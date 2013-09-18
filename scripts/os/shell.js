@@ -319,8 +319,8 @@ function shellLoad(){
 }
 
 function shellKrnTrapErrorTest(){
-    // we don't want to kill the OS so we'll pass false for the kill switch
-    return krnTrapError("This is just an OS Error trap test.", false);
+    _Canvas.style.backgroundColor = "pink";
+    return krnTrapError("Pink screen of death!", true);
 }
 
 function shellCurse()
