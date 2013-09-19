@@ -302,7 +302,6 @@ function shellStatus() {
     var typedText = _Console.buffer.split(" ");
     var clensedText = typedText.join(" ").replace("status", "Status:");
 
-    _TaskbarContext.fillStyle = "#ffffff";
     _TaskbarContext.font = "bold 12px Arial";
     _TaskbarContext.clearRect(165, 0, 300, 20);
     _TaskbarContext.fillText(clensedText, 200, 16);
@@ -319,7 +318,8 @@ function shellLoad(){
 }
 
 function shellPSOD(){
-    _Canvas.style.backgroundColor = "pink";
+    _TaskbarCanvas.style.backgroundColor = "pink";
+    $("#divConsole, #taLog, #taProgramInput").css({background: "pink"});
     return krnTrapError("Pink screen of death!", true);
 }
 
