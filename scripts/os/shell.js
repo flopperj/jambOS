@@ -62,9 +62,9 @@ function shellInit() {
     
     // krntraperrortest
     sc = new ShellCommand();
-    sc.command = "krntraperrortest";
+    sc.command = "psod";
     sc.description = "- simulates an OS error";
-    sc.function = shellKrnTrapErrorTest;
+    sc.function = shellPSOD;
     this.commandList[this.commandList.length] = sc;
 
     // ver
@@ -318,7 +318,7 @@ function shellLoad(){
         _StdIn.putText("Sorry I can only accept valid hex digit values :(");
 }
 
-function shellKrnTrapErrorTest(){
+function shellPSOD(){
     _Canvas.style.backgroundColor = "pink";
     return krnTrapError("Pink screen of death!", true);
 }
