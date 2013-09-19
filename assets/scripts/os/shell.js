@@ -60,7 +60,7 @@ function shellInit() {
     sc.function = shellLoad;
     this.commandList[this.commandList.length] = sc;
     
-    // krntraperrortest
+    // psod
     sc = new ShellCommand();
     sc.command = "psod";
     sc.description = "- simulates an OS error";
@@ -302,7 +302,6 @@ function shellStatus() {
     var typedText = _Console.buffer.split(" ");
     var clensedText = typedText.join(" ").replace("status", "Status:");
 
-    _TaskbarContext.fillStyle = "#ffffff";
     _TaskbarContext.font = "bold 12px Arial";
     _TaskbarContext.clearRect(165, 0, 300, 20);
     _TaskbarContext.fillText(clensedText, 200, 16);
@@ -319,7 +318,12 @@ function shellLoad(){
 }
 
 function shellPSOD(){
+<<<<<<< HEAD:scripts/os/shell.js
     _Canvas.style.backgroundColor = "pink";
+=======
+    _TaskbarCanvas.style.backgroundColor = "pink";
+    $("#divConsole, #taLog, #taProgramInput").css({background: "pink"});
+>>>>>>> master:assets/scripts/os/shell.js
     return krnTrapError("Pink screen of death!", true);
 }
 

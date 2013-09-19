@@ -24,7 +24,6 @@ function CLIconsole() {
 
     this.initTaskbar = function() {
         var date = new Date();
-        _TaskbarContext.fillStyle = "#ffffff";
         _TaskbarContext.font = "bold 12px Arial";
         _TaskbarContext.fillText(date.toLocaleString(), 16, 16);
         _TaskbarContext.fillText("Status: OS is running...", 200, 16);
@@ -38,13 +37,13 @@ function CLIconsole() {
     };
 
     this.clearScreen = function() {
-       _Canvas.height = 500;
+       _Canvas.height = 480;
        _DrawingContext.clearRect(0, 0, _Canvas.width, _Canvas.height);
     };
 
     this.resetXY = function() {
        this.CurrentXPosition = 0;
-       this.CurrentYPosition = this.CurrentFontSize + 25;
+       this.CurrentYPosition = this.CurrentFontSize + 30;
     };
 
     this.handleInput = function() {

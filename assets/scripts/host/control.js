@@ -23,14 +23,15 @@ function hostInit()
 {
     // Get a global reference to the canvas.  TODO: Move this stuff into a Display Device Driver, maybe?
     _Canvas = document.getElementById('display');
+    _Canvas.width = $("#divConsole").width() - 10;
     _TaskbarCanvas = document.createElement('canvas');
     _TaskbarCanvas.id = "taskbar";
-    _TaskbarCanvas.width = 500;
+    _TaskbarCanvas.width = $("#divConsole").width() - 10;
     _TaskbarCanvas.height = 22;
     _TaskbarCanvas.style.zIndex = 8;
     _TaskbarCanvas.style.position = "absolute";
     _TaskbarCanvas.style.borderBottom = "2px solid #000000";
-    _TaskbarCanvas.style.background = "#9E9E9E";
+    _TaskbarCanvas.style.background = "#DFDBC3";
     
     document.getElementById("divConsole").insertBefore(_TaskbarCanvas, _Canvas);
 
@@ -51,8 +52,7 @@ function hostInit()
     if (typeof Glados === "function") {
         _GLaDOS = new Glados();
         _GLaDOS.init();
-    }
-    ;
+    }   
 
 }
 
