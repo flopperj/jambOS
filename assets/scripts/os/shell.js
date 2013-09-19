@@ -318,12 +318,8 @@ function shellLoad(){
 }
 
 function shellPSOD(){
-<<<<<<< HEAD:scripts/os/shell.js
-    _Canvas.style.backgroundColor = "pink";
-=======
     _TaskbarCanvas.style.backgroundColor = "pink";
     $("#divConsole, #taLog, #taProgramInput").css({background: "pink"});
->>>>>>> master:assets/scripts/os/shell.js
     return krnTrapError("Pink screen of death!", true);
 }
 
