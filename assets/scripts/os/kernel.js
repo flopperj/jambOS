@@ -21,10 +21,11 @@ function krnBootstrap()      // Page 8.
    _KernelInterruptQueue = new Queue();  // A (currently) non-priority queue for interrupt requests (IRQs).
    _KernelBuffers = new Array();         // Buffers... for the kernel.
    _KernelInputQueue = new Queue();      // Where device input lands before being processed out somewhere.
-   _Console = new CLIconsole();          // The command line interface / console I/O device.
+//   _Console = new CLIconsole();          // The command line interface / console I/O device.
+    _Console = new jambOS.Console();
 
    // Initialize the CLIconsole.
-   _Console.init();
+//   _Console.init();
 
    // Initialize standard input and output to the _Console.
    _StdIn  = _Console;
@@ -188,14 +189,14 @@ function krnTrapError(msg, killSwitch)
     hostLog("OS ERROR - TRAP: " + msg);
 
     // Display error on console, perhaps in some sort of colored screen. (Perhaps blue?)
-    var offset = _DrawingContext.measureText(_Console.CurrentFont, _Console.CurrentFontSize, ">");
+    var offset = _DrawingContext.measureText(_Console.currentFont, _Console.currentFontSize, ">");
 
-    _Console.CurrentXPosition = offset;
+    _Console.currentXPosition = offset;
 
-    var xPos = _Console.CurrentXPosition;
-    var yPos = (_Console.CurrentYPosition - _Console.CurrentFontSize) - 1;
+    var xPos = _Console.currentXPosition;
+    var yPos = (_Console.currentYPosition - _Console.currentFontSize) - 1;
     var width = 500;
-    var height = _Console.CurrentFontSize + (_Console.CurrentFontSize / 2);
+    var height = _Console.currentFontSize + (_Console.currentFontSize / 2);
 
     // erase previous command
     _DrawingContext.clearRect(xPos, yPos, width, height);
@@ -203,7 +204,7 @@ function krnTrapError(msg, killSwitch)
     // print message on display in blue    
     _DrawingContext.fillStyle = "blue";
     _DrawingContext.font = "bold 12px Arial";
-    _DrawingContext.fillText("OS ERROR - TRAP: => " + msg, xPos, _Console.CurrentYPosition);
+    _DrawingContext.fillText("OS ERROR - TRAP: => " + msg, xPos, _Console.currentYPosition);
 
     if (killSwitch)
         krnShutdown();

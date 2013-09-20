@@ -212,7 +212,7 @@ function shellParseInput(buffer)
     for (var i in tempList)
     {
         var arg = trim(tempList[i]);
-        if (arg != "")
+        if (arg !== "")
         {
             retVal.args[retVal.args.length] = tempList[i];
         }
@@ -227,7 +227,7 @@ function shellExecute(fn, args)
     // ... call the command function passing in the args...
     fn(args);
     // Check to see if we need to advance the line again
-    if (_StdIn.CurrentXPosition > 0)
+    if (_StdIn.currentXPosition > 0)
     {
         _StdIn.advanceLine();
     }

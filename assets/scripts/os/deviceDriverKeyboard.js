@@ -230,14 +230,14 @@ function krnKbdDispatchKeyPress(params)
 
             command = _CommandHistory[_CurrentCommandIndex];
 
-            var offset = _DrawingContext.measureText(_Console.CurrentFont, _Console.CurrentFontSize, ">");
+            var offset = _DrawingContext.measureText(_Console.currentFont, _Console.currentFontSize, ">");
 
-            _Console.CurrentXPosition = offset;
+            _Console.currentXPosition = offset;
 
-            var xPos = _Console.CurrentXPosition;
-            var yPos = (_Console.CurrentYPosition - _Console.CurrentFontSize) - 1;
+            var xPos = _Console.currentXPosition;
+            var yPos = (_Console.currentYPosition - _Console.currentFontSize) - 1;
             var width = 500;
-            var height = _Console.CurrentFontSize + (_Console.CurrentFontSize / 2);
+            var height = _Console.currentFontSize + (_Console.currentFontSize / 2);
 
             // erase previous command
             _DrawingContext.clearRect(xPos, yPos, width, height);
@@ -264,14 +264,14 @@ function krnKbdDispatchKeyPress(params)
 
             command = _CommandHistory[_CurrentCommandIndex];
 
-            var offset = _DrawingContext.measureText(_Console.CurrentFont, _Console.CurrentFontSize, ">");
+            var offset = _DrawingContext.measureText(_Console.currentFont, _Console.currentFontSize, ">");
 
-            _Console.CurrentXPosition = offset;
+            _Console.currentXPosition = offset;
 
-            var xPos = _Console.CurrentXPosition;
-            var yPos = (_Console.CurrentYPosition - _Console.CurrentFontSize) - 1;
+            var xPos = _Console.currentXPosition;
+            var yPos = (_Console.currentYPosition - _Console.currentFontSize) - 1;
             var width = 500;
-            var height = _Console.CurrentFontSize + (_Console.CurrentFontSize / 2);
+            var height = _Console.currentFontSize + (_Console.currentFontSize / 2);
 
             // erase previous command
             _DrawingContext.clearRect(xPos, yPos, width, height);
@@ -292,13 +292,13 @@ function krnKbdDispatchKeyPress(params)
             // remove last character from the buffer
             _Console.buffer = _Console.buffer.slice(0, -1);
 
-            var charWidth = _DrawingContext.measureText(_Console.CurrentFont, _Console.CurrentFontSize, charToDel);
-            _Console.CurrentXPosition -= charWidth;
+            var charWidth = _DrawingContext.measureText(_Console.currentFont, _Console.currentFontSize, charToDel);
+            _Console.currentXPosition -= charWidth;
 
-            var xPos = _Console.CurrentXPosition;
-            var yPos = (_Console.CurrentYPosition - _Console.CurrentFontSize) - 1;
+            var xPos = _Console.currentXPosition;
+            var yPos = (_Console.currentYPosition - _Console.currentFontSize) - 1;
             var width = charWidth;
-            var height = _Console.CurrentFontSize + (_Console.CurrentFontSize / 2);
+            var height = _Console.currentFontSize + (_Console.currentFontSize / 2);
             _DrawingContext.clearRect(xPos, yPos, width, height);
         } else if (keyCode !== 38 && keyCode !== 40)
             _KernelInputQueue.enqueue(chr);
