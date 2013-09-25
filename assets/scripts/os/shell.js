@@ -138,7 +138,7 @@ function shellPutPrompt()
 
 function shellHandleInput(buffer)
 {
-    krnTrace("Shell Command~" + buffer);
+    _Kernel.trace("Shell Command~" + buffer);
     // 
     // Parse the input...
     //
@@ -320,7 +320,7 @@ function shellLoad(){
 function shellPSOD(){
     _TaskbarCanvas.style.backgroundColor = "pink";
     $("#divConsole, #taLog, #taProgramInput").css({background: "pink"});
-    return krnTrapError("Pink screen of death!", true);
+    return _Kernel.trapError("Pink screen of death!", true);
 }
 
 function shellCurse()
@@ -360,7 +360,7 @@ function shellShutdown(args)
 {
     _StdIn.putText("Shutting down...");
     // Call Kernel shutdown routine.
-    krnShutdown();
+    _Kernel.shutdown();
     // TODO: Stop the final prompt from being displayed.  If possible.  Not a high priority.  (Damn OCD!)
 }
 

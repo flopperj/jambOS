@@ -57,8 +57,11 @@ var _OsShell = null;
 // At least this OS is not trying to kill you. (Yet.)
 var _SarcasticMode = false;
 
-// Global Device Driver Objects - page 12
-var krnKeyboardDriver = null;
+// Kernel
+var _Kernel = null;
+
+// Control 
+_Control = null;
 
 // For testing...
 var _GLaDOS = null;
@@ -66,3 +69,6 @@ var _GLaDOS = null;
 // for command history
 var _CommandHistory = [];
 var _CurrentCommandIndex = -1;
+
+// bakward compatibility vars with previous code base
+krnInterruptHandler = null;

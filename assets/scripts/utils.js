@@ -12,10 +12,21 @@ var jambOS = jambOS || {version: "1.0"};
 
 /**
  * Utility scope for jambOS
- * @property
- * @type {scope}
+ * @property {scope}
  */
 jambOS.util = {};
+
+/**
+ * OS scope for jambOS
+ * @property {scope}
+ */
+jambOS.OS = {};
+
+/**
+ * Host scope for jambOS
+ * @property {scope}
+ */
+jambOS.host = {};
 
 (function() {
 
@@ -172,11 +183,6 @@ jambOS.util = {};
          * @param value
          */
         klass.prototype._set = function(key, value) {
-            var toFixed = fabric.util.toFixed;
-
-            if (key === 'width' || key === 'height') {
-                this.minScaleLimit = toFixed(Math.min(0.1, 1 / Math.max(this.width, this.height)), 2);
-            }
 
             this[key] = value;
 
@@ -204,23 +210,27 @@ jambOS.util = {};
 
 })();
 
+// initialize host
+$(document).ready(function(){
+    _Control = new jambOS.host.Control();
+});
 
 
 function trim(str) {     // Use a regular expression to remove leading and trailing spaces.
-	return str.replace(/^\s+ | \s+$/g, "");
-	/* 
-	Huh?  Take a breath.  Here we go:
-	- The "|" separates this into two expressions, as in A or B.
-	- "^\s+" matches a sequence of one or more whitespace characters at the beginning of a string.
-    - "\s+$" is the same thing, but at the end of the string.
-    - "g" makes is global, so we get all the whitespace.
-    - "" is nothing, which is what we replace the whitespace with.
-	*/
-	
+    return str.replace(/^\s+ | \s+$/g, "");
+    /* 
+     Huh?  Take a breath.  Here we go:
+     - The "|" separates this into two expressions, as in A or B.
+     - "^\s+" matches a sequence of one or more whitespace characters at the beginning of a string.
+     - "\s+$" is the same thing, but at the end of the string.
+     - "g" makes is global, so we get all the whitespace.
+     - "" is nothing, which is what we replace the whitespace with.
+     */
+
 }
 
 function rot13(str) {   // An easy-to understand implementation of the famous and common Rot13 obfuscator.
-                        // You can do this in three lines with a complex regular expression, but I'd have
+    // You can do this in three lines with a complex regular expression, but I'd have
     var retVal = "";    // trouble explaining it in the future.  There's a lot to be said for obvious code.
     for (var i in str) {
         var ch = str[i];

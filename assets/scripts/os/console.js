@@ -9,11 +9,11 @@
  * @requires globals.js
  * @public
  * @class Console
- * @memberOf jambOS
+ * @memberOf jambOS.OS
  * =============================================================================
  */
 
-jambOS.Console = jambOS.util.createClass(/** @scope jambOS.Console.prototype */{
+jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototype */{
     /**
      * @property {string}   buffer          - Contains the current typed data
      */

@@ -31,7 +31,7 @@ function Cpu() {
     };
     
     this.cycle = function() {
-        krnTrace("CPU cycle");
+        _Kernel.trace("CPU cycle");
         // TODO: Accumulate CPU usage and profiling statistics here.
         // Do the real work here. Be sure to set this.isExecuting appropriately.
     };

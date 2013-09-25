@@ -1,19 +1,38 @@
-/* ------------------------------
-   DeviceDriver.js
-   
-   The "base class" (or 'prototype') for all Device Drivers.
-   ------------------------------ */
+/**
+ * =============================================================================
+ * deviceDriver.js 
+ * 
+ * Base class for all Device Drivers
+ * 
+ * @public
+ * @class DeviceDriver
+ * @memberOf jambOS.OS
+ * =============================================================================
+ */
 
-function DeviceDriver()
-{
-    // Base Attributes
-    this.version = "1.00";
-    this.status = "unloaded";
-    this.preemptable = false;
-    // this.queue = new Queue();     // TODO: We will eventually want a queue for, well, queueing requests for this device to be handled by deferred procedure calls (DPCs).
+jambOS.OS.DeviceDriver = jambOS.util.createClass({
+    /**
+     * @property {string} version
+     */
+    version: "1.00",
+    /**
+     * @property {string} status
+     */
+    status: "unloaded",
+    /**
+     * @property {boolean} preemptable
+     */
+    preemptable: false,
+    // queue: new jambOS.OS.Queue(),     // TODO: We will eventually want a queue for, well, queueing requests for this device to be handled by deferred procedure calls (DPCs).
 
     // Base Method pointers.
-    this.driverEntry = null;    // Initialization routine.  Should be called when the driver is loaded.
-    this.isr = null;            // Interrupt Service Routine
-    // TODO: this.dpc = null;   // Deferred Procedure Call routine - Start next queued operation on this device.
-}
+    /**
+     * Initialization routine.  Should be called when the driver is loaded.
+     */
+    driverEntry: null,
+    /**
+     * Interrupt Service Routine
+     */
+    isr: null
+            // TODO: this.dpc: null   // Deferred Procedure Call routine - Start next queued operation on this device.
+});

@@ -25,7 +25,7 @@ function hostClockPulse()
     // Increment the hardware (host) clock.
     _OSclock++;
     // Call the kernel clock pulse event handler.
-    krnOnCPUClockPulse();
+    _Kernel.onCPUClockPulse();
 }
 
 
