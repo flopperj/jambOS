@@ -1933,7 +1933,7 @@ jambOS.OS.Kernel = jambOS.util.createClass({
     disableInterupts: function()
     {
         // Keyboard
-        hostDisableKeyboardInterrupt();
+        _Device.hostDisableKeyboardInterrupt();
         // Put more here.
     },
     interruptHandler: function(irq, params)    // This is the Interrupt Handler Routine.  Pages 8 and 560.
