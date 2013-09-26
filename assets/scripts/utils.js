@@ -1,33 +1,3 @@
-/**
- * jambOS
- * 
- * @author                  James Arama
- * @copyright               2012-2013
- * @version                 1.0
- */
-
-
-var jambOS = jambOS || {version: "1.0"};
-
-
-/**
- * Utility scope for jambOS
- * @property {scope}
- */
-jambOS.util = {};
-
-/**
- * OS scope for jambOS
- * @property {scope}
- */
-jambOS.OS = {};
-
-/**
- * Host scope for jambOS
- * @property {scope}
- */
-jambOS.host = {};
-
 (function() {
 
     var slice = Array.prototype.slice, emptyFunction = function() {

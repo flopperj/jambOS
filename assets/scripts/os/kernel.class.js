@@ -110,7 +110,7 @@ jambOS.OS.Kernel = jambOS.util.createClass({
     enableInterupts: function()
     {
         // Keyboard
-        hostEnableKeyboardInterrupt();
+        _Device.hostEnableKeyboardInterrupt();
         // Put more here.
     },
     disableInterupts: function()

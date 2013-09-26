@@ -1,12 +1,32 @@
-/* ------------  
-   Globals.js
+/**
+ * jambOS
+ * 
+ * @author                  James Arama
+ * @copyright               2012-2013
+ * @version                 1.0
+ */
 
-   Global CONSTANTS and _Variables.
-   (Global over both the OS and Hardware Simulation / Host.)
-   
-   This code references page numbers in the text book: 
-   Operating System Concepts 8th edition by Silberschatz, Galvin, and Gagne.  ISBN 978-0-470-12872-5
-   ------------ */
+
+var jambOS = jambOS || {version: "1.0"};
+
+
+/**
+ * Utility scope for jambOS
+ * @property {scope}
+ */
+jambOS.util = {};
+
+/**
+ * OS scope for jambOS
+ * @property {scope}
+ */
+jambOS.OS = {};
+
+/**
+ * Host scope for jambOS
+ * @property {scope}
+ */
+jambOS.host = {};
 
 //
 // Global CONSTANTS
@@ -61,7 +81,10 @@ var _SarcasticMode = false;
 var _Kernel = null;
 
 // Control 
-_Control = null;
+var _Control = null;
+
+// Device
+var _Device = null;
 
 // For testing...
 var _GLaDOS = null;
