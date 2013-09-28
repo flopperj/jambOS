@@ -2,7 +2,7 @@
  * jambOS
  * 
  * @author                  James Arama
- * @copyright               2012-2013
+ * @copyright               2013
  * @version                 1.0
  */
 
@@ -316,7 +316,7 @@ function rot13(str) {   // An easy-to understand implementation of the famous an
 
 /**
  * =============================================================================
- * Control.js
+ * control.class.js
  * 
  * Routines for the hardware simulation, NOT for our client OS itself. In this manner, it's A LITTLE BIT like a hypervisor,
  * in that the Document environment inside a browser is the "bare metal" (so to speak) for which we write code that
@@ -542,21 +542,24 @@ jambOS.host.Device = jambOS.util.createClass({
         }
     }
 });
-/* ------------  
- CPU.js
- 
- Requires global.js.
- 
- Routines for the host CPU simulation, NOT for the OS itself.  
- In this manner, it's A LITTLE BIT like a hypervisor,
- in that the Document environment inside a browser is the "bare metal" (so to speak) for which we write code
- that hosts our client OS. But that analogy only goes so far, and the lines are blurred, because we are using
- JavaScript in both the host and client environments.
- 
- This code references page numbers in the text book: 
- Operating System Concepts 8th edition by Silberschatz, Galvin, and Gagne.  ISBN 978-0-470-12872-5
- ------------ */
-
+/**
+ * =============================================================================
+ * cpu.class.js
+ * Routines for the host CPU simulation, NOT for the OS itself.  
+ * In this manner, it's A LITTLE BIT like a hypervisor,
+ * in that the Document environment inside a browser is the "bare metal" (so to speak) for which we write code
+ * that hosts our client OS. But that analogy only goes so far, and the lines are blurred, because we are using 
+ * JavaScript in both the host and client environments.
+ * 
+ * This code references page numbers in the text book: 
+ * Operating System Concepts 8th edition by Silberschatz, Galvin, and Gagne.  ISBN 978-0-470-12872-5
+ * 
+ * @requires globals.js
+ * @public
+ * @class Cpu
+ * @memberOf jambOS.host
+ * =============================================================================
+ */
 jambOS.host.Cpu = jambOS.util.createClass({
     pc: 0, // Program Counter
     acc: 0, // Accumulator

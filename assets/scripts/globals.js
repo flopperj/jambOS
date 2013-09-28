@@ -2,7 +2,7 @@
  * jambOS
  * 
  * @author                  James Arama
- * @copyright               2012-2013
+ * @copyright               2013
  * @version                 1.0
  */
 

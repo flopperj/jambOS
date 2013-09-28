@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * Control.js
+ * control.class.js
  * 
  * Routines for the hardware simulation, NOT for our client OS itself. In this manner, it's A LITTLE BIT like a hypervisor,
  * in that the Document environment inside a browser is the "bare metal" (so to speak) for which we write code that
