@@ -1,5 +1,5 @@
-AlanBBOS2013
+jambOS
 ============
 
-This is my Fall 2013 Operating Systems class initial project.
-See http://www.labouseur.com/courses/os/ for details.
+This is my Fall 2013 Operating Systems class project.
+Just trying to create a killer web Operating System in html5 javascript :)
