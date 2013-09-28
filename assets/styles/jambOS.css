@@ -48,6 +48,7 @@ body {
 }
 
 textarea{
+    background-color: #DFDBC3;
     padding: 5px; 
     font-size: .9em;
     resize: none;
