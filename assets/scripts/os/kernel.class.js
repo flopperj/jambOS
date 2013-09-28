@@ -35,9 +35,9 @@ jambOS.OS.Kernel = jambOS.util.createClass({
         _Control.hostLog("bootstrap", "host");  // Use hostLog because we ALWAYS want this, even if _Trace is off.
 
         // Initialize our global queues.
-        _KernelInterruptQueue = new Queue();  // A (currently) non-priority queue for interrupt requests (IRQs).
+        _KernelInterruptQueue = new jambOS.OS.Queue();  // A (currently) non-priority queue for interrupt requests (IRQs).
         _KernelBuffers = new Array();         // Buffers... for the kernel.
-        _KernelInputQueue = new Queue();      // Where device input lands before being processed out somewhere.
+        _KernelInputQueue = new jambOS.OS.Queue();      // Where device input lands before being processed out somewhere.
 
         // The command line interface / console I/O device.
         _Console = new jambOS.OS.Console();

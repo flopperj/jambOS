@@ -1318,52 +1318,50 @@ jambOS.OS.DeviceDriverKeyboard = jambOS.util.createClass(jambOS.OS.DeviceDriver,
         }
     }
 });
-/* ------------
-   Queue.js
-   
-   A simple Queue, which is really just a dressed-up JavaScript Array.
-   See the Javascript Array documentation at http://www.w3schools.com/jsref/jsref_obj_array.asp .
-   Look at the push and shift methods, as they are the least obvious here.
-   
-   ------------ */
-   
-function Queue()
-{
+/**
+ * =============================================================================
+ * queue.class.js 
+ * 
+ * A simple Queue, which is really just a dressed-up JavaScript Array.
+ * See the Javascript Array documentation at http://www.w3schools.com/jsref/jsref_obj_array.asp .
+ * Look at the push and shift methods, as they are the least obvious here.
+ * 
+ * @public
+ * @class Queue
+ * @memberOf jambOS.OS
+ * =============================================================================
+ */
+
+jambOS.OS.Queue = jambOS.util.createClass({
     // Properties
-    this.q = new Array();
-
+    q: new Array(),
     // Methods
-    this.getSize = function() {
-        return this.q.length;    
-    };
-
-    this.isEmpty = function(){
-        return (this.q.length == 0);    
-    };
-
-    this.enqueue = function(element) {
-        this.q.push(element);        
-    };
-    
-    this.dequeue = function() {
+    getSize: function() {
+        return this.q.length;
+    },
+    isEmpty: function() {
+        return (this.q.length === 0);
+    },
+    enqueue: function(element) {
+        this.q.push(element);
+    },
+    dequeue: function() {
         var retVal = null;
         if (this.q.length > 0)
         {
             retVal = this.q.shift();
         }
-        return retVal;        
-    };
-    
-    this.toString = function() {
+        return retVal;
+    },
+    toString: function() {
         var retVal = "";
         for (var i in this.q)
         {
             retVal += "[" + this.q[i] + "] ";
         }
         return retVal;
-    };
-}
-
+    }
+});
 /* ------------
  Shell.js
  
@@ -1850,9 +1848,9 @@ jambOS.OS.Kernel = jambOS.util.createClass({
         _Control.hostLog("bootstrap", "host");  // Use hostLog because we ALWAYS want this, even if _Trace is off.
 
         // Initialize our global queues.
-        _KernelInterruptQueue = new Queue();  // A (currently) non-priority queue for interrupt requests (IRQs).
+        _KernelInterruptQueue = new jambOS.OS.Queue();  // A (currently) non-priority queue for interrupt requests (IRQs).
         _KernelBuffers = new Array();         // Buffers... for the kernel.
-        _KernelInputQueue = new Queue();      // Where device input lands before being processed out somewhere.
+        _KernelInputQueue = new jambOS.OS.Queue();      // Where device input lands before being processed out somewhere.
 
         // The command line interface / console I/O device.
         _Console = new jambOS.OS.Console();

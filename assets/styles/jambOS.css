@@ -15,6 +15,11 @@ body {
 #taskbar {
     border-radius: 10px 10px 0 0;
 }
+#divButtonBar{
+    margin: 10px 0;
+    padding: 10px 0;
+    border-bottom: 1px solid #9B9286;
+}
 
 #divConsole{    
     background-color: #DFDBC3;

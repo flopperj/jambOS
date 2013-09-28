@@ -66,7 +66,7 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
      * @method clearScreen
      */
     clearScreen: function() {
-        _Canvas.height = 500;
+        _Canvas.height = 480;
         _DrawingContext.clearRect(0, 0, _Canvas.width, _Canvas.height);
     },
     /**
