@@ -23,36 +23,36 @@
             <div class="container">
                 <h1>JambOS</h1>
                 <div id="divButtonBar" style="margin:4px;">
-                    <input type="button"
+                    <button type="button"
                            id = "btnStartOS"
                            name="brnStartOS"
                            class="normal_button btn btn-default"
-                           value="Start"
-                           tabindex="0">
+                           title="start"
+                           tabindex="0"><span class="glyphicon glyphicon-play"></span></button>
 
-                    <input type="button"
+                    <button type="button"
                            id = "btnHaltOS"
                            name="brnHaltOS"
                            class="normal_button btn btn-default"
                            disabled="disabled"
-                           value="Halt"
-                           tabindex="1">
+                           title="halt"
+                           tabindex="1"><span class="glyphicon glyphicon-stop"></span></button>
 
-                    <input type="button"
+                    <button type="button"
                            id = "btnReset"
                            name="brnReset"
-                           class="normal_button btn btn-default"
+                           class="normal_button btn btn-danger"
                            disabled="disabled"
-                           value="Reset"
-                           tabindex="2">
+                           title="reset"
+                           tabindex="2"><span class="glyphicon glyphicon-off"></span></button>
                 </div>
 
                 <div class="row-fluid">
 
-                    <div id="divConsole" style="height:500px; float:left;" class="span6 pull-left">
+                    <div id="divConsole" style="height:540px; float:left;" class="span6 pull-left">
                         <canvas id="display"
-                                width="480px"
-                                height="480px"
+                                width="500px"
+                                height="500px"
                                 tabindex="3">
                         </canvas>
                     </div>

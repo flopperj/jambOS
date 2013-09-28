@@ -343,7 +343,7 @@ function shellApology()
 
 function shellVer(args)
 {
-    _StdIn.putText(APP_NAME + " version " + APP_VERSION);
+    _StdIn.putText(jambOS.name + " version " + jambOS.version);
 }
 
 function shellHelp(args)

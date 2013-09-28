@@ -7,7 +7,7 @@
  */
 
 
-var jambOS = jambOS || {version: "1.0"};
+var jambOS = jambOS || {version: "1.0", name: "jambOS"};
 
 
 /**
@@ -31,8 +31,6 @@ jambOS.host = {};
 //
 // Global CONSTANTS
 //
-var APP_NAME = "JambOS";  // 'cause I was at a loss for a better name.
-var APP_VERSION = "1.00";   // What did you expect?
 
 var CPU_CLOCK_INTERVAL = 100;   // This is in ms, or milliseconds, so 1000 = 1 second.
 
@@ -1711,7 +1709,7 @@ function shellApology()
 
 function shellVer(args)
 {
-    _StdIn.putText(APP_NAME + " version " + APP_VERSION);
+    _StdIn.putText(jambOS.name + " version " + jambOS.version);
 }
 
 function shellHelp(args)
