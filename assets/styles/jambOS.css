@@ -13,7 +13,6 @@ body {
 }
 
 #taskbar {
-    position: fixed !important;
 }
 #divButtonBar{
     margin: 10px 0;

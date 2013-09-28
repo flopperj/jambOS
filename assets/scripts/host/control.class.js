@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * Control.js
+ * control.class.js
  * 
  * Routines for the hardware simulation, NOT for our client OS itself. In this manner, it's A LITTLE BIT like a hypervisor,
  * in that the Document environment inside a browser is the "bare metal" (so to speak) for which we write code that
@@ -42,7 +42,7 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
         _TaskbarCanvas.width = $("#divConsole").width() - 10;
         _TaskbarCanvas.height = 22;
         _TaskbarCanvas.style.zIndex = 8;
-        _TaskbarCanvas.style.position = "absolute";
+        _TaskbarCanvas.style.position = "fixed";
         _TaskbarCanvas.style.borderBottom = "2px solid #000000";
         _TaskbarCanvas.style.background = "#DFDBC3";
 
@@ -129,8 +129,7 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
         document.getElementById("display").focus();
 
         // ... Create and initialize the CPU ...
-        _CPU = new Cpu();
-        _CPU.init();
+        _CPU = new jambOS.host.Cpu();
 
         // ... then set the host clock pulse ...
         _hardwareClockID = setInterval(_Device.hostClockPulse, CPU_CLOCK_INTERVAL);
