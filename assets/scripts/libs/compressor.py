@@ -40,6 +40,7 @@ SCRIPTS = [
            "../utils.js",
            "../host/control.class.js",
            "../host/device.class.js",
+           "../host/memory.class.js",
            "../host/cpu.class.js",
            "../os/interrupt.js",
            "../os/canvastext.js",

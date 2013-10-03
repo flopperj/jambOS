@@ -2,6 +2,10 @@ body {
     background: #fef5e8 url(../images/seamless-brown-mountains.png) bottom repeat-x;
 }
 
+#divMain{
+    padding: 10px;
+}
+
 #display {
     cursor: default;
 }
@@ -59,6 +63,7 @@ textarea{
     position: relative;
 }
 
+
 #taLog{
     color: lightgreen;
     background: rgba(0,0,0,.6);
@@ -70,4 +75,30 @@ h1, label{
 
 #divUserProgramInput{
     margin-top: 20px;
+}
+
+#memory{
+    margin-top: 20px;
+}
+#memory .content{
+    background-color: #DFDBC3;
+    height: 200px;
+    overflow-y: auto;
+}
+#memory .content table{
+    width: 100%;
+}
+#memory .content table tr.has-value{
+    background-color: #A39A8A;
+}
+#memory .content table tr td{
+    border: 1px solid #000;
+}
+
+.card{
+    box-shadow: 0 3px 0 rgba(0, 0, 0, 0.1);
+    -moz-box-shadow: 0 3px 0 rgba(0, 0, 0, 0.1);
+    -webkit-box-shadow: 0 3px 0 rgba(0, 0, 0, 0.1);
+    border: 13px solid #ffffff;
+    
 }

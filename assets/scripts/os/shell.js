@@ -307,11 +307,21 @@ function shellStatus() {
     _TaskbarContext.fillText(clensedText, 200, 16);
 }
 
-function shellLoad(){
+function shellLoad() {
     var textarea = document.getElementById("taProgramInput");
-    if(/[0-9A-F]/.test(textarea.value.trim()) && textarea.value.trim().length % 2 === 0)
+    if (/[0-9A-F]/.test(textarea.value.trim()) && textarea.value.split(" ").length % 2 === 0) {
+        _CPU.memory.write([0, 0], textarea.value);
+
+        // sanitize text
+        var input = textarea.value.split(" ");
+        
+        // write to memory
+        for(var i = 0; i < input.length; i++)
+        
+        _CPU.memory.updateMemoryDisplay();
+        
         _StdIn.putText("The user input value passed the test!");
-    else if(!textarea.value.trim())
+    }else if(!textarea.value.trim())
         _StdIn.putText("Please enter an input value then call the load command");
     else
         _StdIn.putText("Sorry I can only accept valid hex digit values :(");

@@ -23,13 +23,15 @@ jambOS.host.Cpu = jambOS.util.createClass({
     yReg: 0, // Y register
     zFlag: 0, // Z-ero flag (Think of it as "isZero".)
     isExecuting: false,
-    intitialize: function() {
+    memory: null,
+    initialize: function() {
         this.pc = 0;
         this.acc = 0;
         this.xReg = 0;
         this.yReg = 0;
         this.zFlag = 0;
         this.isExecuting = false;
+        this.memory = new jambOS.host.Memory();
     },
     cycle: function() {
         _Kernel.trace("CPU cycle");

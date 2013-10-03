@@ -38,6 +38,7 @@ var TIMER_IRQ = 0;  // Pages 23 (timer), 9 (interrupts), and 561 (interrupt prio
                     // NOTE: The timer is different from hardware/host clock pulses. Don't confuse these.
 var KEYBOARD_IRQ = 1;  
 
+var TOTAL_MEMORY = 768;
 
 //
 // Global Variables
@@ -358,7 +359,7 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
         _TaskbarCanvas.width = $("#divConsole").width() - 10;
         _TaskbarCanvas.height = 22;
         _TaskbarCanvas.style.zIndex = 8;
-        _TaskbarCanvas.style.position = "fixed";
+        _TaskbarCanvas.style.position = "absolute";
         _TaskbarCanvas.style.borderBottom = "2px solid #000000";
         _TaskbarCanvas.style.background = "#DFDBC3";
 
@@ -543,6 +544,109 @@ jambOS.host.Device = jambOS.util.createClass({
     }
 });
 /**
+ *==============================================================================
+ * Class Memory
+ *    
+ * @class Memory
+ * @memberOf jambOS 
+ * @param {object} - Array Object containing the default values to be 
+ *                             passed to the class
+ *==============================================================================
+ */
+jambOS.host.Memory = jambOS.util.createClass(/** @scopee jambOS.host.Memory.prototype */{
+    /**
+     * @property {array} storage
+     */
+    storage: new Array(),
+    /**
+     * Constructor
+     */
+    initialize: function() {
+
+        var self = this;
+        var cols = 8;
+        var rows = TOTAL_MEMORY / cols;
+
+        // initialize storage memory array with zeros
+        for (var i = 0; i < rows; i++) {
+            this.storage[i] = new Array();
+            for (var j = 0; j < cols; j++) {
+                var address = [i, j];
+                self.write(address, 00);
+            }
+        }
+
+        self.updateMemoryDisplay();
+    },
+    /**
+     * Reads data from storage
+     * @param {string} address
+     * @returns data
+     */
+    read: function(address) {
+        var row = address[0];
+        var col = address[1];
+        return this.storage[row][col];
+    },
+    /**
+     * Writes to storage
+     * 
+     * @public
+     * @param {string} address
+     * @param {object} data
+     */
+    write: function(address, data) {
+        var row = address[0];
+        var col = address[1];
+        this.storage[row][col] = data;
+    },
+    /**
+     * Updates content that is on memory for display on the OS
+     * 
+     * @public
+     * @method updateDisplay
+     */
+    updateMemoryDisplay: function() {
+        var self = this;
+        var cols = 8;
+        var rows = TOTAL_MEMORY / cols;
+
+        var table = "<table>";
+
+        for (var i = 0; i < rows; i++) {
+            table += "<tr class='" + (self.read([i, 0]) !== 0 ? "has-value" : "") + "'>";
+            table += "<td>0x" + self._decimalToHex((8 * (i+1)) - 8, 4) + "</td>";
+            for (var j = 0; j < cols; j++) {
+                table += "<td>" + self.read([i, j]) + "</td>";
+            }
+            table += "</tr>";
+        }
+        table += "</table>";
+
+        // add to the memory div
+        $("#memory .content").html(table);
+    },
+    /**
+     * Converts decimal values to hex
+     * 
+     * @private
+     * @method _decimalToHex
+     * @param {Number} d
+     * @param {int} padding
+     * @returns {string} hex
+     */
+    _decimalToHex: function(d, padding) {
+        var hex = Number(d).toString(16);
+        padding = typeof (padding) === "undefined" || padding === null ? padding = 2 : padding;
+
+        while (hex.length < padding) {
+            hex = "0" + hex;
+        }
+
+        return hex.toUpperCase();
+    }
+});
+/**
  * =============================================================================
  * cpu.class.js
  * Routines for the host CPU simulation, NOT for the OS itself.  
@@ -567,13 +671,15 @@ jambOS.host.Cpu = jambOS.util.createClass({
     yReg: 0, // Y register
     zFlag: 0, // Z-ero flag (Think of it as "isZero".)
     isExecuting: false,
-    intitialize: function() {
+    memory: null,
+    initialize: function() {
         this.pc = 0;
         this.acc = 0;
         this.xReg = 0;
         this.yReg = 0;
         this.zFlag = 0;
         this.isExecuting = false;
+        this.memory = new jambOS.host.Memory();
     },
     cycle: function() {
         _Kernel.trace("CPU cycle");
@@ -1671,11 +1777,26 @@ function shellStatus() {
     _TaskbarContext.fillText(clensedText, 200, 16);
 }
 
-function shellLoad(){
+function shellLoad() {
     var textarea = document.getElementById("taProgramInput");
-    if(/[0-9A-F]/.test(textarea.value.trim()) && textarea.value.trim().length % 2 === 0)
+    if (/[0-9A-F]/.test(textarea.value.trim()) && textarea.value.trim().length % 2 === 0) {
+        _CPU.memory.write([0, 0], textarea.value);
+
+        // sanitize text
+        var data = new Array();
+        var input = textarea.value.trim();
+        var i = 2;
+        do {
+            data.push(input.substring(0, i));
+        } while ((input = input.substring(i, input.length)) !== "");
+
+        // write to memory
+        console.log(data.length);
+        
+        _CPU.memory.updateMemoryDisplay();
+        
         _StdIn.putText("The user input value passed the test!");
-    else if(!textarea.value.trim())
+    }else if(!textarea.value.trim())
         _StdIn.putText("Please enter an input value then call the load command");
     else
         _StdIn.putText("Sorry I can only accept valid hex digit values :(");

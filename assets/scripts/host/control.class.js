@@ -42,7 +42,7 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
         _TaskbarCanvas.width = $("#divConsole").width() - 10;
         _TaskbarCanvas.height = 22;
         _TaskbarCanvas.style.zIndex = 8;
-        _TaskbarCanvas.style.position = "fixed";
+        _TaskbarCanvas.style.position = "absolute";
         _TaskbarCanvas.style.borderBottom = "2px solid #000000";
         _TaskbarCanvas.style.background = "#DFDBC3";
 
