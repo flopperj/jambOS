@@ -19,16 +19,10 @@ jambOS.host.Memory = jambOS.util.createClass(/** @scopee jambOS.host.Memory.prot
     initialize: function() {
 
         var self = this;
-        var cols = 8;
-        var rows = TOTAL_MEMORY / cols;
 
         // initialize storage memory array with zeros
-        for (var i = 0; i < rows; i++) {
-            this.storage[i] = new Array();
-            for (var j = 0; j < cols; j++) {
-                var address = [i, j];
-                self.write(address, 00);
-            }
+        for (var i = 0; i < TOTAL_MEMORY; i++) {
+            self.write(i, 00);
         }
 
         self.updateMemoryDisplay();
@@ -39,9 +33,7 @@ jambOS.host.Memory = jambOS.util.createClass(/** @scopee jambOS.host.Memory.prot
      * @returns data
      */
     read: function(address) {
-        var row = address[0];
-        var col = address[1];
-        return this.storage[row][col];
+        return this.storage[address];
     },
     /**
      * Writes to storage
@@ -51,9 +43,7 @@ jambOS.host.Memory = jambOS.util.createClass(/** @scopee jambOS.host.Memory.prot
      * @param {object} data
      */
     write: function(address, data) {
-        var row = address[0];
-        var col = address[1];
-        this.storage[row][col] = data;
+        this.storage[address] = data;
     },
     /**
      * Updates content that is on memory for display on the OS
@@ -69,10 +59,11 @@ jambOS.host.Memory = jambOS.util.createClass(/** @scopee jambOS.host.Memory.prot
         var table = "<table>";
 
         for (var i = 0; i < rows; i++) {
-            table += "<tr class='" + (self.read([i, 0]) !== 0 ? "has-value" : "") + "'>";
-            table += "<td>0x" + self._decimalToHex((8 * (i+1)) - 8, 4) + "</td>";
-            for (var j = 0; j < cols; j++) {
-                table += "<td>" + self.read([i, j]) + "</td>";
+            table += "<tr class='" + (self.read((8 * (i + 1)) - 8) !== 0 ? "has-value" : "") + "'>";
+            table += "<td>0x" + self._decimalToHex((8 * (i + 1)) - 8, 4) + "</td>";
+            for (var j = 0; j < cols; j++) {                
+                var address = i + j;
+                table += "<td>" + self.read(address) + "</td>";
             }
             table += "</tr>";
         }

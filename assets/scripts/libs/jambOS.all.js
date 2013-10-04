@@ -564,16 +564,10 @@ jambOS.host.Memory = jambOS.util.createClass(/** @scopee jambOS.host.Memory.prot
     initialize: function() {
 
         var self = this;
-        var cols = 8;
-        var rows = TOTAL_MEMORY / cols;
 
         // initialize storage memory array with zeros
-        for (var i = 0; i < rows; i++) {
-            this.storage[i] = new Array();
-            for (var j = 0; j < cols; j++) {
-                var address = [i, j];
-                self.write(address, 00);
-            }
+        for (var i = 0; i < TOTAL_MEMORY; i++) {
+            self.write(i, 00);
         }
 
         self.updateMemoryDisplay();
@@ -584,9 +578,7 @@ jambOS.host.Memory = jambOS.util.createClass(/** @scopee jambOS.host.Memory.prot
      * @returns data
      */
     read: function(address) {
-        var row = address[0];
-        var col = address[1];
-        return this.storage[row][col];
+        return this.storage[address];
     },
     /**
      * Writes to storage
@@ -596,9 +588,7 @@ jambOS.host.Memory = jambOS.util.createClass(/** @scopee jambOS.host.Memory.prot
      * @param {object} data
      */
     write: function(address, data) {
-        var row = address[0];
-        var col = address[1];
-        this.storage[row][col] = data;
+        this.storage[address] = data;
     },
     /**
      * Updates content that is on memory for display on the OS
@@ -614,10 +604,11 @@ jambOS.host.Memory = jambOS.util.createClass(/** @scopee jambOS.host.Memory.prot
         var table = "<table>";
 
         for (var i = 0; i < rows; i++) {
-            table += "<tr class='" + (self.read([i, 0]) !== 0 ? "has-value" : "") + "'>";
-            table += "<td>0x" + self._decimalToHex((8 * (i+1)) - 8, 4) + "</td>";
-            for (var j = 0; j < cols; j++) {
-                table += "<td>" + self.read([i, j]) + "</td>";
+            table += "<tr class='" + (self.read((8 * (i + 1)) - 8) !== 0 ? "has-value" : "") + "'>";
+            table += "<td>0x" + self._decimalToHex((8 * (i + 1)) - 8, 4) + "</td>";
+            for (var j = 0; j < cols; j++) {                
+                var address = i + j;
+                table += "<td>" + self.read(address) + "</td>";
             }
             table += "</tr>";
         }
@@ -1482,7 +1473,7 @@ function Shell() {
     this.commandList = [];
     this.curses = "[fuvg],[cvff],[shpx],[phag],[pbpxfhpxre],[zbgureshpxre],[gvgf]";
     this.apologies = "[sorry]";
-    
+
     // Methods
     this.init = shellInit;
     this.putPrompt = shellPutPrompt;
@@ -1508,28 +1499,28 @@ function shellInit() {
     sc.description = "- Displays the current location";
     sc.function = shellWhereAmI;
     this.commandList[this.commandList.length] = sc;
-    
+
     // whoisawesome
     sc = new ShellCommand();
     sc.command = "whoisawesome";
     sc.description = "- Displays emotiocon of person";
     sc.function = shellWhoIsAwesome;
     this.commandList[this.commandList.length] = sc;
-    
+
     // status
     sc = new ShellCommand();
     sc.command = "status";
     sc.description = "<string> - Sets status message on taskbar";
     sc.function = shellStatus;
     this.commandList[this.commandList.length] = sc;
-    
+
     // status
     sc = new ShellCommand();
     sc.command = "load";
     sc.description = "- loads commands from the user input text area";
     sc.function = shellLoad;
     this.commandList[this.commandList.length] = sc;
-    
+
     // psod
     sc = new ShellCommand();
     sc.command = "psod";
@@ -1764,7 +1755,7 @@ function shellWhereAmI() {
     _StdIn.putText(output);
 }
 
-function shellWhoIsAwesome(){
+function shellWhoIsAwesome() {
     _StdIn.putText("YOU ARE!!!!! d(*_*)b");
 }
 
@@ -1779,30 +1770,25 @@ function shellStatus() {
 
 function shellLoad() {
     var textarea = document.getElementById("taProgramInput");
-    if (/[0-9A-F]/.test(textarea.value.trim()) && textarea.value.trim().length % 2 === 0) {
-        _CPU.memory.write([0, 0], textarea.value);
+    if (/[0-9A-F]/.test(textarea.value.trim()) && textarea.value.split(" ").length % 2 === 0) {
 
         // sanitize text
-        var data = new Array();
-        var input = textarea.value.trim();
-        var i = 2;
-        do {
-            data.push(input.substring(0, i));
-        } while ((input = input.substring(i, input.length)) !== "");
+        var input = textarea.value.split(" ");
 
         // write to memory
-        console.log(data.length);
-        
+        for (var i = 0; i < input.length; i++)
+            _CPU.memory.write(i, input[i]);
+
         _CPU.memory.updateMemoryDisplay();
-        
+
         _StdIn.putText("The user input value passed the test!");
-    }else if(!textarea.value.trim())
+    } else if (!textarea.value.trim())
         _StdIn.putText("Please enter an input value then call the load command");
     else
         _StdIn.putText("Sorry I can only accept valid hex digit values :(");
 }
 
-function shellPSOD(){
+function shellPSOD() {
     _TaskbarCanvas.style.backgroundColor = "pink";
     $("#divConsole, #taLog, #taProgramInput").css({background: "pink"});
     return _Kernel.trapError("Pink screen of death!", true);
