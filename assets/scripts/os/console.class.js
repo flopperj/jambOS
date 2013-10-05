@@ -76,7 +76,7 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
      */
     resetXY: function() {
         this.currentXPosition = 0;
-        this.currentYPosition = this.currentFontSize + 30;
+        this.currentYPosition = this.currentFontSize + 5;
     },
     /**
      * Handles console input
@@ -160,8 +160,8 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
             _DrawingContext.putImageData(canvasData, 0, 0);
 
             // scroll to the bottom
-            var consoleDiv = document.getElementById("divConsole");
-            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+            var consoleDiv = $("#divConsole .canvas");
+            consoleDiv.scrollTop(consoleDiv.height());
         }
     }
 });

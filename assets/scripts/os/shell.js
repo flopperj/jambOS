@@ -53,7 +53,7 @@ function shellInit() {
     sc.function = shellStatus;
     this.commandList[this.commandList.length] = sc;
 
-    // status
+    // load
     sc = new ShellCommand();
     sc.command = "load";
     sc.description = "- loads commands from the user input text area";
@@ -125,6 +125,14 @@ function shellInit() {
 
     // processes - list the running processes and their IDs
     // kill <id> - kills the specified process id.
+    
+    
+    // run
+    sc = new ShellCommand();
+    sc.command = "run";
+    sc.description = "<id> - Runs program already in memory";
+    sc.function = shellRun;
+    this.commandList[this.commandList.length] = sc;
 
     //
     // Display the initial prompt.
@@ -298,13 +306,10 @@ function shellWhoIsAwesome() {
     _StdIn.putText("YOU ARE!!!!! d(*_*)b");
 }
 
-function shellStatus() {
-    var typedText = _Console.buffer.split(" ");
-    var clensedText = typedText.join(" ").replace("status", "Status:");
-
+function shellStatus(args) {
     _TaskbarContext.font = "bold 12px Arial";
     _TaskbarContext.clearRect(165, 0, 300, 20);
-    _TaskbarContext.fillText(clensedText, 200, 16);
+    _TaskbarContext.fillText(args[0], 200, 16);
 }
 
 function shellLoad() {
@@ -312,9 +317,10 @@ function shellLoad() {
     if (/[0-9A-F]/.test(textarea.value.trim()) && textarea.value.split(" ").length % 2 === 0) {
         
         var input = textarea.value.split(" ");
-        _CPU.memory.insert(0, input);
+        var proccess = _CPU.memory.insert(0, input);
 
-        _StdIn.putText("The user input value passed the test!");
+        _StdIn.putText("Process " + proccess.pid + " has been added to memory");
+        
     } else if (!textarea.value.trim())
         _StdIn.putText("Please enter an input value then call the load command");
     else
@@ -449,4 +455,8 @@ function shellPrompt(args)
     {
         _StdIn.putText("Usage: prompt <string>  Please supply a string.");
     }
+}
+
+function shellRun(args){
+    console.log(args);
 }

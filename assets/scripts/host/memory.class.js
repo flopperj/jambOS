@@ -51,18 +51,36 @@ jambOS.host.Memory = jambOS.util.createClass(/** @scopee jambOS.host.Memory.prot
      * @public
      * @param {int} start starting address point
      * @param {array} data data to add to storage
+     * @returns {jambOS.OS.ProcessControlBlock} pcb
      */
-    insert: function(start, data){
-        
+    insert: function(start, data) {
+
         var self = this;
-        
-        var lastAddress = data.length + start;
+        var memorySlots = [];
 
         // write to memory
-        for (var i = start; i < lastAddress; i++)
-            self.write(i, data[i]);
+        for (var i = 0; i < data.length; i++) {
+            self.write(i + start, data[i]);
+            memorySlots.push(i + start);
+        }
+
+        var pid = _CPU.processes.length;
+        var pcb = new jambOS.OS.ProcessControlBlock({
+            pid: pid,
+            pc: _CPU.pc,
+            base: start,
+            limit: memorySlots.length,
+            slots: memorySlots,
+            xReg: _CPU.xReg,
+            yReg: _CPU.yReg,
+            zFlag: _CPU.zFlag
+        });
+        
+        _CPU.processes.push(pcb);
 
         self.updateMemoryDisplay();
+        
+        return pcb;
     },
     /**
      * Updates content that is on memory for display on the OS

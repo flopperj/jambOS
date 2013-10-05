@@ -24,6 +24,7 @@ jambOS.host.Cpu = jambOS.util.createClass({
     zFlag: 0, // Z-ero flag (Think of it as "isZero".)
     isExecuting: false,
     memory: null,
+    processes: [], // contains all process in cpu
     initialize: function() {
         this.pc = 0;
         this.acc = 0;

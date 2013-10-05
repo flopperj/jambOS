@@ -49,7 +49,8 @@ SCRIPTS = [
            "../os/devicedriverkeyboard.class.js",
            "../os/queue.class.js",
            "../os/shell.js",
-           "../os/kernel.class.js"
+           "../os/kernel.class.js",
+           "../os/processcontrolblock.class.js"
            ]
 SCRIPTS_OUT_DEBUG = 'jambOS.all.js'
 SCRIPTS_OUT = 'jambOS.all.min.js'

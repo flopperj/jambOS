@@ -262,13 +262,13 @@ jambOS.OS.DeviceDriverKeyboard = jambOS.util.createClass(jambOS.OS.DeviceDriver,
                 if (consoleDiv.scrollTop !== consoleDiv.scrollHeight)
                     consoleDiv.scrollTop = consoleDiv.scrollHeight;
 
-                if (_CurrentCommandIndex < _CommandHistory.length)
+                if (_CurrentCommandIndex < _CommandHistory.length - 1 )
                     _CurrentCommandIndex += 1;
                 else
                     _CurrentCommandIndex = _CommandHistory.length - 1;
 
                 command = _CommandHistory[_CurrentCommandIndex];
-
+                
                 var offset = _DrawingContext.measureText(_Console.currentFont, _Console.currentFontSize, ">");
 
                 _Console.currentXPosition = offset;

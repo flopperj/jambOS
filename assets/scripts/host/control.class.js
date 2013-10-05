@@ -46,7 +46,7 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
         _TaskbarCanvas.style.borderBottom = "2px solid #000000";
         _TaskbarCanvas.style.background = "#DFDBC3";
 
-        document.getElementById("divConsole").insertBefore(_TaskbarCanvas, _Canvas);
+        $("#taskbar").append(_TaskbarCanvas);
 
         // Get a global reference to the drawing context.
         _DrawingContext = _Canvas.getContext('2d');

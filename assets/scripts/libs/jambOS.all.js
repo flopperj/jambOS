@@ -363,7 +363,7 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
         _TaskbarCanvas.style.borderBottom = "2px solid #000000";
         _TaskbarCanvas.style.background = "#DFDBC3";
 
-        document.getElementById("divConsole").insertBefore(_TaskbarCanvas, _Canvas);
+        $("#taskbar").append(_TaskbarCanvas);
 
         // Get a global reference to the drawing context.
         _DrawingContext = _Canvas.getContext('2d');
@@ -596,18 +596,36 @@ jambOS.host.Memory = jambOS.util.createClass(/** @scopee jambOS.host.Memory.prot
      * @public
      * @param {int} start starting address point
      * @param {array} data data to add to storage
+     * @returns {jambOS.OS.ProcessControlBlock} pcb
      */
-    insert: function(start, data){
-        
+    insert: function(start, data) {
+
         var self = this;
-        
-        var lastAddress = data.length + start;
+        var memorySlots = [];
 
         // write to memory
-        for (var i = start; i < lastAddress; i++)
-            self.write(i, data[i]);
+        for (var i = 0; i < data.length; i++) {
+            self.write(i + start, data[i]);
+            memorySlots.push(i + start);
+        }
+
+        var pid = _CPU.processes.length;
+        var pcb = new jambOS.OS.ProcessControlBlock({
+            pid: pid,
+            pc: _CPU.pc,
+            base: start,
+            limit: memorySlots.length,
+            slots: memorySlots,
+            xReg: _CPU.xReg,
+            yReg: _CPU.yReg,
+            zFlag: _CPU.zFlag
+        });
+        
+        _CPU.processes.push(pcb);
 
         self.updateMemoryDisplay();
+        
+        return pcb;
     },
     /**
      * Updates content that is on memory for display on the OS
@@ -679,6 +697,7 @@ jambOS.host.Cpu = jambOS.util.createClass({
     zFlag: 0, // Z-ero flag (Think of it as "isZero".)
     isExecuting: false,
     memory: null,
+    processes: [], // contains all process in cpu
     initialize: function() {
         this.pc = 0;
         this.acc = 0;
@@ -991,7 +1010,7 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
      */
     resetXY: function() {
         this.currentXPosition = 0;
-        this.currentYPosition = this.currentFontSize + 30;
+        this.currentYPosition = this.currentFontSize + 5;
     },
     /**
      * Handles console input
@@ -1075,8 +1094,8 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
             _DrawingContext.putImageData(canvasData, 0, 0);
 
             // scroll to the bottom
-            var consoleDiv = document.getElementById("divConsole");
-            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+            var consoleDiv = $("#divConsole .canvas");
+            consoleDiv.scrollTop(consoleDiv.height());
         }
     }
 });
@@ -1383,13 +1402,13 @@ jambOS.OS.DeviceDriverKeyboard = jambOS.util.createClass(jambOS.OS.DeviceDriver,
                 if (consoleDiv.scrollTop !== consoleDiv.scrollHeight)
                     consoleDiv.scrollTop = consoleDiv.scrollHeight;
 
-                if (_CurrentCommandIndex < _CommandHistory.length)
+                if (_CurrentCommandIndex < _CommandHistory.length - 1 )
                     _CurrentCommandIndex += 1;
                 else
                     _CurrentCommandIndex = _CommandHistory.length - 1;
 
                 command = _CommandHistory[_CurrentCommandIndex];
-
+                
                 var offset = _DrawingContext.measureText(_Console.currentFont, _Console.currentFontSize, ">");
 
                 _Console.currentXPosition = offset;
@@ -1530,7 +1549,7 @@ function shellInit() {
     sc.function = shellStatus;
     this.commandList[this.commandList.length] = sc;
 
-    // status
+    // load
     sc = new ShellCommand();
     sc.command = "load";
     sc.description = "- loads commands from the user input text area";
@@ -1602,6 +1621,14 @@ function shellInit() {
 
     // processes - list the running processes and their IDs
     // kill <id> - kills the specified process id.
+    
+    
+    // run
+    sc = new ShellCommand();
+    sc.command = "run";
+    sc.description = "<id> - Runs program already in memory";
+    sc.function = shellRun;
+    this.commandList[this.commandList.length] = sc;
 
     //
     // Display the initial prompt.
@@ -1775,13 +1802,10 @@ function shellWhoIsAwesome() {
     _StdIn.putText("YOU ARE!!!!! d(*_*)b");
 }
 
-function shellStatus() {
-    var typedText = _Console.buffer.split(" ");
-    var clensedText = typedText.join(" ").replace("status", "Status:");
-
+function shellStatus(args) {
     _TaskbarContext.font = "bold 12px Arial";
     _TaskbarContext.clearRect(165, 0, 300, 20);
-    _TaskbarContext.fillText(clensedText, 200, 16);
+    _TaskbarContext.fillText(args[0], 200, 16);
 }
 
 function shellLoad() {
@@ -1789,9 +1813,10 @@ function shellLoad() {
     if (/[0-9A-F]/.test(textarea.value.trim()) && textarea.value.split(" ").length % 2 === 0) {
         
         var input = textarea.value.split(" ");
-        _CPU.memory.insert(0, input);
+        var proccess = _CPU.memory.insert(0, input);
 
-        _StdIn.putText("The user input value passed the test!");
+        _StdIn.putText("Process " + proccess.pid + " has been added to memory");
+        
     } else if (!textarea.value.trim())
         _StdIn.putText("Please enter an input value then call the load command");
     else
@@ -1926,6 +1951,10 @@ function shellPrompt(args)
     {
         _StdIn.putText("Usage: prompt <string>  Please supply a string.");
     }
+}
+
+function shellRun(args){
+    console.log(args);
 }
 
 /**
@@ -2143,4 +2172,59 @@ jambOS.OS.Kernel = jambOS.util.createClass({
             this.shutdown();
     }
 
+});
+/**
+ *==============================================================================
+ * Class ProcessControlBlock
+ *    
+ * @class ProcessControlBlock
+ * @memberOf jambOS.OS 
+ * @param {object} - Array Object containing the default values to be 
+ *                             passed to the class
+ *==============================================================================
+ */
+jambOS.OS.ProcessControlBlock = jambOS.util.createClass(/** @scope jambOS.OS.ProcessControlBlock.prototype */ {
+    /**
+     * @property {int} limit                - Memory limit for a process
+     */
+    limit: 0,
+    /**
+     * @property {int} pid                  - process id
+     */
+    pid: 0,
+    /**
+     * @property {int} pc                   - Program Counter
+     */
+    pc: 0,
+    /**
+     * @property {int} priority             - Process Priority
+     */
+    priority: 0,
+    /**
+     * @property {array} slots              - Memory addresses in which the process is occupying
+     */
+    slots: [],
+    /**
+     * @property {string} state             - Process State
+     */
+    state: null,
+    /**
+     * @property {int} xReg                 - X Register
+     */
+    xReg: 0,
+    /**
+     * @property {int} yReg                 - Y Register
+     */
+    yReg: 0,
+    /**
+     * @property {int} zFlag                - zero flag
+     */
+    zFlag: 0, 
+    /**
+     * Constructor
+     */
+    initialize: function(options){        
+        options || (options = {});
+        this.setOptions(options);
+    }
 });

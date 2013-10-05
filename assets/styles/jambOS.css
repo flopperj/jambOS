@@ -24,14 +24,22 @@ body {
 
 #divConsole{    
     background-color: #DFDBC3;
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow: hidden;
     padding: 0 10px;
     box-shadow: 0 3px 0 rgba(0, 0, 0, 0.1);
     -moz-box-shadow: 0 3px 0 rgba(0, 0, 0, 0.1);
     -webkit-box-shadow: 0 3px 0 rgba(0, 0, 0, 0.1);
     border: 13px solid #ffffff;
     position: relative;
+}
+
+#divConsole .canvas{
+    overflow-x: hidden;
+    overflow-y: auto;
+    height: 480px;
+    display: block;
+    top: 25px;
+    position: absolute;
 }
 
 .normal_button {
@@ -100,5 +108,5 @@ h1, label{
     -moz-box-shadow: 0 3px 0 rgba(0, 0, 0, 0.1);
     -webkit-box-shadow: 0 3px 0 rgba(0, 0, 0, 0.1);
     border: 13px solid #ffffff;
-    
+
 }

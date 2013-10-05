@@ -5,14 +5,14 @@
         <meta name="author"             content="James M Arama" />
         <link rel="stylesheet" href="assets/styles/bootstrap.min.css" type="text/css" media="screen" />
         <link rel="stylesheet" href="assets/styles/bootstrap-responsive.min.css" type="text/css" media="screen" />
-        <link rel="stylesheet" href="assets/styles/jambOS.css" type="text/css" media="screen" />
+        <link rel="stylesheet" href="assets/styles/jambOS.min.css" type="text/css" media="screen" />
         <title>
             JambOS - a Browser-based virtual Operating System
         </title>
 
         <script type="text/javascript" src="assets/scripts/libs/jquery-1.10.2.min.js"></script>
         <script type="text/javascript" src="assets/scripts/libs/jambOS.all.js"></script>
-        
+
         <!-- Other Routines -->
         <script type="text/javascript" src="http://www.labouseur.com/courses/os/projects/glados.js"></script>   
     </head>
@@ -24,38 +24,41 @@
                 <h1>JambOS</h1>
                 <div id="divButtonBar">
                     <button type="button"
-                           id = "btnStartOS"
-                           name="brnStartOS"
-                           class="normal_button btn btn-default"
-                           title="start"
-                           tabindex="0"><span class="glyphicon glyphicon-play"></span></button>
+                            id = "btnStartOS"
+                            name="brnStartOS"
+                            class="normal_button btn btn-default"
+                            title="start"
+                            tabindex="0"><span class="glyphicon glyphicon-play"></span></button>
 
                     <button type="button"
-                           id = "btnHaltOS"
-                           name="brnHaltOS"
-                           class="normal_button btn btn-default"
-                           disabled="disabled"
-                           title="halt"
-                           tabindex="1"><span class="glyphicon glyphicon-stop"></span></button>
+                            id = "btnHaltOS"
+                            name="brnHaltOS"
+                            class="normal_button btn btn-default"
+                            disabled="disabled"
+                            title="halt"
+                            tabindex="1"><span class="glyphicon glyphicon-stop"></span></button>
 
                     <button type="button"
-                           id = "btnReset"
-                           name="brnReset"
-                           class="normal_button btn btn-danger pull-right"
-                           disabled="disabled"
-                           title="reset"
-                           tabindex="2"><span class="glyphicon glyphicon-off"></span></button>
+                            id = "btnReset"
+                            name="brnReset"
+                            class="normal_button btn btn-danger pull-right"
+                            disabled="disabled"
+                            title="reset"
+                            tabindex="2"><span class="glyphicon glyphicon-off"></span></button>
                 </div>
 
                 <div class="row-fluid">
 
                     <div id="divConsole" style="height:540px; float:left;" class="span6 pull-left">
                         <div id="taskbar"></div>
-                        <canvas id="display"
-                                width="500px"
-                                height="480px"
-                                tabindex="3">
-                        </canvas>
+                        <div class="clearfix"></div>
+                        <div class="canvas">
+                            <canvas id="display"
+                                    width="500px"
+                                    height="480px"
+                                    tabindex="3">
+                            </canvas>
+                        </div>
                     </div>
                     <div class="span6 pull-left">
 
@@ -69,12 +72,12 @@
                                       rows="10"
                                       ></textarea>
                         </div>
-                        
-                        
+
+
                         <div id="memory">
                             <label>Memory</label>
                             <div class="card content"></div>
-                            
+
                         </div>
 
                         <div id="divUserProgramInput">
