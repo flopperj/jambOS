@@ -310,15 +310,9 @@ function shellStatus() {
 function shellLoad() {
     var textarea = document.getElementById("taProgramInput");
     if (/[0-9A-F]/.test(textarea.value.trim()) && textarea.value.split(" ").length % 2 === 0) {
-
-        // sanitize text
+        
         var input = textarea.value.split(" ");
-
-        // write to memory
-        for (var i = 0; i < input.length; i++)
-            _CPU.memory.write(i, input[i]);
-
-        _CPU.memory.updateMemoryDisplay();
+        _CPU.memory.insert(0, input);
 
         _StdIn.putText("The user input value passed the test!");
     } else if (!textarea.value.trim())

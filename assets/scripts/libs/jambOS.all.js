@@ -591,6 +591,25 @@ jambOS.host.Memory = jambOS.util.createClass(/** @scopee jambOS.host.Memory.prot
         this.storage[address] = data;
     },
     /**
+     * Inserts data to storage starting from the specified storage address
+     * 
+     * @public
+     * @param {int} start starting address point
+     * @param {array} data data to add to storage
+     */
+    insert: function(start, data){
+        
+        var self = this;
+        
+        var lastAddress = data.length + start;
+
+        // write to memory
+        for (var i = start; i < lastAddress; i++)
+            self.write(i, data[i]);
+
+        self.updateMemoryDisplay();
+    },
+    /**
      * Updates content that is on memory for display on the OS
      * 
      * @public
@@ -598,19 +617,16 @@ jambOS.host.Memory = jambOS.util.createClass(/** @scopee jambOS.host.Memory.prot
      */
     updateMemoryDisplay: function() {
         var self = this;
-        var cols = 8;
-        var rows = TOTAL_MEMORY / cols;
-
-        var table = "<table>";
-
-        for (var i = 0; i < rows; i++) {
-            table += "<tr class='" + (self.read((8 * (i + 1)) - 8) !== 0 ? "has-value" : "") + "'>";
-            table += "<td>0x" + self._decimalToHex((8 * (i + 1)) - 8, 4) + "</td>";
-            for (var j = 0; j < cols; j++) {                
-                var address = i + j;
-                table += "<td>" + self.read(address) + "</td>";
-            }
-            table += "</tr>";
+        var table = "<table><tr>";
+        var i = 0;
+        while (TOTAL_MEMORY > i) {
+            if (i % 8 === 0) {
+                table += "</tr><tr class='" + (self.read(i) !== 0 ? "has-value" : "") + "'>";
+                table += "<td>0x" + self._decimalToHex(i, 4) + "</td>";
+                table += "<td>" + self.read(i) + "</td>";
+            } else
+                table += "<td>" + self.read(i) + "</td>";
+            i++;
         }
         table += "</table>";
 
@@ -1771,15 +1787,9 @@ function shellStatus() {
 function shellLoad() {
     var textarea = document.getElementById("taProgramInput");
     if (/[0-9A-F]/.test(textarea.value.trim()) && textarea.value.split(" ").length % 2 === 0) {
-
-        // sanitize text
+        
         var input = textarea.value.split(" ");
-
-        // write to memory
-        for (var i = 0; i < input.length; i++)
-            _CPU.memory.write(i, input[i]);
-
-        _CPU.memory.updateMemoryDisplay();
+        _CPU.memory.insert(0, input);
 
         _StdIn.putText("The user input value passed the test!");
     } else if (!textarea.value.trim())
