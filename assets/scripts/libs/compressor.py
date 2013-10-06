@@ -42,6 +42,8 @@ SCRIPTS = [
            "../host/device.class.js",
            "../host/memory.class.js",
            "../host/cpu.class.js",
+           "../os/memorymanager.class.js",
+           "../os/processManager.class.js",
            "../os/interrupt.js",
            "../os/canvastext.js",
            "../os/console.class.js",

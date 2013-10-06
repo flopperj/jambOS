@@ -8,24 +8,36 @@
  *                             passed to the class
  *==============================================================================
  */
-jambOS.host.Memory = jambOS.util.createClass(/** @scopee jambOS.host.Memory.prototype */{
+jambOS.host.Memory = jambOS.util.createClass( /** @scopee jambOS.host.Memory.prototype */{
+    /**
+     * @property {int} size             - Size of Memory
+     */
+    size: 0,
     /**
      * @property {array} storage
      */
     storage: new Array(),
     /**
-     * Constructor
+     * @property {string} type
      */
-    initialize: function() {
-
+    type: "memory",
+    /**
+     * Constructor
+     * @param {object} options
+     * @returns {jambOS.host.Memory}
+     */
+    initialize: function(options) {
         var self = this;
+    
+        options || (options = {});
+        self.setOptions(options);
 
         // initialize storage memory array with zeros
-        for (var i = 0; i < TOTAL_MEMORY; i++) {
+        for (var i = 0; i < self.size; i++) {
             self.write(i, 00);
         }
-
-        self.updateMemoryDisplay();
+        
+        return this;
     },
     /**
      * Reads data from storage
@@ -51,78 +63,16 @@ jambOS.host.Memory = jambOS.util.createClass(/** @scopee jambOS.host.Memory.prot
      * @public
      * @param {int} start starting address point
      * @param {array} data data to add to storage
-     * @returns {jambOS.OS.ProcessControlBlock} pcb
      */
     insert: function(start, data) {
 
         var self = this;
-        var memorySlots = [];
 
         // write to memory
         for (var i = 0; i < data.length; i++) {
             self.write(i + start, data[i]);
-            memorySlots.push(i + start);
-        }
+        }        
 
-        var pid = _CPU.processes.length;
-        var pcb = new jambOS.OS.ProcessControlBlock({
-            pid: pid,
-            pc: _CPU.pc,
-            base: start,
-            limit: memorySlots.length,
-            slots: memorySlots,
-            xReg: _CPU.xReg,
-            yReg: _CPU.yReg,
-            zFlag: _CPU.zFlag
-        });
-        
-        _CPU.processes.push(pcb);
-
-        self.updateMemoryDisplay();
-        
-        return pcb;
-    },
-    /**
-     * Updates content that is on memory for display on the OS
-     * 
-     * @public
-     * @method updateDisplay
-     */
-    updateMemoryDisplay: function() {
-        var self = this;
-        var table = "<table><tr>";
-        var i = 0;
-        while (TOTAL_MEMORY > i) {
-            if (i % 8 === 0) {
-                table += "</tr><tr class='" + (self.read(i) !== 0 ? "has-value" : "") + "'>";
-                table += "<td>0x" + self._decimalToHex(i, 4) + "</td>";
-                table += "<td>" + self.read(i) + "</td>";
-            } else
-                table += "<td>" + self.read(i) + "</td>";
-            i++;
-        }
-        table += "</table>";
-
-        // add to the memory div
-        $("#memory .content").html(table);
-    },
-    /**
-     * Converts decimal values to hex
-     * 
-     * @private
-     * @method _decimalToHex
-     * @param {Number} d
-     * @param {int} padding
-     * @returns {string} hex
-     */
-    _decimalToHex: function(d, padding) {
-        var hex = Number(d).toString(16);
-        padding = typeof (padding) === "undefined" || padding === null ? padding = 2 : padding;
-
-        while (hex.length < padding) {
-            hex = "0" + hex;
-        }
-
-        return hex.toUpperCase();
+        _Kernel.memoryManager.updateMemoryDisplay();
     }
 });

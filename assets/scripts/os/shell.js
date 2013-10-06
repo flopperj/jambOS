@@ -317,7 +317,7 @@ function shellLoad() {
     if (/[0-9A-F]/.test(textarea.value.trim()) && textarea.value.split(" ").length % 2 === 0) {
         
         var input = textarea.value.split(" ");
-        var proccess = _CPU.memory.insert(0, input);
+        var proccess = _Kernel.processManager.load(input);
 
         _StdIn.putText("Process " + proccess.pid + " has been added to memory");
         
@@ -458,5 +458,13 @@ function shellPrompt(args)
 }
 
 function shellRun(args){
-    console.log(args);
+    var pid = parseInt(args[0]);
+    var pcb = $.grep(_Kernel.processManager.processes, function(el){
+        return this.pid === pid;
+    })[0];
+    
+    if(pcb){
+        _Kernel.processManager.execute(pcb);
+    }else
+        _StdIn.putText("Invalid Process ID");
 }

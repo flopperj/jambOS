@@ -16,7 +16,9 @@
  */
 
 jambOS.OS.Kernel = jambOS.util.createClass({
-    keyboardDrive: null,
+    keyboardDriver: null,
+    memoryManager: null,
+    ProcessManager: null,
     /**
      * Constructor
      */
@@ -24,6 +26,9 @@ jambOS.OS.Kernel = jambOS.util.createClass({
 
         // support Previous calls from outside
         krnInterruptHandler = this.interruptHandler;
+        
+        this.memoryManager = new jambOS.OS.MemoryManager();
+        this.processManager = new jambOS.OS.ProcessManager();
     },
     /**
      * Contains OS Startup and shutdown routines
@@ -140,11 +145,15 @@ jambOS.OS.Kernel = jambOS.util.createClass({
                 self.keyboardDriver.isr(params);   // Kernel mode device driver
                 _StdIn.handleInput();
                 break;
+            case PROCESS_INITIATION_IRQ:
+                self.processInitiationISR(params);
+            break;
             default:
                 self.trapError("Invalid Interrupt Request. irq=" + irq + " params=[" + params + "]");
         }
     },
-    imerISRL: function()  // The built-in TIMER (not clock) Interrupt Service Routine (as opposed to an ISR coming from a device driver).
+    processInitiationISR: function(){},
+    timerISR: function()  // The built-in TIMER (not clock) Interrupt Service Routine (as opposed to an ISR coming from a device driver).
     {
         // Check multiprogramming parameters and enforce quanta here. Call the scheduler / context switch here if necessary.
     },

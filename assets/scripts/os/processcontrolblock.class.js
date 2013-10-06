@@ -30,9 +30,9 @@ jambOS.OS.ProcessControlBlock = jambOS.util.createClass(/** @scope jambOS.OS.Pro
      */
     slots: [],
     /**
-     * @property {string} state             - Process State
+     * @property {string} state             - Process State (new, running, waiting, ready, terminated)
      */
-    state: null,
+    state: "new",
     /**
      * @property {int} xReg                 - X Register
      */

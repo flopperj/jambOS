@@ -37,8 +37,8 @@ var CPU_CLOCK_INTERVAL = 100;   // This is in ms, or milliseconds, so 1000 = 1 s
 var TIMER_IRQ = 0;  // Pages 23 (timer), 9 (interrupts), and 561 (interrupt priority).
                     // NOTE: The timer is different from hardware/host clock pulses. Don't confuse these.
 var KEYBOARD_IRQ = 1;  
-
-var TOTAL_MEMORY = 768;
+var PROCESS_INITIATION_IRQ = 2;
+var PROCESS_TERMINATION_IRQ = 3;
 
 //
 // Global Variables
@@ -553,24 +553,36 @@ jambOS.host.Device = jambOS.util.createClass({
  *                             passed to the class
  *==============================================================================
  */
-jambOS.host.Memory = jambOS.util.createClass(/** @scopee jambOS.host.Memory.prototype */{
+jambOS.host.Memory = jambOS.util.createClass( /** @scopee jambOS.host.Memory.prototype */{
+    /**
+     * @property {int} size             - Size of Memory
+     */
+    size: 0,
     /**
      * @property {array} storage
      */
     storage: new Array(),
     /**
-     * Constructor
+     * @property {string} type
      */
-    initialize: function() {
-
+    type: "memory",
+    /**
+     * Constructor
+     * @param {object} options
+     * @returns {jambOS.host.Memory}
+     */
+    initialize: function(options) {
         var self = this;
+    
+        options || (options = {});
+        self.setOptions(options);
 
         // initialize storage memory array with zeros
-        for (var i = 0; i < TOTAL_MEMORY; i++) {
+        for (var i = 0; i < self.size; i++) {
             self.write(i, 00);
         }
-
-        self.updateMemoryDisplay();
+        
+        return this;
     },
     /**
      * Reads data from storage
@@ -596,36 +608,100 @@ jambOS.host.Memory = jambOS.util.createClass(/** @scopee jambOS.host.Memory.prot
      * @public
      * @param {int} start starting address point
      * @param {array} data data to add to storage
-     * @returns {jambOS.OS.ProcessControlBlock} pcb
      */
     insert: function(start, data) {
 
         var self = this;
-        var memorySlots = [];
 
         // write to memory
         for (var i = 0; i < data.length; i++) {
             self.write(i + start, data[i]);
-            memorySlots.push(i + start);
-        }
+        }        
 
-        var pid = _CPU.processes.length;
-        var pcb = new jambOS.OS.ProcessControlBlock({
-            pid: pid,
-            pc: _CPU.pc,
-            base: start,
-            limit: memorySlots.length,
-            slots: memorySlots,
-            xReg: _CPU.xReg,
-            yReg: _CPU.yReg,
-            zFlag: _CPU.zFlag
-        });
-        
-        _CPU.processes.push(pcb);
+        _Kernel.memoryManager.updateMemoryDisplay();
+    }
+});
+/**
+ * =============================================================================
+ * cpu.class.js
+ * Routines for the host CPU simulation, NOT for the OS itself.  
+ * In this manner, it's A LITTLE BIT like a hypervisor,
+ * in that the Document environment inside a browser is the "bare metal" (so to speak) for which we write code
+ * that hosts our client OS. But that analogy only goes so far, and the lines are blurred, because we are using 
+ * JavaScript in both the host and client environments.
+ * 
+ * This code references page numbers in the text book: 
+ * Operating System Concepts 8th edition by Silberschatz, Galvin, and Gagne.  ISBN 978-0-470-12872-5
+ * 
+ * @requires globals.js
+ * @public
+ * @class Cpu
+ * @memberOf jambOS.host
+ * =============================================================================
+ */
+jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype */{
+    pc: 0, // Program Counter
+    acc: 0, // Accumulator
+    xReg: 0, // X register
+    yReg: 0, // Y register
+    zFlag: 0, // Z-ero flag (Think of it as "isZero".)
+    isExecuting: false,
+    currentProcess: null,
+    initialize: function() {
+    },
+    start: function(pcb){
+        this.currentProcess = pcb;
+        this.isExecuting = true;
+    },
+    stop: function(){        
+        this.pc = 0;
+        this.acc = 0;
+        this.xReg = 0;
+        this.yReg = 0;
+        this.zFlag = 0;
+        this.isExecuting = false;
+        this.currentProcess = null;
+    },
+    cycle: function() {
+        _Kernel.trace("CPU cycle");
+        // TODO: Accumulate CPU usage and profiling statistics here.
+        // Do the real work here. Be sure to set this.isExecuting appropriately.
+    }
+});
 
+/**
+ *==============================================================================
+ * Class MemoryManager
+ *    
+ * @class MemoryManager
+ * @memberOf jambOS 
+ * @param {object} - Array Object containing the default values to be 
+ *                             passed to the class
+ *==============================================================================
+ */
+jambOS.OS.MemoryManager = jambOS.util.createClass({
+    /**
+     * @property {jambOS.host.Memory} memory
+     */
+    memory: null,
+    /**
+     * @property {string} type
+     */
+    type: "memorymanager",
+    /**
+     * @property {int} memorySize
+     */
+    memorySize: 768,
+    /**
+     * Constructor
+     */
+    initialize: function(){
+        var self = this;
+        self.memory = new jambOS.host.Memory({size: self.memorySize});
         self.updateMemoryDisplay();
+    },
+    deallocate: function(pcb){
         
-        return pcb;
     },
     /**
      * Updates content that is on memory for display on the OS
@@ -637,13 +713,13 @@ jambOS.host.Memory = jambOS.util.createClass(/** @scopee jambOS.host.Memory.prot
         var self = this;
         var table = "<table><tr>";
         var i = 0;
-        while (TOTAL_MEMORY > i) {
+        while (self.memory.size > i) {
             if (i % 8 === 0) {
-                table += "</tr><tr class='" + (self.read(i) !== 0 ? "has-value" : "") + "'>";
+                table += "</tr><tr class='" + (self.memory.read(i) !== 0 ? "has-value" : "") + "'>";
                 table += "<td>0x" + self._decimalToHex(i, 4) + "</td>";
-                table += "<td>" + self.read(i) + "</td>";
+                table += "<td>" + self.memory.read(i) + "</td>";
             } else
-                table += "<td>" + self.read(i) + "</td>";
+                table += "<td>" + self.memory.read(i) + "</td>";
             i++;
         }
         table += "</table>";
@@ -671,46 +747,63 @@ jambOS.host.Memory = jambOS.util.createClass(/** @scopee jambOS.host.Memory.prot
         return hex.toUpperCase();
     }
 });
-/**
- * =============================================================================
- * cpu.class.js
- * Routines for the host CPU simulation, NOT for the OS itself.  
- * In this manner, it's A LITTLE BIT like a hypervisor,
- * in that the Document environment inside a browser is the "bare metal" (so to speak) for which we write code
- * that hosts our client OS. But that analogy only goes so far, and the lines are blurred, because we are using 
- * JavaScript in both the host and client environments.
- * 
- * This code references page numbers in the text book: 
- * Operating System Concepts 8th edition by Silberschatz, Galvin, and Gagne.  ISBN 978-0-470-12872-5
- * 
- * @requires globals.js
- * @public
- * @class Cpu
- * @memberOf jambOS.host
- * =============================================================================
- */
-jambOS.host.Cpu = jambOS.util.createClass({
-    pc: 0, // Program Counter
-    acc: 0, // Accumulator
-    xReg: 0, // X register
-    yReg: 0, // Y register
-    zFlag: 0, // Z-ero flag (Think of it as "isZero".)
-    isExecuting: false,
-    memory: null,
-    processes: [], // contains all process in cpu
-    initialize: function() {
-        this.pc = 0;
-        this.acc = 0;
-        this.xReg = 0;
-        this.yReg = 0;
-        this.zFlag = 0;
-        this.isExecuting = false;
-        this.memory = new jambOS.host.Memory();
+jambOS.OS.ProcessManager = jambOS.util.createClass({
+    type: "processmanager",
+    /**
+     * @property {[jambOS.OS.ProcessControlBlock]} processes
+     */
+    processes: [],
+    /**
+     * Constructor
+     * @param {object} options
+     * @returns {jambOS.OS.ProcessManager}
+     */
+    initialize: function(options) {
+        options || (options = {});
+        this.setOptions(options);
+
+        return this;
     },
-    cycle: function() {
-        _Kernel.trace("CPU cycle");
-        // TODO: Accumulate CPU usage and profiling statistics here.
-        // Do the real work here. Be sure to set this.isExecuting appropriately.
+    execute: function(pcb) {
+        _Kernel.interruptHandler(PROCESS_INITIATION_IRQ, pcb);
+    },
+    /**
+     * Loads program to memory
+     * 
+     * @param {string} program
+     * @returns {jambOS.OS.ProcessControlBlock} pcb
+     */
+    load: function(program){
+        
+        _Kernel.memoryManager.memory.insert(0, program);
+
+        var pid = this.processes.length;
+        var pcb = new jambOS.OS.ProcessControlBlock({
+            pid: pid,
+            pc: 0,
+            base: null,
+            limit: null,
+            ir: 0,
+            xReg: 0,
+            yReg: 0,
+            zFlag: 0
+        });
+        
+        this.processes.push(pcb);
+        
+        return pcb;   
+    },
+    
+    /**
+     * Unloads process from memory
+     * 
+     * @param {jambOS.OS.ProcessControlBlock} pcb
+     */
+    unload: function(pcb){
+        _Kernel.memoryManager.deallocate(pcb);
+        var index = this.processes.indexOf(pcb);
+        if(index > -1)
+            this.processes.splice(index, 1);
     }
 });
 
@@ -1813,7 +1906,7 @@ function shellLoad() {
     if (/[0-9A-F]/.test(textarea.value.trim()) && textarea.value.split(" ").length % 2 === 0) {
         
         var input = textarea.value.split(" ");
-        var proccess = _CPU.memory.insert(0, input);
+        var proccess = _Kernel.processManager.load(input);
 
         _StdIn.putText("Process " + proccess.pid + " has been added to memory");
         
@@ -1954,7 +2047,15 @@ function shellPrompt(args)
 }
 
 function shellRun(args){
-    console.log(args);
+    var pid = parseInt(args[0]);
+    var pcb = $.grep(_Kernel.processManager.processes, function(el){
+        return this.pid === pid;
+    })[0];
+    
+    if(pcb){
+        _Kernel.processManager.execute(pcb);
+    }else
+        _StdIn.putText("Invalid Process ID");
 }
 
 /**
@@ -1975,7 +2076,9 @@ function shellRun(args){
  */
 
 jambOS.OS.Kernel = jambOS.util.createClass({
-    keyboardDrive: null,
+    keyboardDriver: null,
+    memoryManager: null,
+    ProcessManager: null,
     /**
      * Constructor
      */
@@ -1983,6 +2086,9 @@ jambOS.OS.Kernel = jambOS.util.createClass({
 
         // support Previous calls from outside
         krnInterruptHandler = this.interruptHandler;
+        
+        this.memoryManager = new jambOS.OS.MemoryManager();
+        this.processManager = new jambOS.OS.ProcessManager();
     },
     /**
      * Contains OS Startup and shutdown routines
@@ -2099,11 +2205,15 @@ jambOS.OS.Kernel = jambOS.util.createClass({
                 self.keyboardDriver.isr(params);   // Kernel mode device driver
                 _StdIn.handleInput();
                 break;
+            case PROCESS_INITIATION_IRQ:
+                self.processInitiationISR(params);
+            break;
             default:
                 self.trapError("Invalid Interrupt Request. irq=" + irq + " params=[" + params + "]");
         }
     },
-    imerISRL: function()  // The built-in TIMER (not clock) Interrupt Service Routine (as opposed to an ISR coming from a device driver).
+    processInitiationISR: function(){},
+    timerISR: function()  // The built-in TIMER (not clock) Interrupt Service Routine (as opposed to an ISR coming from a device driver).
     {
         // Check multiprogramming parameters and enforce quanta here. Call the scheduler / context switch here if necessary.
     },
@@ -2205,9 +2315,9 @@ jambOS.OS.ProcessControlBlock = jambOS.util.createClass(/** @scope jambOS.OS.Pro
      */
     slots: [],
     /**
-     * @property {string} state             - Process State
+     * @property {string} state             - Process State (new, running, waiting, ready, terminated)
      */
-    state: null,
+    state: "new",
     /**
      * @property {int} xReg                 - X Register
      */

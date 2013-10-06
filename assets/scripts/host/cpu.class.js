@@ -16,23 +16,28 @@
  * @memberOf jambOS.host
  * =============================================================================
  */
-jambOS.host.Cpu = jambOS.util.createClass({
+jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype */{
     pc: 0, // Program Counter
     acc: 0, // Accumulator
     xReg: 0, // X register
     yReg: 0, // Y register
     zFlag: 0, // Z-ero flag (Think of it as "isZero".)
     isExecuting: false,
-    memory: null,
-    processes: [], // contains all process in cpu
+    currentProcess: null,
     initialize: function() {
+    },
+    start: function(pcb){
+        this.currentProcess = pcb;
+        this.isExecuting = true;
+    },
+    stop: function(){        
         this.pc = 0;
         this.acc = 0;
         this.xReg = 0;
         this.yReg = 0;
         this.zFlag = 0;
         this.isExecuting = false;
-        this.memory = new jambOS.host.Memory();
+        this.currentProcess = null;
     },
     cycle: function() {
         _Kernel.trace("CPU cycle");
