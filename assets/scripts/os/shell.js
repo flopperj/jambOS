@@ -460,7 +460,7 @@ function shellPrompt(args)
 function shellRun(args){
     var pid = parseInt(args[0]);
     var pcb = $.grep(_Kernel.processManager.processes, function(el){
-        return this.pid === pid;
+        return el.pid === pid;
     })[0];
     
     if(pcb){

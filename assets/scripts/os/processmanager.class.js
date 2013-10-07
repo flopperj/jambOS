@@ -24,23 +24,26 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
      * @param {string} program
      * @returns {jambOS.OS.ProcessControlBlock} pcb
      */
-    load: function(program){
+    load: function(program){        
         
         _Kernel.memoryManager.memory.insert(0, program);
-
+        
+        var slots = _Kernel.memoryManager.slots;
+        var activeSlot = _Kernel.memoryManager.activeSlot;
+        
         var pid = this.processes.length;
         var pcb = new jambOS.OS.ProcessControlBlock({
             pid: pid,
             pc: 0,
-            base: null,
-            limit: null,
-            ir: 0,
+            base: slots[activeSlot].base,
+            limit: slots[activeSlot].limit,
             xReg: 0,
             yReg: 0,
             zFlag: 0
         });
         
         this.processes.push(pcb);
+        _Kernel.memoryManager.allocate(pcb);
         
         return pcb;   
     },

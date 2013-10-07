@@ -26,7 +26,7 @@ jambOS.OS.Kernel = jambOS.util.createClass({
 
         // support Previous calls from outside
         krnInterruptHandler = this.interruptHandler;
-        
+
         this.memoryManager = new jambOS.OS.MemoryManager();
         this.processManager = new jambOS.OS.ProcessManager();
     },
@@ -147,12 +147,22 @@ jambOS.OS.Kernel = jambOS.util.createClass({
                 break;
             case PROCESS_INITIATION_IRQ:
                 self.processInitiationISR(params);
-            break;
+                break;
+            case PROCESS_TERMINATION_IRQ:
+                self.processTerminationISR(params);
+                break;
             default:
                 self.trapError("Invalid Interrupt Request. irq=" + irq + " params=[" + params + "]");
         }
     },
-    processInitiationISR: function(){},
+    processInitiationISR: function(pcb) {
+        _CPU.start(pcb);
+    },
+    processTerminationISR: function(pcb) {
+        _CPU.stop();
+        this.memoryManager.deallocate(pcb);
+        
+    },
     timerISR: function()  // The built-in TIMER (not clock) Interrupt Service Routine (as opposed to an ISR coming from a device driver).
     {
         // Check multiprogramming parameters and enforce quanta here. Call the scheduler / context switch here if necessary.

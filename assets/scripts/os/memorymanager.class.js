@@ -22,15 +22,55 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
      */
     memorySize: 768,
     /**
+     * @property {object} slots                 
+     */
+    slots: {},
+    activeSlot: 1,
+    /**
      * Constructor
      */
-    initialize: function(){
+    initialize: function() {
         var self = this;
         self.memory = new jambOS.host.Memory({size: self.memorySize});
+        self.slots = {
+            1: {
+                base: 0,
+                limit: 255,
+                open: true
+            },
+            2: {
+                base: 256,
+                limit: 512,
+                open: false
+            },
+            3: {
+                base: 513,
+                limit: 767,
+                open: false
+            }
+        };
         self.updateMemoryDisplay();
     },
-    deallocate: function(pcb){
+    allocate: function(pcb) {
+        var self = this;
+        pcb.set({base: self.slots[1].base, limit: self.slots[1].limit});
+    },
+    deallocate: function(pcb) {
+        var self = this;
+        for (var i = pcb.base; i < pcb.limit; i++)
+        {
+            self.memory.write(i, 0);
+        }
+        pcb.base = null;
+        pcb.limit = null;
         
+        self.updateMemoryDisplay();
+        
+        _Kernel.processManager.processes = [];
+    },
+    validateAddress: function(address){
+        var self = this;
+        return (address <= self.slots[self.activeSlot].limit);
     },
     /**
      * Updates content that is on memory for display on the OS
@@ -45,7 +85,7 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
         while (self.memory.size > i) {
             if (i % 8 === 0) {
                 table += "</tr><tr class='" + (self.memory.read(i) !== 0 ? "has-value" : "") + "'>";
-                table += "<td>0x" + self._decimalToHex(i, 4) + "</td>";
+                table += "<td>0x" + self.decimalToHex(i, 4) + "</td>";
                 table += "<td>" + self.memory.read(i) + "</td>";
             } else
                 table += "<td>" + self.memory.read(i) + "</td>";
@@ -60,12 +100,12 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
      * Converts decimal values to hex
      * 
      * @private
-     * @method _decimalToHex
+     * @method decimalToHex
      * @param {Number} d
      * @param {int} padding
      * @returns {string} hex
      */
-    _decimalToHex: function(d, padding) {
+    decimalToHex: function(d, padding) {
         var hex = Number(d).toString(16);
         padding = typeof (padding) === "undefined" || padding === null ? padding = 2 : padding;
 
