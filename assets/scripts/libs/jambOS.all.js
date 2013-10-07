@@ -818,8 +818,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     loadXRegWithConstant: function(self)
     {
         var byte = _Kernel.memoryManager.memory.read(self.pc++);
-
-        // Place the decimal conversion of next byte in memory in the X register
         self.xReg = parseInt(byte, 16);
     },
     /**
@@ -837,7 +835,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var address = parseInt((byteTwo + byteOne), 16);
         var value = _Kernel.memoryManager.memory.read(address);
 
-        // Make sure it is not out of bounds (ie. in that block and memory address exists)
         if (_Kernel.memoryManager.validateAddress(address))
         {
             // Place contents of the memory location (in decimal form) in the x register
@@ -895,6 +892,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      * opCode: 00
      */
     breakOperation: function(self) {
+        console.log(self.currentProcess);
         _Kernel.interruptHandler(PROCESS_TERMINATION_IRQ, self.currentProcess);
     },
     /**
@@ -929,19 +927,16 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      */
     branchXBytes: function(self)
     {
+
         if (self.zFlag === 0)
         {
             var branchValue = parseInt(_Kernel.memoryManager.memory.read(self.pc++), 16);
-
             self.pc += branchValue;
 
-            if (self.pc > 255)
+            if (self.pc > self.currentProcess.limit)
             {
-                self.pc -= 256;
+                self.pc -= self.currentProcess.limit + 1;
             }
-            self.pc++;
-        } else {
-            self.pc += 2;
         }
     },
     /**
@@ -963,9 +958,9 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
             decimalValue++;
 
-            var hexValue = _Kernel.memoryManger.decimalToHex(decimalValue);
+            var hexValue = _Kernel.memoryManager.decimalToHex(decimalValue);
 
-            _Kernel.memoryManage.write(address, hexValue);
+            _Kernel.memoryManager.memory.write(address, hexValue);
         } else {
             // TODO: Halt the OS
             // TODO: Show error in log
@@ -981,6 +976,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      */
     systemCall: function(self)
     {
+
         if (self.xReg === 1)
         {
             var value = parseInt(self.yReg).toString();
@@ -993,7 +989,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             _StdIn.advanceLine();
 
             _StdIn.putText(">");
-        } else {
+        } else if (self.xReg === 2) {
 
             var address = parseInt(self.yReg, 16);
 
@@ -1011,8 +1007,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             _StdIn.advanceLine();
             _StdIn.putText(">");
         }
-
-        self.pc++;
     }
 });
 
