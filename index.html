@@ -16,9 +16,7 @@
         <!-- Other Routines -->
         <script type="text/javascript" src="http://www.labouseur.com/courses/os/projects/glados.js"></script>   
     </head>
-
     <body>
-
         <div id="divMain">
             <div class="container">
                 <h1>JambOS</h1>
@@ -31,9 +29,10 @@
                             tabindex="0"><span class="glyphicon glyphicon-play"></span></button>
                     <button type="button"
                             id = "btnStepOver"
-                            name="brnStartOS"
+                            name="brnStepOver"
                             class="normal_button btn btn-default"
-                            title="start"
+                            disabled="disabled"
+                            title="Step Over"
                             tabindex="0"><span class="glyphicon glyphicon-chevron-right"></span></button>
 
                     <button type="button"
@@ -84,6 +83,30 @@
                             <label>Memory</label>
                             <div class="card content"></div>
 
+                        </div>
+                        
+                        <div id="cpuStatus">
+                            <label>CPU Status</label>
+                            <div class="card content">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>PC</th>
+                                        <th>ACC</th>
+                                        <th>X Register</th>
+                                        <th>Y Register</th>
+                                        <th>Z Flag</th>
+                                    </tr>
+                                    <tr>
+                                        <td class="pc">0</td>
+                                        <td class="acc">0</td>
+                                        <td class="x-register">0</td>
+                                        <td class="y-register">0</td>
+                                        <td class="z-flag">0</td>
+                                    </tr>
+                                </thead>
+                            </table>
+                            </div>
                         </div>
 
                         <div id="divUserProgramInput">

@@ -103,6 +103,14 @@ h1, label{
     border: 1px solid #000;
 }
 
+#cpuStatus{
+    margin-top: 20px;
+}
+
+#cpuStatus .content{
+    background-color: #fff;
+}
+
 .card{
     box-shadow: 0 3px 0 rgba(0, 0, 0, 0.1);
     -moz-box-shadow: 0 3px 0 rgba(0, 0, 0, 0.1);

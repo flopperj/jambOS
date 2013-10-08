@@ -74,6 +74,10 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         this.zFlag = 0;
         this.isExecuting = false;
         this.currentProcess = null;
+        
+        
+        // disable stepover button
+        $("#btnStepOver").prop("disabled", true);
     },
     /**
      * Called every clock cycle
@@ -85,12 +89,17 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         // TODO: Accumulate CPU usage and profiling statistics here.
         // Do the real work here. Be sure to set this.isExecuting appropriately.
 
+        $("#cpuStatus .pc").text(self.pc);
+        $("#cpuStatus .acc").text(self.acc);
+        $("#cpuStatus .x-register").text(self.xReg);
+        $("#cpuStatus .z-flag").text(self.zFlag);
+
         var opCode = _Kernel.memoryManager.memory.read(self.pc++).toString().toLowerCase();
         var operation = self.getOpCode(opCode);
 
         if (operation) {
             operation(self);
-            
+
             if (self.currentProcess)
                 self.currentProcess.set({acc: self.acc, pc: self.pc, xReg: self.xReg, yReg: self.yReg, zFlag: self.zFlag, state: "running"});
 
@@ -290,7 +299,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      * opCode: 00
      */
     breakOperation: function(self) {
-        console.log(self.currentProcess);
         _Kernel.interruptHandler(PROCESS_TERMINATION_IRQ, self.currentProcess);
     },
     /**
@@ -385,7 +393,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             _StdIn.advanceLine();
 
             _StdIn.putText(">");
-            
+
         } else if (self.xReg === 2) {
 
             var address = parseInt(self.yReg, 16);
@@ -398,7 +406,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             {
                 currentByte = _Kernel.memoryManager.memory.read(address++);
                 char = String.fromCharCode(parseInt(currentByte, 16));
-                _StdIn.putText(char);                
+                _StdIn.putText(char);
             }
 
             _StdIn.advanceLine();

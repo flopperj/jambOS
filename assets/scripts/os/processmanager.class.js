@@ -4,6 +4,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
      * @property {[jambOS.OS.ProcessControlBlock]} processes
      */
     processes: [],
+    currentProcessID: 0,
     /**
      * Constructor
      * @param {object} options
@@ -24,14 +25,17 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
      * @param {string} program
      * @returns {jambOS.OS.ProcessControlBlock} pcb
      */
-    load: function(program){        
-        
+    load: function(program) {
+
+        // enable stepover button
+        $("#btnStepOver").prop("disabled", false);
+
         _Kernel.memoryManager.memory.insert(0, program);
-        
+
         var slots = _Kernel.memoryManager.slots;
         var activeSlot = _Kernel.memoryManager.activeSlot;
-        
-        var pid = this.processes.length;
+
+        var pid = this.currentProcessID++;
         var pcb = new jambOS.OS.ProcessControlBlock({
             pid: pid,
             pc: 0,
@@ -41,22 +45,22 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
             yReg: 0,
             zFlag: 0
         });
-        
+
         this.processes.push(pcb);
         _Kernel.memoryManager.allocate(pcb);
-        
-        return pcb;   
+
+        return pcb;
     },
-    
     /**
      * Unloads process from memory
      * 
      * @param {jambOS.OS.ProcessControlBlock} pcb
      */
-    unload: function(pcb){
+    unload: function(pcb) {
+
         _Kernel.memoryManager.deallocate(pcb);
         var index = this.processes.indexOf(pcb);
-        if(index > -1)
+        if (index > -1)
             this.processes.splice(index, 1);
     }
 });

@@ -401,13 +401,10 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
         });
 
         // load first default program
-        $("#taProgramInput").val("A9 03 8D 41 00 A9 01 8D 40 00 AC 40 00 A2 01 FF EE 40 00 AE 40 00 EC 41 00 D0 EF A9 44 8D 42 00 A9 4F 8D 43 00 A9 4E 8D 44 00 A9 45 8D 45 00 A9 00 8D 46 00 A2 02 A0 42 FF 00");
+//        $("#taProgramInput").val("A9 03 8D 41 00 A9 01 8D 40 00 AC 40 00 A2 01 FF EE 40 00 AE 40 00 EC 41 00 D0 EF A9 44 8D 42 00 A9 4F 8D 43 00 A9 4E 8D 44 00 A9 45 8D 45 00 A9 00 8D 46 00 A2 02 A0 42 FF 00");
         
         // Step over
-        $("#btnStepOver").click(function(){
-            
-//            $(this).data("start", "active");
-            
+        $("#btnStepOver").click(function(){            
             if(_CPU)
                 _CPU.cycle();
         });
@@ -709,6 +706,10 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         this.zFlag = 0;
         this.isExecuting = false;
         this.currentProcess = null;
+        
+        
+        // disable stepover button
+        $("#btnStepOver").prop("disabled", true);
     },
     /**
      * Called every clock cycle
@@ -720,12 +721,17 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         // TODO: Accumulate CPU usage and profiling statistics here.
         // Do the real work here. Be sure to set this.isExecuting appropriately.
 
+        $("#cpuStatus .pc").text(self.pc);
+        $("#cpuStatus .acc").text(self.acc);
+        $("#cpuStatus .x-register").text(self.xReg);
+        $("#cpuStatus .z-flag").text(self.zFlag);
+
         var opCode = _Kernel.memoryManager.memory.read(self.pc++).toString().toLowerCase();
         var operation = self.getOpCode(opCode);
 
         if (operation) {
             operation(self);
-            
+
             if (self.currentProcess)
                 self.currentProcess.set({acc: self.acc, pc: self.pc, xReg: self.xReg, yReg: self.yReg, zFlag: self.zFlag, state: "running"});
 
@@ -925,7 +931,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      * opCode: 00
      */
     breakOperation: function(self) {
-        console.log(self.currentProcess);
         _Kernel.interruptHandler(PROCESS_TERMINATION_IRQ, self.currentProcess);
     },
     /**
@@ -1020,7 +1025,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             _StdIn.advanceLine();
 
             _StdIn.putText(">");
-            
+
         } else if (self.xReg === 2) {
 
             var address = parseInt(self.yReg, 16);
@@ -1033,7 +1038,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             {
                 currentByte = _Kernel.memoryManager.memory.read(address++);
                 char = String.fromCharCode(parseInt(currentByte, 16));
-                _StdIn.putText(char);                
+                _StdIn.putText(char);
             }
 
             _StdIn.advanceLine();
@@ -1167,6 +1172,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
      * @property {[jambOS.OS.ProcessControlBlock]} processes
      */
     processes: [],
+    currentProcessID: 0,
     /**
      * Constructor
      * @param {object} options
@@ -1187,14 +1193,17 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
      * @param {string} program
      * @returns {jambOS.OS.ProcessControlBlock} pcb
      */
-    load: function(program){        
-        
+    load: function(program) {
+
+        // enable stepover button
+        $("#btnStepOver").prop("disabled", false);
+
         _Kernel.memoryManager.memory.insert(0, program);
-        
+
         var slots = _Kernel.memoryManager.slots;
         var activeSlot = _Kernel.memoryManager.activeSlot;
-        
-        var pid = this.processes.length;
+
+        var pid = this.currentProcessID++;
         var pcb = new jambOS.OS.ProcessControlBlock({
             pid: pid,
             pc: 0,
@@ -1204,22 +1213,22 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
             yReg: 0,
             zFlag: 0
         });
-        
+
         this.processes.push(pcb);
         _Kernel.memoryManager.allocate(pcb);
-        
-        return pcb;   
+
+        return pcb;
     },
-    
     /**
      * Unloads process from memory
      * 
      * @param {jambOS.OS.ProcessControlBlock} pcb
      */
-    unload: function(pcb){
+    unload: function(pcb) {
+
         _Kernel.memoryManager.deallocate(pcb);
         var index = this.processes.indexOf(pcb);
-        if(index > -1)
+        if (index > -1)
             this.processes.splice(index, 1);
     }
 });
