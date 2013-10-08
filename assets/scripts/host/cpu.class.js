@@ -3,12 +3,14 @@
  * cpu.class.js
  * Routines for the host CPU simulation, NOT for the OS itself.  
  * In this manner, it's A LITTLE BIT like a hypervisor,
- * in that the Document environment inside a browser is the "bare metal" (so to speak) for which we write code
- * that hosts our client OS. But that analogy only goes so far, and the lines are blurred, because we are using 
+ * in that the Document environment inside a browser is the "bare metal" 
+ * (so to speak) for which we write code that hosts our client OS. But that 
+ * analogy only goes so far, and the lines are blurred, because we are using 
  * JavaScript in both the host and client environments.
  * 
  * This code references page numbers in the text book: 
- * Operating System Concepts 8th edition by Silberschatz, Galvin, and Gagne.  ISBN 978-0-470-12872-5
+ * Operating System Concepts 8th edition by Silberschatz, Galvin, and Gagne.  
+ * ISBN 978-0-470-12872-5
  * 
  * @requires globals.js
  * @public
@@ -17,12 +19,33 @@
  * =============================================================================
  */
 jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype */{
-    pc: 0, // Program Counter
-    acc: 0, // Accumulator
-    xReg: 0, // X register
-    yReg: 0, // Y register
-    zFlag: 0, // Z-ero flag (Think of it as "isZero".)
+    /**
+     * @property {int} pc                       - Program counter
+     */
+    pc: 0,
+    /**
+     * @property {int} acc                      - Accumulator
+     */
+    acc: 0,
+    /**
+     * @property {int} xReg                     - X Register
+     */
+    xReg: 0,
+    /**
+     * @property {int}  yReg                    - Y Register
+     */
+    yReg: 0,
+    /**
+     * @property {int}  zFlag                   - Z-ero flag (Think of it as "isZero".)
+     */
+    zFlag: 0,
+    /**
+     * @property {boolean} isExecuting          - Is the CPU executing?
+     */
     isExecuting: false,
+    /**
+     * @process {jambOS.OS.ProcessControl}      - currentProcess that is running
+     */
     currentProcess: null,
     /**
      * Constructor
@@ -65,14 +88,9 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var opCode = _Kernel.memoryManager.memory.read(self.pc++).toString().toLowerCase();
         var operation = self.getOpCode(opCode);
 
-//        console.log({acc: self.acc, pc: self.pc, xReg: self.xReg, yReg: self.yReg, zFlag: self.zFlag, state: "running"});
-//        console.log(opCode);
-
         if (operation) {
             operation(self);
-            console.log(opCode);
-            console.log({acc: self.acc, pc: self.pc, xReg: self.xReg, yReg: self.yReg, zFlag: self.zFlag, state: "running"});
-
+            
             if (self.currentProcess)
                 self.currentProcess.set({acc: self.acc, pc: self.pc, xReg: self.xReg, yReg: self.yReg, zFlag: self.zFlag, state: "running"});
 
@@ -82,10 +100,10 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     /*------------------Operations -----------------------*/
     /**
      * Gets an opcode function
-     * @param {key} opcode
+     * @param {string} opcode
      * @returns {function} opcode routine
      */
-    getOpCode: function(key) {
+    getOpCode: function(opcode) {
         var self = this;
         var opcodes = {
             "a9": self.loadAccWithConstant,
@@ -103,7 +121,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             "ee": self.incrementByteValue,
             "ff": self.systemCall
         };
-        return opcodes[key];
+        return opcodes[opcode];
     },
     /**
      * Load the accumulator with a constant.
@@ -367,6 +385,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             _StdIn.advanceLine();
 
             _StdIn.putText(">");
+            
         } else if (self.xReg === 2) {
 
             var address = parseInt(self.yReg, 16);
@@ -377,9 +396,9 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
             while (currentByte !== "00")
             {
-                char = String.fromCharCode(parseInt(currentByte, 16));
-                _StdIn.putText(char);
                 currentByte = _Kernel.memoryManager.memory.read(address++);
+                char = String.fromCharCode(parseInt(currentByte, 16));
+                _StdIn.putText(char);                
             }
 
             _StdIn.advanceLine();

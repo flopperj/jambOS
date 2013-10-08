@@ -125,8 +125,8 @@ function shellInit() {
 
     // processes - list the running processes and their IDs
     // kill <id> - kills the specified process id.
-    
-    
+
+
     // run
     sc = new ShellCommand();
     sc.command = "run";
@@ -313,14 +313,11 @@ function shellStatus(args) {
 }
 
 function shellLoad() {
-    var textarea = document.getElementById("taProgramInput");
-    if (/[0-9A-F]/.test(textarea.value.trim()) && textarea.value.split(" ").length % 2 === 0) {
-        
-        var input = textarea.value.split(" ");
-        var proccess = _Kernel.processManager.load(input);
-
+    var textInput = $("#taProgramInput").val();
+    if (/^[0-9a-f]{2}( [0-9a-f]{2})*$/i.test(textInput)) {
+        var proccess = _Kernel.processManager.load(textInput.split(/\s/));
         _StdIn.putText("Process " + proccess.pid + " has been added to memory");
-        
+
     } else if (!textarea.value.trim())
         _StdIn.putText("Please enter an input value then call the load command");
     else
@@ -457,14 +454,14 @@ function shellPrompt(args)
     }
 }
 
-function shellRun(args){
+function shellRun(args) {
     var pid = parseInt(args[0]);
-    var pcb = $.grep(_Kernel.processManager.processes, function(el){
+    var pcb = $.grep(_Kernel.processManager.processes, function(el) {
         return el.pid === pid;
     })[0];
-    
-    if(pcb){
+
+    if (pcb) {
         _Kernel.processManager.execute(pcb);
-    }else
+    } else
         _StdIn.putText("Invalid Process ID");
 }
