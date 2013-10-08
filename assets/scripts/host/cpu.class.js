@@ -62,14 +62,17 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         // TODO: Accumulate CPU usage and profiling statistics here.
         // Do the real work here. Be sure to set this.isExecuting appropriately.
 
-        var opCode = _Kernel.memoryManager.memory.read(self.pc++).toLowerCase();
+        var opCode = _Kernel.memoryManager.memory.read(self.pc++).toString().toLowerCase();
         var operation = self.getOpCode(opCode);
 
 //        console.log({acc: self.acc, pc: self.pc, xReg: self.xReg, yReg: self.yReg, zFlag: self.zFlag, state: "running"});
-        console.log(opCode);
+//        console.log(opCode);
 
         if (operation) {
             operation(self);
+            console.log(opCode);
+            console.log({acc: self.acc, pc: self.pc, xReg: self.xReg, yReg: self.yReg, zFlag: self.zFlag, state: "running"});
+
             if (self.currentProcess)
                 self.currentProcess.set({acc: self.acc, pc: self.pc, xReg: self.xReg, yReg: self.yReg, zFlag: self.zFlag, state: "running"});
 
@@ -291,7 +294,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         {
             // Compare contents of the memory location with the x reg
             // Set z flag if they are equal
-            self.zFlag = (parseInt(value) === self.yReg) ? 1 : 0;
+            self.zFlag = (parseInt(value) === self.xReg) ? 1 : 0;
         } else {
             // TODO: Halt the OS
             // TODO: Show error in log
@@ -304,7 +307,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      */
     branchXBytes: function(self)
     {
-
         if (self.zFlag === 0)
         {
             var branchValue = parseInt(_Kernel.memoryManager.memory.read(self.pc++), 16);
@@ -353,7 +355,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      */
     systemCall: function(self)
     {
-
         if (self.xReg === 1)
         {
             var value = parseInt(self.yReg).toString();

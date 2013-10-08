@@ -54,6 +54,7 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
     allocate: function(pcb) {
         var self = this;
         pcb.set({base: self.slots[1].base, limit: self.slots[1].limit});
+        _CPU.currentProcess = pcb;
     },
     deallocate: function(pcb) {
         var self = this;

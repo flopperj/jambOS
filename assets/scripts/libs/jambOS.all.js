@@ -347,7 +347,7 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
 
         // initialize Kernel
         _Kernel = new jambOS.OS.Kernel();
-        
+
         // initialize host device routines
         _Device = new jambOS.host.Device();
 
@@ -398,6 +398,18 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
         // reset
         $("#btnReset").click(function() {
             self.resetOS($(this));
+        });
+
+        // load first default program
+        $("#taProgramInput").val("A9 03 8D 41 00 A9 01 8D 40 00 AC 40 00 A2 01 FF EE 40 00 AE 40 00 EC 41 00 D0 EF A9 44 8D 42 00 A9 4F 8D 43 00 A9 4E 8D 44 00 A9 45 8D 45 00 A9 00 8D 46 00 A2 02 A0 42 FF 00");
+        
+        // Step over
+        $("#btnStepOver").click(function(){
+            
+//            $(this).data("start", "active");
+            
+            if(_CPU)
+                _CPU.cycle();
         });
 
     },
@@ -685,14 +697,17 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         // TODO: Accumulate CPU usage and profiling statistics here.
         // Do the real work here. Be sure to set this.isExecuting appropriately.
 
-        var opCode = _Kernel.memoryManager.memory.read(self.pc++).toLowerCase();
+        var opCode = _Kernel.memoryManager.memory.read(self.pc++).toString().toLowerCase();
         var operation = self.getOpCode(opCode);
 
 //        console.log({acc: self.acc, pc: self.pc, xReg: self.xReg, yReg: self.yReg, zFlag: self.zFlag, state: "running"});
-        console.log(opCode);
+//        console.log(opCode);
 
         if (operation) {
             operation(self);
+            console.log(opCode);
+            console.log({acc: self.acc, pc: self.pc, xReg: self.xReg, yReg: self.yReg, zFlag: self.zFlag, state: "running"});
+
             if (self.currentProcess)
                 self.currentProcess.set({acc: self.acc, pc: self.pc, xReg: self.xReg, yReg: self.yReg, zFlag: self.zFlag, state: "running"});
 
@@ -914,7 +929,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         {
             // Compare contents of the memory location with the x reg
             // Set z flag if they are equal
-            self.zFlag = (parseInt(value) === self.yReg) ? 1 : 0;
+            self.zFlag = (parseInt(value) === self.xReg) ? 1 : 0;
         } else {
             // TODO: Halt the OS
             // TODO: Show error in log
@@ -927,7 +942,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      */
     branchXBytes: function(self)
     {
-
         if (self.zFlag === 0)
         {
             var branchValue = parseInt(_Kernel.memoryManager.memory.read(self.pc++), 16);
@@ -976,7 +990,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      */
     systemCall: function(self)
     {
-
         if (self.xReg === 1)
         {
             var value = parseInt(self.yReg).toString();
@@ -1066,6 +1079,7 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
     allocate: function(pcb) {
         var self = this;
         pcb.set({base: self.slots[1].base, limit: self.slots[1].limit});
+        _CPU.currentProcess = pcb;
     },
     deallocate: function(pcb) {
         var self = this;
