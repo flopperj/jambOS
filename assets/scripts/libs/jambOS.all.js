@@ -1184,6 +1184,10 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
 
         return this;
     },
+    /**
+     * Executes a process
+     * @param {jambOS.OS.ProcessControlBlock} pcb
+     */
     execute: function(pcb) {
         _Kernel.interruptHandler(PROCESS_INITIATION_IRQ, pcb);
     },
@@ -2329,11 +2333,11 @@ function shellStatus(args) {
 
 function shellLoad() {
     var textInput = $("#taProgramInput").val();
-    if (/^[0-9a-f]{2}( [0-9a-f]{2})*$/i.test(textInput)) {
+    if (/^[0-9a-f]{2}( [0-9a-f]{2})*$/i.test(textInput) && textInput.trim()) {
         var proccess = _Kernel.processManager.load(textInput.split(/\s/));
         _StdIn.putText("Process " + proccess.pid + " has been added to memory");
 
-    } else if (!textarea.value.trim())
+    } else if (!textInput.trim())
         _StdIn.putText("Please enter an input value then call the load command");
     else
         _StdIn.putText("Sorry I can only accept valid hex digit values :(");

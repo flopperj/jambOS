@@ -16,6 +16,10 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
 
         return this;
     },
+    /**
+     * Executes a process
+     * @param {jambOS.OS.ProcessControlBlock} pcb
+     */
     execute: function(pcb) {
         _Kernel.interruptHandler(PROCESS_INITIATION_IRQ, pcb);
     },
