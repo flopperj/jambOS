@@ -85,11 +85,17 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
      * @param {jambOS.host.Cpu} cpu
      */
     updateCpuStatusDisplay: function(cpu) {
-        $("#cpuStatus .pc").text(cpu.pc);
-        $("#cpuStatus .acc").text(cpu.acc);
-        $("#cpuStatus .x-register").text(cpu.xReg);
-        $("#cpuStatus .y-register").text(cpu.yReg);
-        $("#cpuStatus .z-flag").text(cpu.zFlag);
+        var pc = cpu.pc;
+        var acc = cpu.acc;
+        var xReg = cpu.xReg;
+        var yReg = parseInt(cpu.yReg, 16);
+        var zFlag = cpu.zFlag;
+        
+        $("#cpuStatus .pc").text(pc);
+        $("#cpuStatus .acc").text(acc);
+        $("#cpuStatus .x-register").text(xReg);
+        $("#cpuStatus .y-register").text(yReg);
+        $("#cpuStatus .z-flag").text(zFlag);
 
     }
 });
