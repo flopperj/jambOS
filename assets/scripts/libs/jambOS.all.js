@@ -1699,7 +1699,7 @@ jambOS.OS.DeviceDriver = jambOS.util.createClass({
  * Add or override specific attributes and method pointers.
  * 
  * @public
- * @requires deviceDrive.js
+ * @inheritsFrom DeviceDriver
  * @class DeviceDriverKeyboard
  * @memberOf jambOS.OS
  * =============================================================================
@@ -2059,7 +2059,7 @@ jambOS.OS.Queue = jambOS.util.createClass({
  *                             passed to the class
  *==============================================================================
  */
-jambOS.OS.SystemServices = jambOS.util.createClass({
+jambOS.OS.SystemServices = jambOS.util.createClass(/** @scope jambOS.OS.SystemServices.prototype */{
     type: "systemservices",
     /**
      * Adds prompt string to console display
@@ -2272,13 +2272,23 @@ jambOS.OS.UserCommand = jambOS.util.createClass(
  *                             passed to the class
  *==============================================================================
  */
-jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, {
-    // Properties
+jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope jambOS.OS.Shell.prototype */ {
+    /**
+     * @property {string} promptStr
+     */
     promptStr: ">",
+    /**
+     * @property {array} commandList
+     */
     commandList: [],
+    /**
+     * @property {string} curses 
+     */
     curses: "[fuvg],[cvff],[shpx],[phag],[pbpxfhpxre],[zbgureshpxre],[gvgf]",
+    /**
+     * @property {string} appologies
+     */
     apologies: "[sorry]",
-    // Methods
     /**
      * Constructor
      */
@@ -2349,7 +2359,7 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, {
                 } else if (!textInput.trim())
                     _StdIn.putText("Please enter an input value then call the load command");
                 else
-                    _StdIn.putText("Sorry I can only accept valid hex digit values :(");
+                    _StdIn.putText("Invalid program");
             }});
         this.commandList.push(sc);
 
@@ -2557,9 +2567,18 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, {
  */
 
 jambOS.OS.Kernel = jambOS.util.createClass({
+    /**
+     * @property {jambOS.OS.DeviceDriverKeyboard} keyboardDriver
+     */
     keyboardDriver: null,
+    /**
+     * @property {jambOS.OS.MemoryManager} memoryManager
+     */
     memoryManager: null,
-    ProcessManager: null,
+    /**
+     * @property {jambOS.OS.ProcessManager} processManager
+     */
+    processManager: null,
     /**
      * Constructor
      */
@@ -2628,13 +2647,15 @@ jambOS.OS.Kernel = jambOS.util.createClass({
         //
         this.trace("end shutdown OS");
     },
+    /**
+     * This gets called from the host hardware sim every time there is a 
+     * hardware clock pulse. This is NOT the same as a TIMER, which causes an 
+     * interrupt and is handled like other interrupts. This, on the other hand, 
+     * is the clock pulse from the hardware (or host) that tells the kernel 
+     * that it has to look for interrupts and process them if it finds any.                          
+     */
     onCPUClockPulse: function()
     {
-        /* This gets called from the host hardware sim every time there is a hardware clock pulse.
-         This is NOT the same as a TIMER, which causes an interrupt and is handled like other interrupts.
-         This, on the other hand, is the clock pulse from the hardware (or host) that tells the kernel 
-         that it has to look for interrupts and process them if it finds any.                           */
-
         // Check for an interrupt, are any. Page 560
         if (_KernelInterruptQueue.getSize() > 0)
         {
@@ -2652,19 +2673,28 @@ jambOS.OS.Kernel = jambOS.util.createClass({
             this.trace("Idle");
         }
     },
+    /**
+     * Enables Interupts
+     */
     enableInterupts: function()
     {
         // Keyboard
         _Device.hostEnableKeyboardInterrupt();
         // Put more here.
     },
+    /**
+     * Disables Interupts
+     */
     disableInterupts: function()
     {
         // Keyboard
         _Device.hostDisableKeyboardInterrupt();
         // Put more here.
     },
-    interruptHandler: function(irq, params)    // This is the Interrupt Handler Routine.  Pages 8 and 560.
+    /**
+     * Handles all interupts
+     */
+    interruptHandler: function(irq, params)
     {
         // have support with perivous code
         var self = _Kernel;
@@ -2695,15 +2725,24 @@ jambOS.OS.Kernel = jambOS.util.createClass({
                 self.trapError("Invalid Interrupt Request. irq=" + irq + " params=[" + params + "]");
         }
     },
+    /**
+     * Initiates a process routine
+     */
     processInitiationISR: function(pcb) {
         _CPU.start(pcb);
     },
+    /**
+     * Terminates a process routine
+     */
     processTerminationISR: function(pcb) {
         _CPU.stop();
         this.memoryManager.deallocate(pcb);
-        
+
     },
-    timerISR: function()  // The built-in TIMER (not clock) Interrupt Service Routine (as opposed to an ISR coming from a device driver).
+    /**
+     * The built-in TIMER (not clock) Interrupt Service Routine (as opposed to an ISR coming from a device driver).
+     */
+    timerISR: function()
     {
         // Check multiprogramming parameters and enforce quanta here. Call the scheduler / context switch here if necessary.
     },

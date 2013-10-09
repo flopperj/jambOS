@@ -12,13 +12,23 @@
  *                             passed to the class
  *==============================================================================
  */
-jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, {
-    // Properties
+jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope jambOS.OS.Shell.prototype */ {
+    /**
+     * @property {string} promptStr
+     */
     promptStr: ">",
+    /**
+     * @property {array} commandList
+     */
     commandList: [],
+    /**
+     * @property {string} curses 
+     */
     curses: "[fuvg],[cvff],[shpx],[phag],[pbpxfhpxre],[zbgureshpxre],[gvgf]",
+    /**
+     * @property {string} appologies
+     */
     apologies: "[sorry]",
-    // Methods
     /**
      * Constructor
      */
@@ -89,7 +99,7 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, {
                 } else if (!textInput.trim())
                     _StdIn.putText("Please enter an input value then call the load command");
                 else
-                    _StdIn.putText("Sorry I can only accept valid hex digit values :(");
+                    _StdIn.putText("Invalid program");
             }});
         this.commandList.push(sc);
 
