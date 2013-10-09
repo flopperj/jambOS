@@ -26,113 +26,204 @@ function shellInit() {
     // Load the command list.
 
     // date
-    sc = new ShellCommand();
-    sc.command = "date";
-    sc.description = "- Displays the current date and time";
-    sc.function = shellDateTime;
-    this.commandList[this.commandList.length] = sc;
+    sc = new ShellCommand("date", "- Displays the current date and time", function()
+    {
+        var date = new Date();
+        _StdIn.putText(date.toString());
+    });
+    this.commandList.push(sc);
 
     // whereami
-    sc = new ShellCommand();
-    sc.command = "whereami";
-    sc.description = "- Displays the current location";
-    sc.function = shellWhereAmI;
-    this.commandList[this.commandList.length] = sc;
+    sc = new ShellCommand("whereami", "- Displays the current location", function() {
+
+        var output = window.location.href;
+
+        _StdIn.putText(output);
+    });
+    this.commandList.push(sc);
 
     // whoisawesome
-    sc = new ShellCommand();
-    sc.command = "whoisawesome";
-    sc.description = "- Displays emotiocon of person";
-    sc.function = shellWhoIsAwesome;
-    this.commandList[this.commandList.length] = sc;
+    sc = new ShellCommand("whoisawesome", "- Displays emotiocon of person", function() {
+        _StdIn.putText("YOU ARE!!!!! d(*_*)b");
+    });
+    this.commandList.push(sc);
 
     // status
-    sc = new ShellCommand();
-    sc.command = "status";
-    sc.description = "<string> - Sets status message on taskbar";
-    sc.function = shellStatus;
-    this.commandList[this.commandList.length] = sc;
+    sc = new ShellCommand("status", "<string> - Sets status message on taskbar", function(args) {
+        _TaskbarContext.font = "bold 12px Arial";
+        if (args[0]) {
+            _TaskbarContext.clearRect(165, 0, 300, 20);
+            _TaskbarContext.fillText(args[0], 200, 16);
+        } else {
+            _TaskbarContext.clearRect(165, 0, 300, 20);
+            _TaskbarContext.fillText("OS is running...", 200, 16);
+            _StdIn.putText("Usage: status <String> - Sets status message on taskbar");
+        }
+    });
+    this.commandList.push(sc);
 
     // load
-    sc = new ShellCommand();
-    sc.command = "load";
-    sc.description = "- loads commands from the user input text area";
-    sc.function = shellLoad;
-    this.commandList[this.commandList.length] = sc;
+    sc = new ShellCommand("load", "- loads commands from the user input text area", function() {
+        var textInput = $("#taProgramInput").val();
+        if (/^[0-9a-f]{2}( [0-9a-f]{2})*$/i.test(textInput) && textInput.trim()) {
+            var proccess = _Kernel.processManager.load(textInput.split(/\s/));
+            _StdIn.putText("Process " + proccess.pid + " has been added to memory");
+
+        } else if (!textInput.trim())
+            _StdIn.putText("Please enter an input value then call the load command");
+        else
+            _StdIn.putText("Sorry I can only accept valid hex digit values :(");
+    });
+    this.commandList.push(sc);
 
     // psod
-    sc = new ShellCommand();
-    sc.command = "psod";
-    sc.description = "- simulates an OS error";
-    sc.function = shellPSOD;
-    this.commandList[this.commandList.length] = sc;
+    sc = new ShellCommand("psod", "- simulates an OS error", function() {
+        _TaskbarCanvas.style.backgroundColor = "pink";
+        $("#divConsole, #taLog, #taProgramInput").css({background: "pink"});
+        return _Kernel.trapError("Pink screen of death!", true);
+    });
+    this.commandList.push(sc);
 
     // ver
-    sc = new ShellCommand();
-    sc.command = "ver";
-    sc.description = "- Displays the current version data.";
-    sc.function = shellVer;
-    this.commandList[this.commandList.length] = sc;
+    sc = new ShellCommand("ver", "- Displays the current version data.", function(args)
+    {
+        _StdIn.putText(jambOS.name + " version " + jambOS.version);
+    });
+    this.commandList.push(sc);
 
     // help
-    sc = new ShellCommand();
-    sc.command = "help";
-    sc.description = "- This is the help command. Seek help.";
-    sc.function = shellHelp;
-    this.commandList[this.commandList.length] = sc;
+    sc = new ShellCommand("help", "- This is the help command. Seek help.", function(args)
+    {
+        _StdIn.putText("Commands:");
+        for (var i in _OsShell.commandList)
+        {
+            _StdIn.advanceLine();
+            _StdIn.putText("  " + _OsShell.commandList[i].command + " " + _OsShell.commandList[i].description);
+        }
+    });
+    this.commandList.push(sc);
 
     // shutdown
-    sc = new ShellCommand();
-    sc.command = "shutdown";
-    sc.description = "- Shuts down the virtual OS but leaves the underlying hardware simulation running.";
-    sc.function = shellShutdown;
-    this.commandList[this.commandList.length] = sc;
+    sc = new ShellCommand("shutdown", "- Shuts down the virtual OS but leaves the underlying hardware simulation running.", function(args)
+    {
+        _StdIn.putText("Shutting down...");
+        // Call Kernel shutdown routine.
+        _Kernel.shutdown();
+        // TODO: Stop the final prompt from being displayed.  If possible.  Not a high priority.  (Damn OCD!)
+    });
+    this.commandList.push(sc);
 
     // cls
-    sc = new ShellCommand();
-    sc.command = "cls";
-    sc.description = "- Clears the screen and resets the cursor position.";
-    sc.function = shellCls;
-    this.commandList[this.commandList.length] = sc;
+    sc = new ShellCommand("cls", "- Clears the screen and resets the cursor position.", function(args)
+    {
+        _StdIn.clearScreen();
+        _StdIn.resetXY();
+    });
+    this.commandList.push(sc);
 
     // man <topic>
-    sc = new ShellCommand();
-    sc.command = "man";
-    sc.description = "<topic> - Displays the MANual page for <topic>.";
-    sc.function = shellMan;
-    this.commandList[this.commandList.length] = sc;
+    sc = new ShellCommand("man", "<topic> - Displays the MANual page for <topic>.", function(args)
+    {
+        if (args.length > 0)
+        {
+            var topic = args[0];
+            switch (topic)
+            {
+                case "help":
+                    _StdIn.putText("Help displays a list of (hopefully) valid commands.");
+                    break;
+                default:
+                    _StdIn.putText("No manual entry for " + args[0] + ".");
+            }
+        }
+        else
+        {
+            _StdIn.putText("Usage: man <topic>  Please supply a topic.");
+        }
+    });
+    this.commandList.push(sc);
 
     // trace <on | off>
-    sc = new ShellCommand();
-    sc.command = "trace";
-    sc.description = "<on | off> - Turns the OS trace on or off.";
-    sc.function = shellTrace;
-    this.commandList[this.commandList.length] = sc;
+    sc = new ShellCommand("trace", "<on | off> - Turns the OS trace on or off.", function(args)
+    {
+        if (args.length > 0)
+        {
+            var setting = args[0];
+            switch (setting)
+            {
+                case "on":
+                    if (_Trace && _SarcasticMode)
+                    {
+                        _StdIn.putText("Trace is already on, dumbass.");
+                    }
+                    else
+                    {
+                        _Trace = true;
+                        _StdIn.putText("Trace ON");
+                    }
+
+                    break;
+                case "off":
+                    _Trace = false;
+                    _StdIn.putText("Trace OFF");
+                    break;
+                default:
+                    _StdIn.putText("Invalid arguement.  Usage: trace <on | off>.");
+            }
+        }
+        else
+        {
+            _StdIn.putText("Usage: trace <on | off>");
+        }
+    });
+    this.commandList.push(sc);
 
     // rot13 <string>
-    sc = new ShellCommand();
-    sc.command = "rot13";
-    sc.description = "<string> - Does rot13 obfuscation on <string>.";
-    sc.function = shellRot13;
-    this.commandList[this.commandList.length] = sc;
+    sc = new ShellCommand("rot13", "<string> - Does rot13 obfuscation on <string>.", function(args)
+    {
+        if (args.length > 0)
+        {
+            _StdIn.putText(args[0] + " = '" + rot13(args[0]) + "'");     // Requires Utils.js for rot13() function.
+        }
+        else
+        {
+            _StdIn.putText("Usage: rot13 <string>  Please supply a string.");
+        }
+    });
+    this.commandList.push(sc);
 
     // prompt <string>
-    sc = new ShellCommand();
-    sc.command = "prompt";
-    sc.description = "<string> - Sets the prompt.";
-    sc.function = shellPrompt;
-    this.commandList[this.commandList.length] = sc;
+    sc = new ShellCommand("prompt", "<string> - Sets the prompt.",
+            function(args)
+            {
+                if (args.length > 0)
+                {
+                    _OsShell.promptStr = args[0];
+                }
+                else
+                {
+                    _StdIn.putText("Usage: prompt <string>  Please supply a string.");
+                }
+            });
+    this.commandList.push(sc);
 
     // processes - list the running processes and their IDs
     // kill <id> - kills the specified process id.
 
 
     // run
-    sc = new ShellCommand();
-    sc.command = "run";
-    sc.description = "<id> - Runs program already in memory";
-    sc.function = shellRun;
-    this.commandList[this.commandList.length] = sc;
+    sc = new ShellCommand("run", "<id> - Runs program already in memory", function(args) {
+        var pid = parseInt(args[0]);
+        var pcb = $.grep(_Kernel.processManager.processes, function(el) {
+            return el.pid === pid;
+        })[0];
+
+        if (pcb) {
+            _Kernel.processManager.execute(pcb);
+        } else
+            _StdIn.putText("Invalid Process ID");
+    });
+    this.commandList.push(sc);
 
     //
     // Display the initial prompt.
@@ -254,12 +345,13 @@ function shellExecute(fn, args)
 //
 // An "interior" or "private" class (prototype) used only inside Shell() (we hope).
 //
-function ShellCommand()
+function ShellCommand(command, description, fn)
 {
     // Properties
-    this.command = "";
-    this.description = "";
-    this.function = "";
+    this.command = command;
+    this.description = description;
+    this.function = fn;
+
 }
 
 //
@@ -289,47 +381,6 @@ function shellInvalidCommand()
     }
 }
 
-function shellDateTime()
-{
-    var date = new Date();
-    _StdIn.putText(date.toString());
-}
-
-function shellWhereAmI() {
-
-    var output = window.location.href;
-
-    _StdIn.putText(output);
-}
-
-function shellWhoIsAwesome() {
-    _StdIn.putText("YOU ARE!!!!! d(*_*)b");
-}
-
-function shellStatus(args) {
-    _TaskbarContext.font = "bold 12px Arial";
-    _TaskbarContext.clearRect(165, 0, 300, 20);
-    _TaskbarContext.fillText(args[0], 200, 16);
-}
-
-function shellLoad() {
-    var textInput = $("#taProgramInput").val();
-    if (/^[0-9a-f]{2}( [0-9a-f]{2})*$/i.test(textInput) && textInput.trim()) {
-        var proccess = _Kernel.processManager.load(textInput.split(/\s/));
-        _StdIn.putText("Process " + proccess.pid + " has been added to memory");
-
-    } else if (!textInput.trim())
-        _StdIn.putText("Please enter an input value then call the load command");
-    else
-        _StdIn.putText("Sorry I can only accept valid hex digit values :(");
-}
-
-function shellPSOD() {
-    _TaskbarCanvas.style.backgroundColor = "pink";
-    $("#divConsole, #taLog, #taProgramInput").css({background: "pink"});
-    return _Kernel.trapError("Pink screen of death!", true);
-}
-
 function shellCurse()
 {
     _StdIn.putText("Oh, so that's how it's going to be, eh? Fine.");
@@ -346,122 +397,4 @@ function shellApology()
     } else {
         _StdIn.putText("For what?");
     }
-}
-
-function shellVer(args)
-{
-    _StdIn.putText(jambOS.name + " version " + jambOS.version);
-}
-
-function shellHelp(args)
-{
-    _StdIn.putText("Commands:");
-    for (var i in _OsShell.commandList)
-    {
-        _StdIn.advanceLine();
-        _StdIn.putText("  " + _OsShell.commandList[i].command + " " + _OsShell.commandList[i].description);
-    }
-}
-
-function shellShutdown(args)
-{
-    _StdIn.putText("Shutting down...");
-    // Call Kernel shutdown routine.
-    _Kernel.shutdown();
-    // TODO: Stop the final prompt from being displayed.  If possible.  Not a high priority.  (Damn OCD!)
-}
-
-function shellCls(args)
-{
-    _StdIn.clearScreen();
-    _StdIn.resetXY();
-}
-
-function shellMan(args)
-{
-    if (args.length > 0)
-    {
-        var topic = args[0];
-        switch (topic)
-        {
-            case "help":
-                _StdIn.putText("Help displays a list of (hopefully) valid commands.");
-                break;
-            default:
-                _StdIn.putText("No manual entry for " + args[0] + ".");
-        }
-    }
-    else
-    {
-        _StdIn.putText("Usage: man <topic>  Please supply a topic.");
-    }
-}
-
-function shellTrace(args)
-{
-    if (args.length > 0)
-    {
-        var setting = args[0];
-        switch (setting)
-        {
-            case "on":
-                if (_Trace && _SarcasticMode)
-                {
-                    _StdIn.putText("Trace is already on, dumbass.");
-                }
-                else
-                {
-                    _Trace = true;
-                    _StdIn.putText("Trace ON");
-                }
-
-                break;
-            case "off":
-                _Trace = false;
-                _StdIn.putText("Trace OFF");
-                break;
-            default:
-                _StdIn.putText("Invalid arguement.  Usage: trace <on | off>.");
-        }
-    }
-    else
-    {
-        _StdIn.putText("Usage: trace <on | off>");
-    }
-}
-
-function shellRot13(args)
-{
-    if (args.length > 0)
-    {
-        _StdIn.putText(args[0] + " = '" + rot13(args[0]) + "'");     // Requires Utils.js for rot13() function.
-    }
-    else
-    {
-        _StdIn.putText("Usage: rot13 <string>  Please supply a string.");
-    }
-}
-
-function shellPrompt(args)
-{
-    if (args.length > 0)
-    {
-        _OsShell.promptStr = args[0];
-    }
-    else
-    {
-        _StdIn.putText("Usage: prompt <string>  Please supply a string.");
-    }
-}
-
-function shellRun(args) {
-    var pid = parseInt(args[0]);
-    var pcb = $.grep(_Kernel.processManager.processes, function(el) {
-        return el.pid === pid;
-    })[0];
-
-    if (pcb) {
-        _Kernel.processManager.execute(pcb);
-    } else
-        _StdIn.putText("Invalid Process ID");
 }
