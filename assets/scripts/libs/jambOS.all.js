@@ -2060,6 +2060,9 @@ jambOS.OS.Queue = jambOS.util.createClass({
  *==============================================================================
  */
 jambOS.OS.SystemServices = jambOS.util.createClass(/** @scope jambOS.OS.SystemServices.prototype */{
+    /**
+     * @property {string} type
+     */
     type: "systemservices",
     /**
      * Adds prompt string to console display
@@ -2069,7 +2072,7 @@ jambOS.OS.SystemServices = jambOS.util.createClass(/** @scope jambOS.OS.SystemSe
         _StdIn.putText(this.promptStr);
     },
     /**
-     * Handles commands and typed text
+     * Handles commands and entered text
      * @param {string} buffer
      */
     handleInput: function(buffer)
