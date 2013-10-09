@@ -1,9 +1,22 @@
+/**
+ *==============================================================================
+ * Class ProcessManager
+ *    
+ * @class ProcessManager
+ * @memberOf jambOS 
+ * @param {object} - Array Object containing the default values to be 
+ *                             passed to the class
+ *==============================================================================
+ */
 jambOS.OS.ProcessManager = jambOS.util.createClass({
     type: "processmanager",
     /**
      * @property {[jambOS.OS.ProcessControlBlock]} processes
      */
     processes: [],
+    /**
+     * @property {int} currentProcessID
+     */
     currentProcessID: 0,
     /**
      * Constructor
@@ -66,5 +79,17 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         var index = this.processes.indexOf(pcb);
         if (index > -1)
             this.processes.splice(index, 1);
+    },
+    /**
+     * Updates cpu status display
+     * @param {jambOS.host.Cpu} cpu
+     */
+    updateCpuStatusDisplay: function(cpu) {
+        $("#cpuStatus .pc").text(cpu.pc);
+        $("#cpuStatus .acc").text(cpu.acc);
+        $("#cpuStatus .x-register").text(cpu.xReg);
+        $("#cpuStatus .y-register").text(cpu.yReg);
+        $("#cpuStatus .z-flag").text(cpu.zFlag);
+
     }
 });

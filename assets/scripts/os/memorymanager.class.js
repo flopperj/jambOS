@@ -3,7 +3,7 @@
  * Class MemoryManager
  *    
  * @class MemoryManager
- * @memberOf jambOS 
+ * @memberOf jambOS.OS
  * @param {object} - Array Object containing the default values to be 
  *                             passed to the class
  *==============================================================================
@@ -51,11 +51,19 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
         };
         self.updateMemoryDisplay();
     },
+    /**
+     * Allocates memory slots to a process
+     * @param {jambOS.OS.ProcessControlBlock} pcb
+     */
     allocate: function(pcb) {
         var self = this;
         pcb.set({base: self.slots[1].base, limit: self.slots[1].limit});
         _CPU.currentProcess = pcb;
     },
+    /**
+     * Deallocates memory slots to a process
+     * @param {jambOS.OS.ProcessControlBlock} pcb
+     */
     deallocate: function(pcb) {
         var self = this;
         for (var i = pcb.base; i < pcb.limit; i++)
@@ -64,24 +72,26 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
         }
         pcb.base = null;
         pcb.limit = null;
-        
+
         self.updateMemoryDisplay();
-        
+
         _Kernel.processManager.processes = [];
     },
-    validateAddress: function(address){
+    /**
+     * Validates if memory address is within available allocated slot
+     * @param {int} address 
+     */
+    validateAddress: function(address) {
         var self = this;
         return (address <= self.slots[self.activeSlot].limit);
     },
     /**
-     * Updates content that is on memory for display on the OS
-     * 
-     * @public
+     * Updates content that is on memory for display on the OS 
      * @method updateDisplay
      */
     updateMemoryDisplay: function() {
         var self = this;
-        var table = "<table><tr>";
+        var table = "<table class='table table-bordered'><tr>";
         var i = 0;
         while (self.memory.size > i) {
             if (i % 8 === 0) {
@@ -99,8 +109,6 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
     },
     /**
      * Converts decimal values to hex
-     * 
-     * @private
      * @method decimalToHex
      * @param {Number} d
      * @param {int} padding

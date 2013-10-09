@@ -74,8 +74,8 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         this.zFlag = 0;
         this.isExecuting = false;
         this.currentProcess = null;
-        
-        
+
+
         // disable stepover button
         $("#btnStepOver").prop("disabled", true);
     },
@@ -89,10 +89,8 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         // TODO: Accumulate CPU usage and profiling statistics here.
         // Do the real work here. Be sure to set this.isExecuting appropriately.
 
-        $("#cpuStatus .pc").text(self.pc);
-        $("#cpuStatus .acc").text(self.acc);
-        $("#cpuStatus .x-register").text(self.xReg);
-        $("#cpuStatus .z-flag").text(self.zFlag);
+        // update cpu status display
+        _Kernel.processManager.updateCpuStatusDisplay(self);
 
         var opCode = _Kernel.memoryManager.memory.read(self.pc++).toString().toLowerCase();
         var operation = self.getOpCode(opCode);
@@ -139,8 +137,8 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      */
     loadAccWithConstant: function(self)
     {
-        var byte = _Kernel.memoryManager.memory.read(self.pc++);
-        self.acc = parseInt(byte, 16);
+        var byteCode = _Kernel.memoryManager.memory.read(self.pc++);
+        self.acc = parseInt(byteCode, 16);
     },
     /**
      * Load the accumulator from memory 
@@ -150,11 +148,11 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     loadAccFromMemory: function(self)
     {
         // Get next two bytes in memory
-        var byteOne = _Kernel.memoryManager.memory.read(self.pc++);
-        var byteTwo = _Kernel.memoryManager.memory.read(self.pc++);
+        var byteCodeOne = _Kernel.memoryManager.memory.read(self.pc++);
+        var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
         // Concatenate the hex address in the correct order
-        var address = parseInt((byteTwo + byteOne), 16);
+        var address = parseInt((byteCodeTwo + byteCodeOne), 16);
         var value = _Kernel.memoryManager.memory.read(address);
 
         if (_Kernel.memoryManager.validateAddress(address))
@@ -173,11 +171,11 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     storeAccInMemory: function(self)
     {
         // Get next two bytes in memory
-        var byteOne = _Kernel.memoryManager.memory.read(self.pc++);
-        var byteTwo = _Kernel.memoryManager.memory.read(self.pc++);
+        var byteCodeOne = _Kernel.memoryManager.memory.read(self.pc++);
+        var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
         // Concatenate the hex address in the correct order
-        var address = parseInt((byteTwo + byteOne), 16);
+        var address = parseInt((byteCodeTwo + byteCodeOne), 16);
 
         if (_Kernel.memoryManager.validateAddress(address))
         {
@@ -201,11 +199,11 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     {
 
         // Get next two bytes in memory
-        var byteOne = _Kernel.memoryManager.memory.read(self.pc++);
-        var byteTwo = _Kernel.memoryManager.memory.read(self.pc++);
+        var byteCodeOne = _Kernel.memoryManager.memory.read(self.pc++);
+        var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
         // Concatenate the hex address in the correct order
-        var address = parseInt((byteTwo + byteOne), 16);
+        var address = parseInt((byteCodeTwo + byteCodeOne), 16);
         var value = _Kernel.memoryManager.memory.read(address);
 
         if (_Kernel.memoryManager.validateAddress(address))
@@ -224,8 +222,8 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      */
     loadXRegWithConstant: function(self)
     {
-        var byte = _Kernel.memoryManager.memory.read(self.pc++);
-        self.xReg = parseInt(byte, 16);
+        var byteCode = _Kernel.memoryManager.memory.read(self.pc++);
+        self.xReg = parseInt(byteCode, 16);
     },
     /**
      * Load the X register from memory 
@@ -235,11 +233,11 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     loadXRegFromMemory: function(self)
     {
         // Get next two bytes in memory
-        var byteOne = _Kernel.memoryManager.memory.read(self.pc++);
-        var byteTwo = _Kernel.memoryManager.memory.read(self.pc++);
+        var byteCodeOne = _Kernel.memoryManager.memory.read(self.pc++);
+        var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
         // Concatenate the hex address in the correct order
-        var address = parseInt((byteTwo + byteOne), 16);
+        var address = parseInt((byteCodeTwo + byteCodeOne), 16);
         var value = _Kernel.memoryManager.memory.read(address);
 
         if (_Kernel.memoryManager.validateAddress(address))
@@ -269,11 +267,11 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     loadYRegFromMemory: function(self)
     {
         // Get next two bytes in memory
-        var byteOne = _Kernel.memoryManager.memory.read(self.pc++);
-        var byteTwo = _Kernel.memoryManager.memory.read(self.pc++);
+        var byteCodeOne = _Kernel.memoryManager.memory.read(self.pc++);
+        var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
         // Concatenate the hex address in the correct order
-        var address = parseInt((byteTwo + byteOne), 16);
+        var address = parseInt((byteCodeTwo + byteCodeOne), 16);
         var value = _Kernel.memoryManager.memory.read(address);
 
         if (_Kernel.memoryManager.validateAddress(address))
@@ -309,11 +307,11 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     compareXReg: function(self)
     {
         // Get next two bytes in memory
-        var byteOne = _Kernel.memoryManager.memory.read(self.pc++);
-        var byteTwo = _Kernel.memoryManager.memory.read(self.pc++);
+        var byteCodeOne = _Kernel.memoryManager.memory.read(self.pc++);
+        var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
         // Concatenate the hex address in the correct order
-        var address = parseInt((byteTwo + byteOne), 16);
+        var address = parseInt((byteCodeTwo + byteCodeOne), 16);
         var value = _Kernel.memoryManager.memory.read(address);
 
         if (_Kernel.memoryManager.validateAddress(address))
@@ -351,10 +349,10 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      */
     incrementByteValue: function(self)
     {
-        var byteOne = _Kernel.memoryManager.memory.read(self.pc++);
-        var byteTwo = _Kernel.memoryManager.memory.read(self.pc++);
+        var byteCodeOne = _Kernel.memoryManager.memory.read(self.pc++);
+        var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
-        var address = parseInt((byteTwo + byteOne), 16);
+        var address = parseInt((byteCodeTwo + byteCodeOne), 16);
         var value = _Kernel.memoryManager.memory.read(address);
 
         if (_Kernel.memoryManager.validateAddress(address))
@@ -389,10 +387,8 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             {
                 _StdIn.putText(value.charAt(i));
             }
-
             _StdIn.advanceLine();
-
-            _StdIn.putText(">");
+            _OsShell.putPrompt();
 
         } else if (self.xReg === 2) {
 
@@ -400,17 +396,17 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
             var currentByte = _Kernel.memoryManager.memory.read(address);
 
-            var char = "";
+            var character = "";
 
             while (currentByte !== "00")
             {
                 currentByte = _Kernel.memoryManager.memory.read(address++);
-                char = String.fromCharCode(parseInt(currentByte, 16));
-                _StdIn.putText(char);
+                character = String.fromCharCode(parseInt(currentByte, 16));
+                _StdIn.putText(character);
             }
 
             _StdIn.advanceLine();
-            _StdIn.putText(">");
+            _OsShell.putPrompt();
         }
     }
 });

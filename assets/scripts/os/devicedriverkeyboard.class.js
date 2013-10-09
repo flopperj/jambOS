@@ -7,7 +7,7 @@
  * Add or override specific attributes and method pointers.
  * 
  * @public
- * @requires deviceDrive.js
+ * @inheritsFrom DeviceDriver
  * @class DeviceDriverKeyboard
  * @memberOf jambOS.OS
  * =============================================================================
@@ -210,6 +210,9 @@ jambOS.OS.DeviceDriverKeyboard = jambOS.util.createClass(jambOS.OS.DeviceDriver,
             // store commands when user presses the enter key
             if (keyCode === 13) {
 
+                // Sometimes the buffer gets away with this so we'll sanitize our text
+                _Console.buffer = _Console.buffer.replace("[object object]", "");
+
                 if (_Console.buffer.trim()) {
                     _CommandHistory.push(_Console.buffer);
                     _CurrentCommandIndex = _CommandHistory.length - 1;
@@ -262,13 +265,13 @@ jambOS.OS.DeviceDriverKeyboard = jambOS.util.createClass(jambOS.OS.DeviceDriver,
                 if (consoleDiv.scrollTop !== consoleDiv.scrollHeight)
                     consoleDiv.scrollTop = consoleDiv.scrollHeight;
 
-                if (_CurrentCommandIndex < _CommandHistory.length - 1 )
+                if (_CurrentCommandIndex < _CommandHistory.length - 1)
                     _CurrentCommandIndex += 1;
                 else
                     _CurrentCommandIndex = _CommandHistory.length - 1;
 
                 command = _CommandHistory[_CurrentCommandIndex];
-                
+
                 var offset = _DrawingContext.measureText(_Console.currentFont, _Console.currentFontSize, ">");
 
                 _Console.currentXPosition = offset;

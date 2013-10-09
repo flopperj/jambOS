@@ -67,8 +67,7 @@ jambOS.OS.Kernel = jambOS.util.createClass({
 
         // Launch the shell.
         this.trace("Creating and Launching the shell.");
-        _OsShell = new Shell();
-        _OsShell.init();
+        _OsShell = new jambOS.OS.Shell();
 
         // Finally, initiate testing.
         if (_GLaDOS) {

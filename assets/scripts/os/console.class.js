@@ -161,7 +161,7 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
 
             // scroll to the bottom
             var consoleDiv = $("#divConsole .canvas");
-            consoleDiv.scrollTop(consoleDiv.height());
+            consoleDiv.scrollTop(consoleDiv.find("canvas").height());
         }
     }
 });
