@@ -84,13 +84,32 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
         });
 
         // load first default program
-//        $("#taProgramInput").val("A9 03 8D 41 00 A9 01 8D 40 00 AC 40 00 A2 01 FF EE 40 00 AE 40 00 EC 41 00 D0 EF A9 44 8D 42 00 A9 4F 8D 43 00 A9 4E 8D 44 00 A9 45 8D 45 00 A9 00 8D 46 00 A2 02 A0 42 FF 00");
-        
+        $("#taProgramInput").val("A9 03 8D 41 00 A9 01 8D 40 00 AC 40 00 A2 01 FF EE 40 00 AE 40 00 EC 41 00 D0 EF A9 44 8D 42 00 A9 4F 8D 43 00 A9 4E 8D 44 00 A9 45 8D 45 00 A9 00 8D 46 00 A2 02 A0 42 FF 00");
+
         // Step over
-        $("#btnStepOver").click(function(){            
-            if(_CPU)
+        $("#btnStepOver").click(function() {
+            if (_CPU)
                 _CPU.cycle();
         });
+        
+        // blinking cursor
+//        window.setInterval(function() {
+//
+//            if (!_IsTyping && _StdIn && $("#display").is(":focus")) {
+//                _StdIn.putText("|");
+//
+//                setTimeout(function() {
+//                    var charWidth = _DrawingContext.measureText(_Console.currentFont, _Console.currentFontSize, "|");
+//                    _Console.currentXPosition -= charWidth;
+//
+//                    var xPos = _Console.currentXPosition;
+//                    var yPos = (_Console.currentYPosition - _Console.currentFontSize) - 1;
+//                    var width = charWidth;
+//                    var height = _Console.currentFontSize + (_Console.currentFontSize / 2);
+//                    _DrawingContext.clearRect(xPos, yPos, width, height);
+//                }, 500);
+//            }
+//        }, 1000);
 
     },
     /**

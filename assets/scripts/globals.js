@@ -35,8 +35,8 @@ jambOS.host = {};
 var CPU_CLOCK_INTERVAL = 100;   // This is in ms, or milliseconds, so 1000 = 1 second.
 
 var TIMER_IRQ = 0;  // Pages 23 (timer), 9 (interrupts), and 561 (interrupt priority).
-                    // NOTE: The timer is different from hardware/host clock pulses. Don't confuse these.
-var KEYBOARD_IRQ = 1;  
+// NOTE: The timer is different from hardware/host clock pulses. Don't confuse these.
+var KEYBOARD_IRQ = 1;
 var PROCESS_INITIATION_IRQ = 2;
 var PROCESS_TERMINATION_IRQ = 3;
 
@@ -60,18 +60,24 @@ var _FontHeightMargin = 4;        // Additional space added to font size when ad
 // Default the OS trace to be on.
 var _Trace = true;
 
+// Default for stepover
+var _Stepover = false;
+
 // OS queues
 var _KernelInterruptQueue = null;
 var _KernelBuffers = null;
 var _KernelInputQueue = null;
 
 // Standard input and output
-var _StdIn  = null;
+var _StdIn = null;
 var _StdOut = null;
 
 // UI
 var _Console = null;
 var _OsShell = null;
+
+// helps with our blinking cursor
+var _IsTyping = false;
 
 // At least this OS is not trying to kill you. (Yet.)
 var _SarcasticMode = false;

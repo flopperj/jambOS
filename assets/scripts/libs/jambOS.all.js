@@ -35,8 +35,8 @@ jambOS.host = {};
 var CPU_CLOCK_INTERVAL = 100;   // This is in ms, or milliseconds, so 1000 = 1 second.
 
 var TIMER_IRQ = 0;  // Pages 23 (timer), 9 (interrupts), and 561 (interrupt priority).
-                    // NOTE: The timer is different from hardware/host clock pulses. Don't confuse these.
-var KEYBOARD_IRQ = 1;  
+// NOTE: The timer is different from hardware/host clock pulses. Don't confuse these.
+var KEYBOARD_IRQ = 1;
 var PROCESS_INITIATION_IRQ = 2;
 var PROCESS_TERMINATION_IRQ = 3;
 
@@ -60,18 +60,24 @@ var _FontHeightMargin = 4;        // Additional space added to font size when ad
 // Default the OS trace to be on.
 var _Trace = true;
 
+// Default for stepover
+var _Stepover = false;
+
 // OS queues
 var _KernelInterruptQueue = null;
 var _KernelBuffers = null;
 var _KernelInputQueue = null;
 
 // Standard input and output
-var _StdIn  = null;
+var _StdIn = null;
 var _StdOut = null;
 
 // UI
 var _Console = null;
 var _OsShell = null;
+
+// helps with our blinking cursor
+var _IsTyping = false;
 
 // At least this OS is not trying to kill you. (Yet.)
 var _SarcasticMode = false;
@@ -401,13 +407,32 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
         });
 
         // load first default program
-//        $("#taProgramInput").val("A9 03 8D 41 00 A9 01 8D 40 00 AC 40 00 A2 01 FF EE 40 00 AE 40 00 EC 41 00 D0 EF A9 44 8D 42 00 A9 4F 8D 43 00 A9 4E 8D 44 00 A9 45 8D 45 00 A9 00 8D 46 00 A2 02 A0 42 FF 00");
-        
+        $("#taProgramInput").val("A9 03 8D 41 00 A9 01 8D 40 00 AC 40 00 A2 01 FF EE 40 00 AE 40 00 EC 41 00 D0 EF A9 44 8D 42 00 A9 4F 8D 43 00 A9 4E 8D 44 00 A9 45 8D 45 00 A9 00 8D 46 00 A2 02 A0 42 FF 00");
+
         // Step over
-        $("#btnStepOver").click(function(){            
-            if(_CPU)
+        $("#btnStepOver").click(function() {
+            if (_CPU)
                 _CPU.cycle();
         });
+        
+        // blinking cursor
+//        window.setInterval(function() {
+//
+//            if (!_IsTyping && _StdIn && $("#display").is(":focus")) {
+//                _StdIn.putText("|");
+//
+//                setTimeout(function() {
+//                    var charWidth = _DrawingContext.measureText(_Console.currentFont, _Console.currentFontSize, "|");
+//                    _Console.currentXPosition -= charWidth;
+//
+//                    var xPos = _Console.currentXPosition;
+//                    var yPos = (_Console.currentYPosition - _Console.currentFontSize) - 1;
+//                    var width = charWidth;
+//                    var height = _Console.currentFontSize + (_Console.currentFontSize / 2);
+//                    _DrawingContext.clearRect(xPos, yPos, width, height);
+//                }, 500);
+//            }
+//        }, 1000);
 
     },
     /**
@@ -2533,7 +2558,7 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
         // kill <id> - kills the specified process id.
 
 
-        // run
+        // run <id>
         sc = new jambOS.OS.ShellCommand({
             command: "run",
             description: "<id> - Runs program already in memory",
@@ -2543,14 +2568,55 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                     return el.pid === pid;
                 })[0];
 
-                if (args[0] && pcb) {
+                if (args[0] && pcb && !_Stepover) {
                     _Kernel.processManager.execute(pcb);
+                } else if (args[0] && pcb && _Stepover) {
+                    _StdIn.putText("stepover is ON. Use the stepover button to run program.");
                 } else if (args[0] && !pcb)
                     _StdIn.putText("Invalid Process ID");
                 else
                     _StdIn.putText("Usage: run <id> - Runs program already in memory");
             }});
         this.commandList.push(sc);
+
+        // stepover <on | off>
+        sc = new jambOS.OS.ShellCommand({
+            command: "stepover",
+            description: "<on | off> - Turns the OS stepover on or off.",
+            behavior: function(args)
+            {
+                if (args.length > 0)
+                {
+                    var setting = args[0];
+                    switch (setting)
+                    {
+                        case "on":
+                            if (_Stepover && _SarcasticMode)
+                            {
+                                _StdIn.putText("Stepover is already on, dumbass.");
+                            }
+                            else
+                            {
+                                _Stepover = true;
+                                _StdIn.putText("Stepover ON");
+                            }
+
+                            break;
+                        case "off":
+                            _Stepover = false;
+                            _StdIn.putText("Stepover OFF");
+                            break;
+                        default:
+                            _StdIn.putText("Invalid arguement.  Usage: stepover <on | off>.");
+                    }
+                }
+                else
+                {
+                    _StdIn.putText("Usage: stepover <on | off>");
+                }
+            }});
+        this.commandList.push(sc);
+
 
         //
         // Display the initial prompt.

@@ -264,7 +264,7 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
         // kill <id> - kills the specified process id.
 
 
-        // run
+        // run <id>
         sc = new jambOS.OS.ShellCommand({
             command: "run",
             description: "<id> - Runs program already in memory",
@@ -274,14 +274,55 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                     return el.pid === pid;
                 })[0];
 
-                if (args[0] && pcb) {
+                if (args[0] && pcb && !_Stepover) {
                     _Kernel.processManager.execute(pcb);
+                } else if (args[0] && pcb && _Stepover) {
+                    _StdIn.putText("stepover is ON. Use the stepover button to run program.");
                 } else if (args[0] && !pcb)
                     _StdIn.putText("Invalid Process ID");
                 else
                     _StdIn.putText("Usage: run <id> - Runs program already in memory");
             }});
         this.commandList.push(sc);
+
+        // stepover <on | off>
+        sc = new jambOS.OS.ShellCommand({
+            command: "stepover",
+            description: "<on | off> - Turns the OS stepover on or off.",
+            behavior: function(args)
+            {
+                if (args.length > 0)
+                {
+                    var setting = args[0];
+                    switch (setting)
+                    {
+                        case "on":
+                            if (_Stepover && _SarcasticMode)
+                            {
+                                _StdIn.putText("Stepover is already on, dumbass.");
+                            }
+                            else
+                            {
+                                _Stepover = true;
+                                _StdIn.putText("Stepover ON");
+                            }
+
+                            break;
+                        case "off":
+                            _Stepover = false;
+                            _StdIn.putText("Stepover OFF");
+                            break;
+                        default:
+                            _StdIn.putText("Invalid arguement.  Usage: stepover <on | off>.");
+                    }
+                }
+                else
+                {
+                    _StdIn.putText("Usage: stepover <on | off>");
+                }
+            }});
+        this.commandList.push(sc);
+
 
         //
         // Display the initial prompt.
