@@ -45,7 +45,7 @@ jambOS.host.Memory = jambOS.util.createClass( /** @scopee jambOS.host.Memory.pro
      * @returns data
      */
     read: function(address) {
-        return this.storage[address];
+        return this.get("storage")[address];
     },
     /**
      * Writes to storage
@@ -55,7 +55,7 @@ jambOS.host.Memory = jambOS.util.createClass( /** @scopee jambOS.host.Memory.pro
      * @param {object} data
      */
     write: function(address, data) {
-        this.storage[address] = data;
+        this.get("storage")[address] = data;
     },
     /**
      * Inserts data to storage starting from the specified storage address

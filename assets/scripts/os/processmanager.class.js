@@ -97,5 +97,25 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         $("#cpuStatus .y-register").text(yReg);
         $("#cpuStatus .z-flag").text(zFlag);
 
+    },
+    /**
+     * Updates pcb status display
+     * @param {jambOS.OS.ProcessControlBlock} pcb
+     */
+    updatePCBStatusDisplay: function(pcb) {
+        var id = pcb.pid;
+        var pc = pcb.pc;
+        var acc = pcb.acc;
+        var xReg = pcb.xReg;
+        var yReg = parseInt(pcb.yReg, 16);
+        var zFlag = pcb.zFlag;
+        
+        $("#pcbStatus .pid").text(id);
+        $("#pcbStatus .pc").text(pc);
+        $("#pcbStatus .acc").text(acc);
+        $("#pcbStatus .x-register").text(xReg);
+        $("#pcbStatus .y-register").text(yReg);
+        $("#pcbStatus .z-flag").text(zFlag);
+
     }
 });

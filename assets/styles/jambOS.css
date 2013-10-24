@@ -104,11 +104,11 @@ h1, label{
     border: 1px solid #000;
 }
 
-#cpuStatus{
+#cpuStatus, #pcbStatus{
     margin-top: 20px;
 }
 
-#cpuStatus .content{
+#cpuStatus .content, #pcbStatus .content{
     background-color: #fff;
 }
 

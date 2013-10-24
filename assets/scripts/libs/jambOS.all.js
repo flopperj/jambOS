@@ -624,7 +624,7 @@ jambOS.host.Memory = jambOS.util.createClass( /** @scopee jambOS.host.Memory.pro
      * @returns data
      */
     read: function(address) {
-        return this.storage[address];
+        return this.get("storage")[address];
     },
     /**
      * Writes to storage
@@ -634,7 +634,7 @@ jambOS.host.Memory = jambOS.util.createClass( /** @scopee jambOS.host.Memory.pro
      * @param {object} data
      */
     write: function(address, data) {
-        this.storage[address] = data;
+        this.get("storage")[address] = data;
     },
     /**
      * Inserts data to storage starting from the specified storage address
@@ -730,6 +730,10 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         this.yReg = 0;
         this.zFlag = 0;
         this.isExecuting = false;
+        
+        // update PCB status display
+        _Kernel.processManager.updatePCBStatusDisplay(this.currentProcess);
+        
         this.currentProcess = null;
 
 
@@ -1047,7 +1051,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             _StdIn.advanceLine();
             _OsShell.putPrompt();
 
-        } else if (self.xReg === 2) {
+        } else {
 
             var address = parseInt(self.yReg, 16);
 
@@ -1293,6 +1297,26 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         $("#cpuStatus .x-register").text(xReg);
         $("#cpuStatus .y-register").text(yReg);
         $("#cpuStatus .z-flag").text(zFlag);
+
+    },
+    /**
+     * Updates pcb status display
+     * @param {jambOS.OS.ProcessControlBlock} pcb
+     */
+    updatePCBStatusDisplay: function(pcb) {
+        var id = pcb.pid;
+        var pc = pcb.pc;
+        var acc = pcb.acc;
+        var xReg = pcb.xReg;
+        var yReg = parseInt(pcb.yReg, 16);
+        var zFlag = pcb.zFlag;
+        
+        $("#pcbStatus .pid").text(id);
+        $("#pcbStatus .pc").text(pc);
+        $("#pcbStatus .acc").text(acc);
+        $("#pcbStatus .x-register").text(xReg);
+        $("#pcbStatus .y-register").text(yReg);
+        $("#pcbStatus .z-flag").text(zFlag);
 
     }
 });

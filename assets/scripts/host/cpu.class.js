@@ -73,6 +73,10 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         this.yReg = 0;
         this.zFlag = 0;
         this.isExecuting = false;
+        
+        // update PCB status display
+        _Kernel.processManager.updatePCBStatusDisplay(this.currentProcess);
+        
         this.currentProcess = null;
 
 
@@ -390,7 +394,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             _StdIn.advanceLine();
             _OsShell.putPrompt();
 
-        } else if (self.xReg === 2) {
+        } else {
 
             var address = parseInt(self.yReg, 16);
 
