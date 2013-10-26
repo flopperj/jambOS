@@ -233,6 +233,11 @@ jambOS.OS.Kernel = jambOS.util.createClass({
             }
         }
     },
+    /**
+     * This is our OS Error trap
+     * @public
+     * @method trapError
+     */
     trapError: function(msg, killSwitch)
     {
         killSwitch = typeof killSwitch === "undefined" ? true : killSwitch;

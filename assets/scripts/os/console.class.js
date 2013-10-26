@@ -41,6 +41,7 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
         this.clearScreen();
         this.resetXY();
         this.initTaskbar();
+        this.initCursor();
     },
     /**
      * Initializes our taskbar
@@ -61,6 +62,28 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
         }, 1000);
     },
     /**
+     * Handlers the cursor on the canvas
+     * @public
+     * @method initCursor
+     */
+    initCursor: function() {
+
+        var self = this;
+
+        // blinking cursor
+        window.setInterval(function() {
+
+            if (!_IsTyping && _StdIn && $("#display").is(":focus")) {
+
+                _DrawingContext.drawText(_Console.currentFont, _Console.currentFontSize, _Console.currentXPosition, _Console.currentYPosition, "|");
+
+                setTimeout(function() {
+                    self.clearBlinker();
+                }, 500);
+            }
+        }, 1000);
+    },
+    /**
      * Clears the canvas
      * @public
      * @method clearScreen
@@ -68,6 +91,17 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
     clearScreen: function() {
         _Canvas.height = 480;
         _DrawingContext.clearRect(0, 0, _Canvas.width, _Canvas.height);
+    },
+    /**
+     * Helps with clearing the cursor blinker
+     * @public
+     * @method clearBlinlker
+     */
+    clearBlinker: function() {
+        var xPos = this.currentXPosition;
+        var yPos = (this.currentYPosition - this.currentFontSize) - 1;
+        var height = this.currentFontSize + (this.currentFontSize / 2);
+        _DrawingContext.clearRect(xPos, yPos, _Canvas.width, height);
     },
     /**
      * Resets the X & Y positions of the cursor
@@ -122,12 +156,18 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
         // decided to write one function and use the term "text" to connote string or char.
         if (text !== "")
         {
+            // clear blinker before drawing character
+            this.clearBlinker();
+
             // Draw the text at the current X and Y coordinates.
             _DrawingContext.drawText(this.currentFont, this.currentFontSize, this.currentXPosition, this.currentYPosition, text);
             // Move the current X position.
             var offset = _DrawingContext.measureText(this.currentFont, this.currentFontSize, text);
             this.currentXPosition = this.currentXPosition + offset;
         }
+        
+        // reset our isTyping variable so that we can show our cursor
+        _isTyping = false;
     },
     /**
      * Handles new line advancement of the cursor
@@ -135,11 +175,15 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
      * @method advanceLine
      */
     advanceLine: function() {
+
+        // clear blinker before we get screenshot of canvas
+        this.clearBlinker();
+
         this.currentXPosition = 0;
         this.currentYPosition += _DefaultFontSize + _FontHeightMargin;
 
         // Handle scrolling.
-        if ((this.currentYPosition + (this.currentFontSize * 4)) > _Canvas.height) {
+        if (this.currentYPosition > _Canvas.height) {
             var bufferCanvas = document.createElement('canvas');
             var buffer = bufferCanvas.getContext("2d");
 
@@ -154,7 +198,7 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
 
             canvasData = buffer.getImageData(0, 0, _Canvas.width, _Canvas.height);
 
-            _Canvas.height = _Canvas.height + (_Console.currentFontSize * 4);
+            _Canvas.height += _DefaultFontSize + _FontHeightMargin;
 
             // redraw everything on the resized canvas
             _DrawingContext.putImageData(canvasData, 0, 0);

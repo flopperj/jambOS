@@ -62,7 +62,7 @@ jambOS.OS.SystemServices = jambOS.util.createClass(/** @scope jambOS.OS.SystemSe
         else
         {
             // It's not found, so check for curses and apologies before declaring the command invalid.
-            if (this.curses.indexOf("[" + rot13(cmd) + "]") >= 0)      // Check for curses.
+            if (this.curses.indexOf("[" + jambOS.util.rot13(cmd) + "]") >= 0)      // Check for curses.
             {
                 this.execute(shellCurse);
             }
@@ -86,7 +86,7 @@ jambOS.OS.SystemServices = jambOS.util.createClass(/** @scope jambOS.OS.SystemSe
         var retVal = new jambOS.OS.UserCommand();
 
         // 1. Remove leading and trailing spaces.
-        buffer = trim(buffer);
+        buffer = jambOS.util.trim(buffer);
 
         // 2. Lower-case it.
         buffer = buffer.toLowerCase();
@@ -97,7 +97,7 @@ jambOS.OS.SystemServices = jambOS.util.createClass(/** @scope jambOS.OS.SystemSe
         // 4. Take the first (zeroth) element and use that as the command.
         var cmd = tempList.shift();  // Yes, you can do that to an array in JavaScript.  See the Queue class.
         // 4.1 Remove any left-over spaces.
-        cmd = trim(cmd);
+        cmd = jambOS.util.trim(cmd);
         // 4.2 Record it in the return value.
         retVal.command = cmd;
         retVal.args = [];
@@ -105,7 +105,7 @@ jambOS.OS.SystemServices = jambOS.util.createClass(/** @scope jambOS.OS.SystemSe
         // 5. Now create the args array from what's left.
         for (var i in tempList)
         {
-            var arg = trim(tempList[i]);
+            var arg = jambOS.util.trim(tempList[i]);
             if (arg !== "")
             {
                 retVal.args.push(tempList[i]);

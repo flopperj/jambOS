@@ -152,9 +152,9 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             }});
         this.commandList.push(sc);
 
-        // cls
+        // clear
         sc = new jambOS.OS.ShellCommand({
-            command: "cls",
+            command: "clear",
             description: "- Clears the screen and resets the cursor position.",
             behavior: function(args)
             {
@@ -234,7 +234,7 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             {
                 if (args.length > 0)
                 {
-                    _StdIn.putText(args[0] + " = '" + rot13(args[0]) + "'");     // Requires Utils.js for rot13() function.
+                    _StdIn.putText(args[0] + " = '" + jambOS.util.rot13(args[0]) + "'");     // Requires Utils.js for jambOS.util.rot13() function.
                 }
                 else
                 {

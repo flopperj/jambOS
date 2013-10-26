@@ -44,7 +44,7 @@ SCRIPTS = [
            "../host/cpu.class.js",
            "../os/memorymanager.class.js",
            "../os/processManager.class.js",
-           "../os/interrupt.js",
+           "../os/interrupt.class.js",
            "../os/canvastext.js",
            "../os/console.class.js",
            "../os/devicedriver.class.js",

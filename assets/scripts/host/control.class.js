@@ -91,26 +91,6 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
             if (_CPU)
                 _CPU.cycle();
         });
-        
-        // blinking cursor
-//        window.setInterval(function() {
-//
-//            if (!_IsTyping && _StdIn && $("#display").is(":focus")) {
-//                _StdIn.putText("|");
-//
-//                setTimeout(function() {
-//                    var charWidth = _DrawingContext.measureText(_Console.currentFont, _Console.currentFontSize, "|");
-//                    _Console.currentXPosition -= charWidth;
-//
-//                    var xPos = _Console.currentXPosition;
-//                    var yPos = (_Console.currentYPosition - _Console.currentFontSize) - 1;
-//                    var width = charWidth;
-//                    var height = _Console.currentFontSize + (_Console.currentFontSize / 2);
-//                    _DrawingContext.clearRect(xPos, yPos, width, height);
-//                }, 500);
-//            }
-//        }, 1000);
-
     },
     /**
      * Helps keep a the log textarea updated

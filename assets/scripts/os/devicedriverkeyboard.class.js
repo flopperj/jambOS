@@ -305,9 +305,8 @@ jambOS.OS.DeviceDriverKeyboard = jambOS.util.createClass(jambOS.OS.DeviceDriver,
 
                 var xPos = _Console.currentXPosition;
                 var yPos = (_Console.currentYPosition - _Console.currentFontSize) - 1;
-                var width = charWidth;
                 var height = _Console.currentFontSize + (_Console.currentFontSize / 2);
-                _DrawingContext.clearRect(xPos, yPos, width, height);
+                _DrawingContext.clearRect(xPos, yPos, _Canvas.width, height);
             } else if (keyCode !== 38 && keyCode !== 40)
                 _KernelInputQueue.enqueue(chr);
         }

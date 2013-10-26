@@ -23,7 +23,8 @@ jambOS.OS.DeviceDriver = jambOS.util.createClass({
      * @property {boolean} preemptable
      */
     preemptable: false,
-    // queue: new jambOS.OS.Queue(),     // TODO: We will eventually want a queue for, well, queueing requests for this device to be handled by deferred procedure calls (DPCs).
+    // TODO: We will eventually want a queue for, well, queueing requests for this device to be handled by deferred procedure calls (DPCs).
+    // queue: new jambOS.OS.Queue(),     
 
     // Base Method pointers.
     /**
@@ -33,6 +34,7 @@ jambOS.OS.DeviceDriver = jambOS.util.createClass({
     /**
      * Interrupt Service Routine
      */
-    isr: null
-            // TODO: this.dpc: null   // Deferred Procedure Call routine - Start next queued operation on this device.
+    isr: null,
+    // TODO: Deferred Procedure Call routine - Start next queued operation on this device.
+    dpc: null
 });

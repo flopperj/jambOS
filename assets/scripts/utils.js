@@ -97,7 +97,7 @@
         /**
          * @property {string} type                 - type of klass
          */
-        klass.prototype.type = klass.prototype.type ? klass.prototype.type : "Klass";
+        klass.prototype.type = klass.prototype.type ? klass.prototype.type : "klass";
 
         /**
          * Returns a string representation of an instance      
@@ -106,7 +106,7 @@
          *                                           Klass object
          */
         klass.prototype.toString = function() {
-            return "#<jambOS." + this.type.capitalize() + ">";
+            return "#<jambOS." + this.type.toUpperCase() + ">";
         };
 
         /**
@@ -180,28 +180,36 @@
 
 })();
 
-// initialize host
-$(document).ready(function(){
-    _Control = new jambOS.host.Control();
-});
-
-
-function trim(str) {     // Use a regular expression to remove leading and trailing spaces.
+/**
+ * Use a regular expression to remove leading and trailing spaces.
+ * Huh?  Take a breath.  Here we go:
+ *      - The "|" separates this into two expressions, as in A or B.
+ *      - "^\s+" matches a sequence of one or more whitespace characters at 
+ *        the beginning of a string.
+ *      - "\s+$" is the same thing, but at the end of the string.
+ *      - "g" makes is global, so we get all the whitespace.
+ *      - "" is nothing, which is what we replace the whitespace with.
+ * @public
+ * @method trim
+ * @param {string} str
+ * @returns {string}
+ */
+jambOS.util.trim = function(str) {
     return str.replace(/^\s+ | \s+$/g, "");
-    /* 
-     Huh?  Take a breath.  Here we go:
-     - The "|" separates this into two expressions, as in A or B.
-     - "^\s+" matches a sequence of one or more whitespace characters at the beginning of a string.
-     - "\s+$" is the same thing, but at the end of the string.
-     - "g" makes is global, so we get all the whitespace.
-     - "" is nothing, which is what we replace the whitespace with.
-     */
+};
 
-}
-
-function rot13(str) {   // An easy-to understand implementation of the famous and common Rot13 obfuscator.
-    // You can do this in three lines with a complex regular expression, but I'd have
-    var retVal = "";    // trouble explaining it in the future.  There's a lot to be said for obvious code.
+/**
+ * An easy-to understand implementation of the famous and common Rot13 
+ * obfuscator. You can do this in three lines with a complex regular expression, 
+ * but I'd have trouble explaining it in the future. There's a lot to be said 
+ * for obvious code.
+ * @public 
+ * @method rot13
+ * @param {string} str
+ * @returns {string}
+ */
+jambOS.util.rot13 = function(str) {
+    var retVal = "";
     for (var i in str) {
         var ch = str[i];
         var code = 0;
@@ -216,5 +224,9 @@ function rot13(str) {   // An easy-to understand implementation of the famous an
         }
     }
     return retVal;
-}
+};
 
+// initialize host
+$(document).ready(function() {
+    _Control = new jambOS.host.Control();
+});

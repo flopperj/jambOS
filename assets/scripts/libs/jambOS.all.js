@@ -55,7 +55,7 @@ var _DrawingContext = null;       // Initialized in hostInit().
 var _TaskbarContext = null;       // Initialized in hostInit().
 var _DefaultFontFamily = "sans";  // Ignored, I think. The was just a place-holder in 2008, but the HTML canvas may have use for it.
 var _DefaultFontSize = 13;
-var _FontHeightMargin = 4;        // Additional space added to font size when advancing a line.
+var _FontHeightMargin = 6;        // Additional space added to font size when advancing a line.
 
 // Default the OS trace to be on.
 var _Trace = true;
@@ -199,7 +199,7 @@ krnInterruptHandler = null;
         /**
          * @property {string} type                 - type of klass
          */
-        klass.prototype.type = klass.prototype.type ? klass.prototype.type : "Klass";
+        klass.prototype.type = klass.prototype.type ? klass.prototype.type : "klass";
 
         /**
          * Returns a string representation of an instance      
@@ -208,7 +208,7 @@ krnInterruptHandler = null;
          *                                           Klass object
          */
         klass.prototype.toString = function() {
-            return "#<jambOS." + this.type.capitalize() + ">";
+            return "#<jambOS." + this.type.toUpperCase() + ">";
         };
 
         /**
@@ -282,28 +282,36 @@ krnInterruptHandler = null;
 
 })();
 
-// initialize host
-$(document).ready(function(){
-    _Control = new jambOS.host.Control();
-});
-
-
-function trim(str) {     // Use a regular expression to remove leading and trailing spaces.
+/**
+ * Use a regular expression to remove leading and trailing spaces.
+ * Huh?  Take a breath.  Here we go:
+ *      - The "|" separates this into two expressions, as in A or B.
+ *      - "^\s+" matches a sequence of one or more whitespace characters at 
+ *        the beginning of a string.
+ *      - "\s+$" is the same thing, but at the end of the string.
+ *      - "g" makes is global, so we get all the whitespace.
+ *      - "" is nothing, which is what we replace the whitespace with.
+ * @public
+ * @method trim
+ * @param {string} str
+ * @returns {string}
+ */
+jambOS.util.trim = function(str) {
     return str.replace(/^\s+ | \s+$/g, "");
-    /* 
-     Huh?  Take a breath.  Here we go:
-     - The "|" separates this into two expressions, as in A or B.
-     - "^\s+" matches a sequence of one or more whitespace characters at the beginning of a string.
-     - "\s+$" is the same thing, but at the end of the string.
-     - "g" makes is global, so we get all the whitespace.
-     - "" is nothing, which is what we replace the whitespace with.
-     */
+};
 
-}
-
-function rot13(str) {   // An easy-to understand implementation of the famous and common Rot13 obfuscator.
-    // You can do this in three lines with a complex regular expression, but I'd have
-    var retVal = "";    // trouble explaining it in the future.  There's a lot to be said for obvious code.
+/**
+ * An easy-to understand implementation of the famous and common Rot13 
+ * obfuscator. You can do this in three lines with a complex regular expression, 
+ * but I'd have trouble explaining it in the future. There's a lot to be said 
+ * for obvious code.
+ * @public 
+ * @method rot13
+ * @param {string} str
+ * @returns {string}
+ */
+jambOS.util.rot13 = function(str) {
+    var retVal = "";
     for (var i in str) {
         var ch = str[i];
         var code = 0;
@@ -318,8 +326,12 @@ function rot13(str) {   // An easy-to understand implementation of the famous an
         }
     }
     return retVal;
-}
+};
 
+// initialize host
+$(document).ready(function() {
+    _Control = new jambOS.host.Control();
+});
 
 /**
  * =============================================================================
@@ -414,26 +426,6 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
             if (_CPU)
                 _CPU.cycle();
         });
-        
-        // blinking cursor
-//        window.setInterval(function() {
-//
-//            if (!_IsTyping && _StdIn && $("#display").is(":focus")) {
-//                _StdIn.putText("|");
-//
-//                setTimeout(function() {
-//                    var charWidth = _DrawingContext.measureText(_Console.currentFont, _Console.currentFontSize, "|");
-//                    _Console.currentXPosition -= charWidth;
-//
-//                    var xPos = _Console.currentXPosition;
-//                    var yPos = (_Console.currentYPosition - _Console.currentFontSize) - 1;
-//                    var width = charWidth;
-//                    var height = _Console.currentFontSize + (_Console.currentFontSize / 2);
-//                    _DrawingContext.clearRect(xPos, yPos, width, height);
-//                }, 500);
-//            }
-//        }, 1000);
-
     },
     /**
      * Helps keep a the log textarea updated
@@ -516,29 +508,39 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
         // page from its cache, which is not what we want.
     }
 });
-/* ------------  
- Devices.js
- 
- Requires global.js.
- 
- Routines for the hardware simulation, NOT for our client OS itself. In this manner, it's A LITTLE BIT like a hypervisor,
- in that the Document environment inside a browser is the "bare metal" (so to speak) for which we write code
- that hosts our client OS. But that analogy only goes so far, and the lines are blurred, because we are using
- JavaScript in both the host and client environments.
- 
- This (and simulation scripts) is the only place that we should see "web" code, like 
- DOM manipulation and JavaScript event handling, and so on.  (Index.html is the only place for markup.)
- 
- This code references page numbers in the text book: 
- Operating System Concepts 8th edition by Silberschatz, Galvin, and Gagne.  ISBN 978-0-470-12872-5
- ------------ */
+/**
+ * =============================================================================
+ * Devices.js
+ * 
+ * Routines for the hardware simulation, NOT for our client OS itself. In this 
+ * manner, it's A LITTLE BIT like a hypervisor, in that the Document environment 
+ * inside a browser is the "bare metal" (so to speak) for which we write code 
+ * that hosts our client OS. But that analogy only goes so far, and the lines 
+ * are blurred, because we are using JavaScript in both the host and client 
+ * environments. 
+ * 
+ * This (and simulation scripts) is the only place that we should see "web" 
+ * code, like DOM manipulation and JavaScript event handling, and so on.  
+ * (Index.html is the only place for markup.) 
+ * 
+ * This code references page numbers in the text book: Operating System Concepts
+ * 8th edition by Silberschatz, Galvin, and Gagne.  ISBN 978-0-470-12872-5
+ * 
+ * @public
+ * @class Device
+ * @requires global.js
+ * @memberOf jambOS.host
+ * =============================================================================
+ */
 
 var _hardwareClockID = -1;
 
 jambOS.host.Device = jambOS.util.createClass({
-//
-// Hardware/Host Clock Pulse
-//
+    /**
+     * Hardware/Host Clock Pulse
+     * @public
+     * @method hostClockPulse
+     */
     hostClockPulse: function()
     {
         // Increment the hardware (host) clock.
@@ -546,9 +548,12 @@ jambOS.host.Device = jambOS.util.createClass({
         // Call the kernel clock pulse event handler.
         _Kernel.onCPUClockPulse();
     },
-//
-// Keyboard Interrupt, a HARDWARE Interrupt Request. (See pages 560-561 in text book.)
-//
+    /**
+     * Keyboard Interrupt, a HARDWARE Interrupt Request. (See pages 560-561 in 
+     * text book.)
+     * @public
+     * @method hostEnableKeyboardInterrupt
+     */
     hostEnableKeyboardInterrupt: function()
     {
         // Listen for key press (keydown, actually) events in the Document
@@ -556,10 +561,20 @@ jambOS.host.Device = jambOS.util.createClass({
         // OS interrupt handler.
         document.addEventListener("keydown", _Device.hostOnKeypress, false);
     },
+    /**
+     * Disables KeyboardInterrupt
+     * @public
+     * @method hostDisableKeyboardInterrupt
+     */
     hostDisableKeyboardInterrupt: function()
     {
         document.removeEventListener("keydown", _Device.hostOnKeypress, false);
     },
+    /**
+     * Handles keypress events
+     * @public
+     * @method hostOnKeypress
+     */
     hostOnKeypress: function(event)
     {
         var keyCode = (event.keyCode ? event.keyCode : event.which);
@@ -568,12 +583,15 @@ jambOS.host.Device = jambOS.util.createClass({
         // Check that we are processing keystrokes only from the canvas's id (as set in index.html).
         if (event.target.id === "display")
         {
+            _isTyping = true;
+
             event.preventDefault();
 
             // Note the pressed key code in the params (Mozilla-specific).
             var params = new Array(keyCode, event.shiftKey);
+            var keyboardInterrupt = new jambOS.OS.Interrupt({irq: KEYBOARD_IRQ, params: params});
             // Enqueue this interrupt on the kernel interrupt queue so that it gets to the Interrupt handler.
-            _KernelInterruptQueue.enqueue(new Interrupt(KEYBOARD_IRQ, params));
+            _KernelInterruptQueue.enqueue(keyboardInterrupt);
         }
     }
 });
@@ -1321,16 +1339,41 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
     }
 });
 
-/* ------------
-   Interrupt.js   
-   ------------ */
-   
-function Interrupt(_irq, _params) {
-    // Properties
-    this.irq = _irq;
-    this.params = _params;
-}
+/**
+ * =============================================================================
+ * interrupt.class.js 
+ * 
+ * Interrupt Class
+ * 
+ * @public
+ * @class Interrupt
+ * @memberOf jambOS.OS
+ * =============================================================================
+ */
 
+jambOS.OS.Interrupt = jambOS.util.createClass(/** @scope jambOS.OS.Interrupt.prototype */{
+    /**
+     * @property {string} type
+     */
+    type: "Interrupt",
+    /**
+     * @property {int} iqr
+     */
+    irq: null,
+    /**
+     * @params {object} params
+     */
+    params: null,
+    /**
+     * Constructor
+     */
+    initialize: function(options) {
+        var self = this;
+
+        options || (options = {});
+        self.setOptions(options);
+    }
+});
 /* ----------------- *
  *   CanvasText.js   *
  *
@@ -1582,6 +1625,7 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
         this.clearScreen();
         this.resetXY();
         this.initTaskbar();
+        this.initCursor();
     },
     /**
      * Initializes our taskbar
@@ -1602,6 +1646,28 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
         }, 1000);
     },
     /**
+     * Handlers the cursor on the canvas
+     * @public
+     * @method initCursor
+     */
+    initCursor: function() {
+
+        var self = this;
+
+        // blinking cursor
+        window.setInterval(function() {
+
+            if (!_IsTyping && _StdIn && $("#display").is(":focus")) {
+
+                _DrawingContext.drawText(_Console.currentFont, _Console.currentFontSize, _Console.currentXPosition, _Console.currentYPosition, "|");
+
+                setTimeout(function() {
+                    self.clearBlinker();
+                }, 500);
+            }
+        }, 1000);
+    },
+    /**
      * Clears the canvas
      * @public
      * @method clearScreen
@@ -1609,6 +1675,17 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
     clearScreen: function() {
         _Canvas.height = 480;
         _DrawingContext.clearRect(0, 0, _Canvas.width, _Canvas.height);
+    },
+    /**
+     * Helps with clearing the cursor blinker
+     * @public
+     * @method clearBlinlker
+     */
+    clearBlinker: function() {
+        var xPos = this.currentXPosition;
+        var yPos = (this.currentYPosition - this.currentFontSize) - 1;
+        var height = this.currentFontSize + (this.currentFontSize / 2);
+        _DrawingContext.clearRect(xPos, yPos, _Canvas.width, height);
     },
     /**
      * Resets the X & Y positions of the cursor
@@ -1663,12 +1740,18 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
         // decided to write one function and use the term "text" to connote string or char.
         if (text !== "")
         {
+            // clear blinker before drawing character
+            this.clearBlinker();
+
             // Draw the text at the current X and Y coordinates.
             _DrawingContext.drawText(this.currentFont, this.currentFontSize, this.currentXPosition, this.currentYPosition, text);
             // Move the current X position.
             var offset = _DrawingContext.measureText(this.currentFont, this.currentFontSize, text);
             this.currentXPosition = this.currentXPosition + offset;
         }
+        
+        // reset our isTyping variable so that we can show our cursor
+        _isTyping = false;
     },
     /**
      * Handles new line advancement of the cursor
@@ -1676,11 +1759,15 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
      * @method advanceLine
      */
     advanceLine: function() {
+
+        // clear blinker before we get screenshot of canvas
+        this.clearBlinker();
+
         this.currentXPosition = 0;
         this.currentYPosition += _DefaultFontSize + _FontHeightMargin;
 
         // Handle scrolling.
-        if ((this.currentYPosition + (this.currentFontSize * 4)) > _Canvas.height) {
+        if (this.currentYPosition > _Canvas.height) {
             var bufferCanvas = document.createElement('canvas');
             var buffer = bufferCanvas.getContext("2d");
 
@@ -1695,7 +1782,7 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
 
             canvasData = buffer.getImageData(0, 0, _Canvas.width, _Canvas.height);
 
-            _Canvas.height = _Canvas.height + (_Console.currentFontSize * 4);
+            _Canvas.height += _DefaultFontSize + _FontHeightMargin;
 
             // redraw everything on the resized canvas
             _DrawingContext.putImageData(canvasData, 0, 0);
@@ -1731,7 +1818,8 @@ jambOS.OS.DeviceDriver = jambOS.util.createClass({
      * @property {boolean} preemptable
      */
     preemptable: false,
-    // queue: new jambOS.OS.Queue(),     // TODO: We will eventually want a queue for, well, queueing requests for this device to be handled by deferred procedure calls (DPCs).
+    // TODO: We will eventually want a queue for, well, queueing requests for this device to be handled by deferred procedure calls (DPCs).
+    // queue: new jambOS.OS.Queue(),     
 
     // Base Method pointers.
     /**
@@ -1741,8 +1829,9 @@ jambOS.OS.DeviceDriver = jambOS.util.createClass({
     /**
      * Interrupt Service Routine
      */
-    isr: null
-            // TODO: this.dpc: null   // Deferred Procedure Call routine - Start next queued operation on this device.
+    isr: null,
+    // TODO: Deferred Procedure Call routine - Start next queued operation on this device.
+    dpc: null
 });
 
 /**
@@ -2052,9 +2141,8 @@ jambOS.OS.DeviceDriverKeyboard = jambOS.util.createClass(jambOS.OS.DeviceDriver,
 
                 var xPos = _Console.currentXPosition;
                 var yPos = (_Console.currentYPosition - _Console.currentFontSize) - 1;
-                var width = charWidth;
                 var height = _Console.currentFontSize + (_Console.currentFontSize / 2);
-                _DrawingContext.clearRect(xPos, yPos, width, height);
+                _DrawingContext.clearRect(xPos, yPos, _Canvas.width, height);
             } else if (keyCode !== 38 && keyCode !== 40)
                 _KernelInputQueue.enqueue(chr);
         }
@@ -2168,7 +2256,7 @@ jambOS.OS.SystemServices = jambOS.util.createClass(/** @scope jambOS.OS.SystemSe
         else
         {
             // It's not found, so check for curses and apologies before declaring the command invalid.
-            if (this.curses.indexOf("[" + rot13(cmd) + "]") >= 0)      // Check for curses.
+            if (this.curses.indexOf("[" + jambOS.util.rot13(cmd) + "]") >= 0)      // Check for curses.
             {
                 this.execute(shellCurse);
             }
@@ -2192,7 +2280,7 @@ jambOS.OS.SystemServices = jambOS.util.createClass(/** @scope jambOS.OS.SystemSe
         var retVal = new jambOS.OS.UserCommand();
 
         // 1. Remove leading and trailing spaces.
-        buffer = trim(buffer);
+        buffer = jambOS.util.trim(buffer);
 
         // 2. Lower-case it.
         buffer = buffer.toLowerCase();
@@ -2203,7 +2291,7 @@ jambOS.OS.SystemServices = jambOS.util.createClass(/** @scope jambOS.OS.SystemSe
         // 4. Take the first (zeroth) element and use that as the command.
         var cmd = tempList.shift();  // Yes, you can do that to an array in JavaScript.  See the Queue class.
         // 4.1 Remove any left-over spaces.
-        cmd = trim(cmd);
+        cmd = jambOS.util.trim(cmd);
         // 4.2 Record it in the return value.
         retVal.command = cmd;
         retVal.args = [];
@@ -2211,7 +2299,7 @@ jambOS.OS.SystemServices = jambOS.util.createClass(/** @scope jambOS.OS.SystemSe
         // 5. Now create the args array from what's left.
         for (var i in tempList)
         {
-            var arg = trim(tempList[i]);
+            var arg = jambOS.util.trim(tempList[i]);
             if (arg !== "")
             {
                 retVal.args.push(tempList[i]);
@@ -2470,9 +2558,9 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             }});
         this.commandList.push(sc);
 
-        // cls
+        // clear
         sc = new jambOS.OS.ShellCommand({
-            command: "cls",
+            command: "clear",
             description: "- Clears the screen and resets the cursor position.",
             behavior: function(args)
             {
@@ -2552,7 +2640,7 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             {
                 if (args.length > 0)
                 {
-                    _StdIn.putText(args[0] + " = '" + rot13(args[0]) + "'");     // Requires Utils.js for rot13() function.
+                    _StdIn.putText(args[0] + " = '" + jambOS.util.rot13(args[0]) + "'");     // Requires Utils.js for jambOS.util.rot13() function.
                 }
                 else
                 {
@@ -2883,6 +2971,11 @@ jambOS.OS.Kernel = jambOS.util.createClass({
             }
         }
     },
+    /**
+     * This is our OS Error trap
+     * @public
+     * @method trapError
+     */
     trapError: function(msg, killSwitch)
     {
         killSwitch = typeof killSwitch === "undefined" ? true : killSwitch;
