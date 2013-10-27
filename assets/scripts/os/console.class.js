@@ -50,15 +50,21 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
      */
     initTaskbar: function() {
         var date = new Date();
+        var date_xpos = 16;
+        var date_ypos = 16;
+        var status_xpos = 200;
+        var status_ypos = 16;
         _TaskbarContext.font = "bold 12px Arial";
-        _TaskbarContext.fillText(date.toLocaleString(), 16, 16);
-        _TaskbarContext.fillText("Status: OS is running...", 200, 16);
+        _TaskbarContext.fillText(date.toLocaleString(), date_xpos, date_ypos);
+        _TaskbarContext.fillText("Status: OS is running...", status_xpos, status_ypos);
 
         // redraw section every second
         window.setInterval(function() {
             date = new Date();
-            _TaskbarContext.clearRect(16, 0, 165, 20);
-            _TaskbarContext.fillText(date.toLocaleString(), 16, 16);
+            var clearWidth = 165;
+            var clearHeight = 20;
+            _TaskbarContext.clearRect(date_xpos, 0, clearWidth, clearHeight);
+            _TaskbarContext.fillText(date.toLocaleString(), date_xpos, date_ypos);
         }, 1000);
     },
     /**
@@ -165,7 +171,7 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
             var offset = _DrawingContext.measureText(this.currentFont, this.currentFontSize, text);
             this.currentXPosition = this.currentXPosition + offset;
         }
-        
+
         // reset our isTyping variable so that we can show our cursor
         _isTyping = false;
     },

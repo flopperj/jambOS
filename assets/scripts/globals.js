@@ -40,6 +40,10 @@ var KEYBOARD_IRQ = 1;
 var PROCESS_INITIATION_IRQ = 2;
 var PROCESS_TERMINATION_IRQ = 3;
 
+// memory
+var MEMORY_BLOCK = 256;
+var ALLOCATABLE_MEMORY_SLOTS = 3;
+
 //
 // Global Variables
 //

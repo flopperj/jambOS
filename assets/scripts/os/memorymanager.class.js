@@ -18,37 +18,43 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
      */
     type: "memorymanager",
     /**
-     * @property {int} memorySize
-     */
-    memorySize: 768,
-    /**
      * @property {object} slots                 
      */
-    slots: {},
-    activeSlot: 1,
+    slots: [],
+    /**
+     * @property {int} activeSlot
+     */
+    activeSlot: 0,
     /**
      * Constructor
      */
     initialize: function() {
         var self = this;
-        self.memory = new jambOS.host.Memory({size: self.memorySize});
-        self.slots = {
-            1: {
-                base: 0,
-                limit: 255,
-                open: true
-            },
-            2: {
-                base: 256,
-                limit: 512,
+
+        // set up memory slots
+        for (var i = 0; i < ALLOCATABLE_MEMORY_SLOTS; i++) {
+
+            // for our bases we are going to use the previous slot's data
+            // unless its the first slot which we'll use 0 as the base and 
+            // the block size minus 1 as the limit
+            var base = i > 0 ? self.slots[i - 1].limit + 1 : 0;
+            var limit = i > 0 ? self.slots[ i - 1].limit + MEMORY_BLOCK : MEMORY_BLOCK - 1;
+
+            self.slots.push({
+                base: base,
+                limit: limit,
                 open: false
-            },
-            3: {
-                base: 513,
-                limit: 767,
-                open: false
-            }
-        };
+            });
+        }
+
+        // initialize our memory. We are going to use the last slot's limit + 1
+        // as the total memory size
+        var memorySize = self.slots[self.slots.length - 1].limit + 1;
+        self.set({
+            memory: new jambOS.host.Memory({size: memorySize})
+        });
+        
+        // update memory table
         self.updateMemoryDisplay();
     },
     /**
@@ -57,7 +63,7 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
      */
     allocate: function(pcb) {
         var self = this;
-        pcb.set({base: self.slots[1].base, limit: self.slots[1].limit});
+        pcb.set({base: self.slots[self.activeSlot].base, limit: self.slots[self.activeSlot].limit});
         _CPU.currentProcess = pcb;
     },
     /**
@@ -66,16 +72,24 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
      */
     deallocate: function(pcb) {
         var self = this;
+
+        // clear out process from memory
         for (var i = pcb.base; i < pcb.limit; i++)
         {
             self.memory.write(i, 0);
         }
-        pcb.base = null;
-        pcb.limit = null;
 
+        // update memory table
         self.updateMemoryDisplay();
 
-        _Kernel.processManager.processes = [];
+        // reset process
+        $.each(_Kernel.processManager.get("processes"), function() {
+            if (this.pid === pcb.pid)
+                this.set({
+                    base: null,
+                    limit: null
+                });
+        });
     },
     /**
      * Validates if memory address is within available allocated slot
