@@ -92,10 +92,10 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             description: "- loads commands from the user input text area",
             behavior: function() {
                 var textInput = $("#taProgramInput").val();
-                if (/^[0-9a-f]{2}( [0-9a-f]{2})*$/i.test(textInput) && textInput.trim()) {
-                    var proccess = _Kernel.processManager.load(textInput.split(/\s/));
-                    _StdIn.putText("Process " + proccess.pid + " has been added to memory");
-
+                var isValid = /^[0-9a-f]{2}( [0-9a-f]{2})*$/i.test(textInput);
+                var process = isValid ? _Kernel.processManager.load(textInput.split(/\s/)) : null;
+                if (isValid && textInput.trim() && process !== undefined) {
+                    _StdIn.putText("Process " + process.pid + " has been added to memory");
                 } else if (!textInput.trim())
                     _StdIn.putText("Please enter an input value then call the load command");
                 else

@@ -723,10 +723,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      */
     isExecuting: false,
     /**
-     * @process {jambOS.OS.ProcessControl}      - currentProcess that is running
-     */
-    currentProcess: null,
-    /**
      * Constructor
      */
     initialize: function() {
@@ -737,7 +733,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      * @param {jambOS.OS.ProcessControlBlock} pcb
      */
     start: function(pcb) {
-        this.currentProcess = pcb;
+        _Kernel.processManager.set("currentProcess", pcb);
         this.pc = pcb.base;
         this.isExecuting = true;
     },
@@ -754,9 +750,8 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         this.isExecuting = false;
         
         // update PCB status display
-        _Kernel.processManager.updatePCBStatusDisplay(this.currentProcess);
-        
-        this.currentProcess = null;
+        _Kernel.processManager.updatePCBStatusDisplay(_Kernel.processManager.get("currentProcess"));
+        _Kernel.processManager.set("currentProcess", null);
 
 
         // disable stepover button
@@ -781,8 +776,8 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         if (operation) {
             operation(self);
 
-            if (self.currentProcess)
-                self.currentProcess.set({acc: self.acc, pc: self.pc, xReg: self.xReg, yReg: self.yReg, zFlag: self.zFlag, state: "running"});
+            if (_Kernel.processManager.get("currentProcess"))
+                _Kernel.processManager.get("currentProcess").set({acc: self.acc, pc: self.pc, xReg: self.xReg, yReg: self.yReg, zFlag: self.zFlag, state: "running"});
 
         }
 
@@ -1139,7 +1134,7 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
             self.slots.push({
                 base: base,
                 limit: limit,
-                open: false
+                open: true
             });
         }
 
@@ -1149,7 +1144,7 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
         self.set({
             memory: new jambOS.host.Memory({size: memorySize})
         });
-        
+
         // update memory table
         self.updateMemoryDisplay();
     },
@@ -1159,7 +1154,7 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
      */
     allocate: function(pcb) {
         var self = this;
-        pcb.set({base: self.slots[self.activeSlot].base, limit: self.slots[self.activeSlot].limit});
+        pcb.set({base: self.slots[self.activeSlot - 1].base, limit: self.slots[self.activeSlot - 1].limit});
         _CPU.currentProcess = pcb;
     },
     /**
@@ -1177,15 +1172,6 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
 
         // update memory table
         self.updateMemoryDisplay();
-
-        // reset process
-        $.each(_Kernel.processManager.get("processes"), function() {
-            if (this.pid === pcb.pid)
-                this.set({
-                    base: null,
-                    limit: null
-                });
-        });
     },
     /**
      * Validates if memory address is within available allocated slot
@@ -1193,7 +1179,8 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
      */
     validateAddress: function(address) {
         var self = this;
-        return (address <= self.slots[self.activeSlot].limit);
+        var activeSlot = _Kernel.processManager.get("currentProcess").slot;
+        return (address <= self.slots[activeSlot].limit);
     },
     /**
      * Updates content that is on memory for display on the OS 
@@ -1256,6 +1243,10 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
      */
     currentProcessID: 0,
     /**
+     * @property {jambOS.OS.ProcessControlBlock} currentProcess
+     */
+    currentProcess: null,
+    /**
      * Constructor
      * @param {object} options
      * @returns {jambOS.OS.ProcessManager}
@@ -1284,20 +1275,30 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         // enable stepover button
         $("#btnStepOver").prop("disabled", false);
 
-        _Kernel.memoryManager.memory.insert(0, program);
+        var slots = _Kernel.memoryManager.get("slots");
+        var activeSlot = _Kernel.memoryManager.get("activeSlot");
 
-        var slots = _Kernel.memoryManager.slots;
-        var activeSlot = _Kernel.memoryManager.activeSlot;
+        // move up memory slot when program has been loaded
+        if (activeSlot < ALLOCATABLE_MEMORY_SLOTS)
+            _Kernel.memoryManager.activeSlot++;
+        else
+            return _Kernel.trapError("No memory is available! \n Deallocate processes from memory before proceeding!", false);
+
+        var base = slots[activeSlot].base;
+        var limit = slots[activeSlot].limit;
+
+        _Kernel.memoryManager.memory.insert(base, program);
 
         var pid = this.currentProcessID++;
         var pcb = new jambOS.OS.ProcessControlBlock({
             pid: pid,
             pc: 0,
-            base: slots[activeSlot].base,
-            limit: slots[activeSlot].limit,
+            base: base,
+            limit: limit,
             xReg: 0,
             yReg: 0,
-            zFlag: 0
+            zFlag: 0,
+            slot: activeSlot
         });
 
         this.processes.push(pcb);
@@ -1327,7 +1328,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         var xReg = cpu.xReg;
         var yReg = parseInt(cpu.yReg, 16);
         var zFlag = cpu.zFlag;
-        
+
         $("#cpuStatus .pc").text(pc);
         $("#cpuStatus .acc").text(acc);
         $("#cpuStatus .x-register").text(xReg);
@@ -1346,7 +1347,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         var xReg = pcb.xReg;
         var yReg = parseInt(pcb.yReg, 16);
         var zFlag = pcb.zFlag;
-        
+
         $("#pcbStatus .pid").text(id);
         $("#pcbStatus .pc").text(pc);
         $("#pcbStatus .acc").text(acc);
@@ -2522,10 +2523,10 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             description: "- loads commands from the user input text area",
             behavior: function() {
                 var textInput = $("#taProgramInput").val();
-                if (/^[0-9a-f]{2}( [0-9a-f]{2})*$/i.test(textInput) && textInput.trim()) {
-                    var proccess = _Kernel.processManager.load(textInput.split(/\s/));
-                    _StdIn.putText("Process " + proccess.pid + " has been added to memory");
-
+                var isValid = /^[0-9a-f]{2}( [0-9a-f]{2})*$/i.test(textInput);
+                var process = isValid ? _Kernel.processManager.load(textInput.split(/\s/)) : null;
+                if (isValid && textInput.trim() && process !== undefined) {
+                    _StdIn.putText("Process " + process.pid + " has been added to memory");
                 } else if (!textInput.trim())
                     _StdIn.putText("Please enter an input value then call the load command");
                 else
@@ -3022,6 +3023,8 @@ jambOS.OS.Kernel = jambOS.util.createClass({
         _DrawingContext.fillStyle = "blue";
         _DrawingContext.font = "bold 12px Arial";
         _DrawingContext.fillText("OS ERROR - TRAP: => " + msg, xPos, _Console.currentYPosition);
+        _Console.currentXPosition = _Canvas.width;
+        _StdIn.advanceLine();
 
         if (killSwitch)
             this.shutdown();
@@ -3075,6 +3078,10 @@ jambOS.OS.ProcessControlBlock = jambOS.util.createClass(/** @scope jambOS.OS.Pro
      * @property {int} zFlag                - zero flag
      */
     zFlag: 0, 
+    /**
+     * @property {int} slot                 - slot in which the process is loaded
+     */
+    slot: 0,
     /**
      * Constructor
      */

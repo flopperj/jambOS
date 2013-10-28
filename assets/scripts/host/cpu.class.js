@@ -44,10 +44,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      */
     isExecuting: false,
     /**
-     * @process {jambOS.OS.ProcessControl}      - currentProcess that is running
-     */
-    currentProcess: null,
-    /**
      * Constructor
      */
     initialize: function() {
@@ -58,7 +54,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      * @param {jambOS.OS.ProcessControlBlock} pcb
      */
     start: function(pcb) {
-        this.currentProcess = pcb;
+        _Kernel.processManager.set("currentProcess", pcb);
         this.pc = pcb.base;
         this.isExecuting = true;
     },
@@ -75,9 +71,8 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         this.isExecuting = false;
         
         // update PCB status display
-        _Kernel.processManager.updatePCBStatusDisplay(this.currentProcess);
-        
-        this.currentProcess = null;
+        _Kernel.processManager.updatePCBStatusDisplay(_Kernel.processManager.get("currentProcess"));
+        _Kernel.processManager.set("currentProcess", null);
 
 
         // disable stepover button
@@ -102,8 +97,8 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         if (operation) {
             operation(self);
 
-            if (self.currentProcess)
-                self.currentProcess.set({acc: self.acc, pc: self.pc, xReg: self.xReg, yReg: self.yReg, zFlag: self.zFlag, state: "running"});
+            if (_Kernel.processManager.get("currentProcess"))
+                _Kernel.processManager.get("currentProcess").set({acc: self.acc, pc: self.pc, xReg: self.xReg, yReg: self.yReg, zFlag: self.zFlag, state: "running"});
 
         }
 

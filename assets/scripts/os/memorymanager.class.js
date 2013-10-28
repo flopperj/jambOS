@@ -43,7 +43,7 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
             self.slots.push({
                 base: base,
                 limit: limit,
-                open: false
+                open: true
             });
         }
 
@@ -53,7 +53,7 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
         self.set({
             memory: new jambOS.host.Memory({size: memorySize})
         });
-        
+
         // update memory table
         self.updateMemoryDisplay();
     },
@@ -63,7 +63,7 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
      */
     allocate: function(pcb) {
         var self = this;
-        pcb.set({base: self.slots[self.activeSlot].base, limit: self.slots[self.activeSlot].limit});
+        pcb.set({base: self.slots[self.activeSlot - 1].base, limit: self.slots[self.activeSlot - 1].limit});
         _CPU.currentProcess = pcb;
     },
     /**
@@ -81,15 +81,6 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
 
         // update memory table
         self.updateMemoryDisplay();
-
-        // reset process
-        $.each(_Kernel.processManager.get("processes"), function() {
-            if (this.pid === pcb.pid)
-                this.set({
-                    base: null,
-                    limit: null
-                });
-        });
     },
     /**
      * Validates if memory address is within available allocated slot
@@ -97,7 +88,8 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
      */
     validateAddress: function(address) {
         var self = this;
-        return (address <= self.slots[self.activeSlot].limit);
+        var activeSlot = _Kernel.processManager.get("currentProcess").slot;
+        return (address <= self.slots[activeSlot].limit);
     },
     /**
      * Updates content that is on memory for display on the OS 

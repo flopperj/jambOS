@@ -46,6 +46,10 @@ jambOS.OS.ProcessControlBlock = jambOS.util.createClass(/** @scope jambOS.OS.Pro
      */
     zFlag: 0, 
     /**
+     * @property {int} slot                 - slot in which the process is loaded
+     */
+    slot: 0,
+    /**
      * Constructor
      */
     initialize: function(options){        

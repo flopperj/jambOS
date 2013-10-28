@@ -19,6 +19,10 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
      */
     currentProcessID: 0,
     /**
+     * @property {jambOS.OS.ProcessControlBlock} currentProcess
+     */
+    currentProcess: null,
+    /**
      * Constructor
      * @param {object} options
      * @returns {jambOS.OS.ProcessManager}
@@ -47,20 +51,30 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         // enable stepover button
         $("#btnStepOver").prop("disabled", false);
 
-        _Kernel.memoryManager.memory.insert(0, program);
+        var slots = _Kernel.memoryManager.get("slots");
+        var activeSlot = _Kernel.memoryManager.get("activeSlot");
 
-        var slots = _Kernel.memoryManager.slots;
-        var activeSlot = _Kernel.memoryManager.activeSlot;
+        // move up memory slot when program has been loaded
+        if (activeSlot < ALLOCATABLE_MEMORY_SLOTS)
+            _Kernel.memoryManager.activeSlot++;
+        else
+            return _Kernel.trapError("No memory is available! \n Deallocate processes from memory before proceeding!", false);
+
+        var base = slots[activeSlot].base;
+        var limit = slots[activeSlot].limit;
+
+        _Kernel.memoryManager.memory.insert(base, program);
 
         var pid = this.currentProcessID++;
         var pcb = new jambOS.OS.ProcessControlBlock({
             pid: pid,
             pc: 0,
-            base: slots[activeSlot].base,
-            limit: slots[activeSlot].limit,
+            base: base,
+            limit: limit,
             xReg: 0,
             yReg: 0,
-            zFlag: 0
+            zFlag: 0,
+            slot: activeSlot
         });
 
         this.processes.push(pcb);
@@ -90,7 +104,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         var xReg = cpu.xReg;
         var yReg = parseInt(cpu.yReg, 16);
         var zFlag = cpu.zFlag;
-        
+
         $("#cpuStatus .pc").text(pc);
         $("#cpuStatus .acc").text(acc);
         $("#cpuStatus .x-register").text(xReg);
@@ -109,7 +123,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         var xReg = pcb.xReg;
         var yReg = parseInt(pcb.yReg, 16);
         var zFlag = pcb.zFlag;
-        
+
         $("#pcbStatus .pid").text(id);
         $("#pcbStatus .pc").text(pc);
         $("#pcbStatus .acc").text(acc);

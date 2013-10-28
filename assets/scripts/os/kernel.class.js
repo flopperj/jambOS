@@ -260,6 +260,8 @@ jambOS.OS.Kernel = jambOS.util.createClass({
         _DrawingContext.fillStyle = "blue";
         _DrawingContext.font = "bold 12px Arial";
         _DrawingContext.fillText("OS ERROR - TRAP: => " + msg, xPos, _Console.currentYPosition);
+        _Console.currentXPosition = _Canvas.width;
+        _StdIn.advanceLine();
 
         if (killSwitch)
             this.shutdown();
