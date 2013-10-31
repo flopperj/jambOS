@@ -43,6 +43,7 @@ var PROCESS_TERMINATION_IRQ = 3;
 // memory
 var MEMORY_BLOCK = 256;
 var ALLOCATABLE_MEMORY_SLOTS = 3;
+var HEX_BASE = 16;
 
 //
 // Global Variables

@@ -54,22 +54,29 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      * @param {jambOS.OS.ProcessControlBlock} pcb
      */
     start: function(pcb) {
-        _Kernel.processManager.set("currentProcess", pcb);
-        this.pc = pcb.base;
-        this.isExecuting = true;
+        _Kernel.processManager.set({
+            currentProcess: pcb,
+            activeSlot: pcb.slot
+        });
+        this.set({
+            pc: pcb.base,
+            isExecuting: true
+        });
     },
     /**
      * Resets cpu registers to default values to help stop process execution
      * @param {jambOS.OS.ProcessControlBlock} pcb
      */
     stop: function() {
-        this.pc = 0;
-        this.acc = 0;
-        this.xReg = 0;
-        this.yReg = 0;
-        this.zFlag = 0;
-        this.isExecuting = false;
-        
+        this.set({
+            pc: 0,
+            acc: 0,
+            xReg: 0,
+            yReg: 0,
+            zFlag: 0,
+            isExecuting: false
+        });
+
         // update PCB status display
         _Kernel.processManager.updatePCBStatusDisplay(_Kernel.processManager.get("currentProcess"));
         _Kernel.processManager.set("currentProcess", null);
@@ -137,7 +144,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     loadAccWithConstant: function(self)
     {
         var byteCode = _Kernel.memoryManager.memory.read(self.pc++);
-        self.acc = parseInt(byteCode, 16);
+        self.acc = parseInt(byteCode, HEX_BASE);
     },
     /**
      * Load the accumulator from memory 
@@ -151,12 +158,12 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
         // Concatenate the hex address in the correct order
-        var address = parseInt((byteCodeTwo + byteCodeOne), 16);
+        var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE);
         var value = _Kernel.memoryManager.memory.read(address);
 
         if (_Kernel.memoryManager.validateAddress(address))
         {
-            self.acc = parseInt(value, 16);
+            self.acc = parseInt(value, HEX_BASE);
         } else {
             // TODO: Halt the OS
             // TODO: Show error in log
@@ -174,7 +181,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
         // Concatenate the hex address in the correct order
-        var address = parseInt((byteCodeTwo + byteCodeOne), 16);
+        var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE);
 
         if (_Kernel.memoryManager.validateAddress(address))
         {
@@ -202,13 +209,13 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
         // Concatenate the hex address in the correct order
-        var address = parseInt((byteCodeTwo + byteCodeOne), 16);
+        var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE);
         var value = _Kernel.memoryManager.memory.read(address);
 
         if (_Kernel.memoryManager.validateAddress(address))
         {
             // Add contents of the memory location and the contents of the acc
-            self.acc += parseInt(value, 16);
+            self.acc += parseInt(value, HEX_BASE);
         } else {
             // TODO: Halt the OS
             // TODO: Show error in log
@@ -222,7 +229,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     loadXRegWithConstant: function(self)
     {
         var byteCode = _Kernel.memoryManager.memory.read(self.pc++);
-        self.xReg = parseInt(byteCode, 16);
+        self.xReg = parseInt(byteCode, HEX_BASE);
     },
     /**
      * Load the X register from memory 
@@ -236,13 +243,13 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
         // Concatenate the hex address in the correct order
-        var address = parseInt((byteCodeTwo + byteCodeOne), 16);
+        var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE);
         var value = _Kernel.memoryManager.memory.read(address);
 
         if (_Kernel.memoryManager.validateAddress(address))
         {
             // Place contents of the memory location (in decimal form) in the x register
-            self.xReg = parseInt(value, 16);
+            self.xReg = parseInt(value, HEX_BASE);
         } else {
             // TODO: Halt the OS
             // TODO: Show error in log
@@ -270,13 +277,13 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
         // Concatenate the hex address in the correct order
-        var address = parseInt((byteCodeTwo + byteCodeOne), 16);
+        var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE);
         var value = _Kernel.memoryManager.memory.read(address);
 
         if (_Kernel.memoryManager.validateAddress(address))
         {
             // Place contents of the memory location in the y register
-            self.yReg = parseInt(value, 16);
+            self.yReg = parseInt(value, HEX_BASE);
         } else {
             // TODO: Halt the OS
             // TODO: Show error in log
@@ -296,7 +303,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      * opCode: 00
      */
     breakOperation: function(self) {
-        _Kernel.interruptHandler(PROCESS_TERMINATION_IRQ, self.currentProcess);
+        _Kernel.interruptHandler(PROCESS_TERMINATION_IRQ, _Kernel.processManager.get("currentProcess"));
     },
     /**
      * Compare a byte in memory to the X reg sets the Z (zero) flag if equal 
@@ -310,7 +317,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
         // Concatenate the hex address in the correct order
-        var address = parseInt((byteCodeTwo + byteCodeOne), 16);
+        var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE);
         var value = _Kernel.memoryManager.memory.read(address);
 
         if (_Kernel.memoryManager.validateAddress(address))
@@ -332,12 +339,12 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     {
         if (self.zFlag === 0)
         {
-            var branchValue = parseInt(_Kernel.memoryManager.memory.read(self.pc++), 16);
+            var branchValue = parseInt(_Kernel.memoryManager.memory.read(self.pc++), HEX_BASE);
             self.pc += branchValue;
 
-            if (self.pc > self.currentProcess.limit)
+            if (self.pc > _Kernel.processManager.get("currentProcess").limit)
             {
-                self.pc -= self.currentProcess.limit + 1;
+                self.pc -= _Kernel.processManager.get("currentProcess").limit + 1;
             }
         }
     },
@@ -351,12 +358,12 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeOne = _Kernel.memoryManager.memory.read(self.pc++);
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
-        var address = parseInt((byteCodeTwo + byteCodeOne), 16);
+        var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE);
         var value = _Kernel.memoryManager.memory.read(address);
 
         if (_Kernel.memoryManager.validateAddress(address))
         {
-            var decimalValue = parseInt(value, 16);
+            var decimalValue = parseInt(value, HEX_BASE);
 
             decimalValue++;
 
@@ -391,7 +398,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
         } else {
 
-            var address = parseInt(self.yReg, 16);
+            var address = parseInt(self.yReg, HEX_BASE);
 
             var currentByte = _Kernel.memoryManager.memory.read(address);
 
@@ -400,7 +407,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             while (currentByte !== "00")
             {
                 currentByte = _Kernel.memoryManager.memory.read(address++);
-                character = String.fromCharCode(parseInt(currentByte, 16));
+                character = String.fromCharCode(parseInt(currentByte, HEX_BASE));
                 _StdIn.putText(character);
             }
 

@@ -272,7 +272,7 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                 var pid = parseInt(args[0]);
                 var pcb = $.grep(_Kernel.processManager.processes, function(el) {
                     return el.pid === pid;
-                })[0];
+                })[0];                
 
                 if (args[0] && pcb && !_Stepover) {
                     _Kernel.processManager.execute(pcb);

@@ -63,7 +63,9 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
      */
     allocate: function(pcb) {
         var self = this;
-        pcb.set({base: self.slots[self.activeSlot - 1].base, limit: self.slots[self.activeSlot - 1].limit});
+        var activeSlot = pcb.slot;
+        self.slots[activeSlot].open = false;
+        pcb.set({base: self.slots[activeSlot].base, limit: self.slots[activeSlot].limit});
         _CPU.currentProcess = pcb;
     },
     /**
@@ -72,12 +74,15 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
      */
     deallocate: function(pcb) {
         var self = this;
+        var slot = pcb.slot;
 
         // clear out process from memory
-        for (var i = pcb.base; i < pcb.limit; i++)
+        for (var i = pcb.base; i <= pcb.limit; i++)
         {
-            self.memory.write(i, 0);
+            self.memory.write(i, 00);
         }
+
+        self.slots[slot].open = true;
 
         // update memory table
         self.updateMemoryDisplay();
@@ -121,7 +126,7 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
      * @returns {string} hex
      */
     decimalToHex: function(d, padding) {
-        var hex = Number(d).toString(16);
+        var hex = Number(d).toString(HEX_BASE);
         padding = typeof (padding) === "undefined" || padding === null ? padding = 2 : padding;
 
         while (hex.length < padding) {
