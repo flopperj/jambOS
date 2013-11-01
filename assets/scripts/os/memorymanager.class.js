@@ -66,7 +66,7 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
         var activeSlot = pcb.slot;
         self.slots[activeSlot].open = false;
         pcb.set({base: self.slots[activeSlot].base, limit: self.slots[activeSlot].limit});
-        _CPU.currentProcess = pcb;
+        _Kernel.processManager.set("currentProcess", pcb);
     },
     /**
      * Deallocates memory slots to a process
@@ -94,7 +94,8 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
     validateAddress: function(address) {
         var self = this;
         var activeSlot = _Kernel.processManager.get("currentProcess").slot;
-        return (address <= self.slots[activeSlot].limit);
+        var isValid = (address <= self.slots[activeSlot].limit && address >= self.slots[activeSlot].base)
+        return isValid;
     },
     /**
      * Updates content that is on memory for display on the OS 

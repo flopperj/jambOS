@@ -275,6 +275,7 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                 })[0];                
 
                 if (args[0] && pcb && !_Stepover) {
+                    _Kernel.processManager.set("activeSlot", pcb.slot);
                     _Kernel.processManager.execute(pcb);
                 } else if (args[0] && pcb && _Stepover) {
                     _StdIn.putText("stepover is ON. Use the stepover button to run program.");

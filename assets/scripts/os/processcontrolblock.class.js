@@ -51,6 +51,7 @@ jambOS.OS.ProcessControlBlock = jambOS.util.createClass(/** @scope jambOS.OS.Pro
     slot: 0,
     /**
      * Constructor
+     * @param {object} options
      */
     initialize: function(options){        
         options || (options = {});

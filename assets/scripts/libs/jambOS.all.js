@@ -837,8 +837,10 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeOne = _Kernel.memoryManager.memory.read(self.pc++);
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
+        var pcb = _Kernel.processManager.get("currentProcess");
+        
         // Concatenate the hex address in the correct order
-        var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE);
+        var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE) + pcb.base;
         var value = _Kernel.memoryManager.memory.read(address);
 
         if (_Kernel.memoryManager.validateAddress(address))
@@ -860,8 +862,10 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeOne = _Kernel.memoryManager.memory.read(self.pc++);
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
+        var pcb = _Kernel.processManager.get("currentProcess");
+
         // Concatenate the hex address in the correct order
-        var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE);
+        var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE) + pcb.base;
 
         if (_Kernel.memoryManager.validateAddress(address))
         {
@@ -888,8 +892,10 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeOne = _Kernel.memoryManager.memory.read(self.pc++);
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
+        var pcb = _Kernel.processManager.get("currentProcess");
+
         // Concatenate the hex address in the correct order
-        var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE);
+        var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE) + pcb.base;
         var value = _Kernel.memoryManager.memory.read(address);
 
         if (_Kernel.memoryManager.validateAddress(address))
@@ -922,8 +928,10 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeOne = _Kernel.memoryManager.memory.read(self.pc++);
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
+        var pcb = _Kernel.processManager.get("currentProcess");
+
         // Concatenate the hex address in the correct order
-        var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE);
+        var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE) + pcb.base;
         var value = _Kernel.memoryManager.memory.read(address);
 
         if (_Kernel.memoryManager.validateAddress(address))
@@ -956,8 +964,10 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeOne = _Kernel.memoryManager.memory.read(self.pc++);
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
+        var pcb = _Kernel.processManager.get("currentProcess");
+
         // Concatenate the hex address in the correct order
-        var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE);
+        var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE) + pcb.base;
         var value = _Kernel.memoryManager.memory.read(address);
 
         if (_Kernel.memoryManager.validateAddress(address))
@@ -976,7 +986,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      */
     noOperation: function(self)
     {
-        self.PC++;
+        self.pc++;
     },
     /**
      * Break (which is really a system call) 
@@ -996,8 +1006,10 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeOne = _Kernel.memoryManager.memory.read(self.pc++);
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
+        var pcb = _Kernel.processManager.get("currentProcess");
+
         // Concatenate the hex address in the correct order
-        var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE);
+        var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE) + pcb.base;
         var value = _Kernel.memoryManager.memory.read(address);
 
         if (_Kernel.memoryManager.validateAddress(address))
@@ -1024,7 +1036,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
             if (self.pc > _Kernel.processManager.get("currentProcess").limit)
             {
-                self.pc -= _Kernel.processManager.get("currentProcess").limit + 1;
+                self.pc -= MEMORY_BLOCK;
             }
         }
     },
@@ -1038,7 +1050,8 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeOne = _Kernel.memoryManager.memory.read(self.pc++);
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
-        var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE);
+        var pcb = _Kernel.processManager.get("currentProcess");
+        var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE) + pcb.base;
         var value = _Kernel.memoryManager.memory.read(address);
 
         if (_Kernel.memoryManager.validateAddress(address))
@@ -1078,7 +1091,9 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
         } else {
 
-            var address = parseInt(self.yReg, HEX_BASE);
+            var pcb = _Kernel.processManager.get("currentProcess");
+
+            var address = parseInt(self.yReg, HEX_BASE) + pcb.base;
 
             var currentByte = _Kernel.memoryManager.memory.read(address);
 
@@ -1165,7 +1180,7 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
         var activeSlot = pcb.slot;
         self.slots[activeSlot].open = false;
         pcb.set({base: self.slots[activeSlot].base, limit: self.slots[activeSlot].limit});
-        _CPU.currentProcess = pcb;
+        _Kernel.processManager.set("currentProcess", pcb);
     },
     /**
      * Deallocates memory slots to a process
@@ -1193,7 +1208,8 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
     validateAddress: function(address) {
         var self = this;
         var activeSlot = _Kernel.processManager.get("currentProcess").slot;
-        return (address <= self.slots[activeSlot].limit);
+        var isValid = (address <= self.slots[activeSlot].limit && address >= self.slots[activeSlot].base)
+        return isValid;
     },
     /**
      * Updates content that is on memory for display on the OS 
@@ -1311,8 +1327,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
             xReg: 0,
             yReg: 0,
             zFlag: 0,
-            slot: activeSlot,
-            lastAddressOccupied: (program.length - 1) + base
+            slot: activeSlot
         });
 
         this.processes.push(pcb);
@@ -2720,6 +2735,7 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                 })[0];                
 
                 if (args[0] && pcb && !_Stepover) {
+                    _Kernel.processManager.set("activeSlot", pcb.slot);
                     _Kernel.processManager.execute(pcb);
                 } else if (args[0] && pcb && _Stepover) {
                     _StdIn.putText("stepover is ON. Use the stepover button to run program.");
@@ -3098,6 +3114,7 @@ jambOS.OS.ProcessControlBlock = jambOS.util.createClass(/** @scope jambOS.OS.Pro
     slot: 0,
     /**
      * Constructor
+     * @param {object} options
      */
     initialize: function(options){        
         options || (options = {});
