@@ -262,6 +262,26 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
 
         // processes - list the running processes and their IDs
         // kill <id> - kills the specified process id.
+        sc = new jambOS.OS.ShellCommand({
+            command: "kill",
+            description: "<id> - kills the specified process id",
+            behavior: function(args) {
+                var pid = args[0];
+                switch (pid) {
+                    case "all":
+                        break;
+                    default:
+                        pid = parseInt(pid);
+
+                        var pcb = $.grep(_Kernel.processManager.processes, function(el) {
+                            return el.pid === pid;
+                        })[0];
+
+                        break;
+                }
+            }});
+        this.commandList.push(sc);
+
 
 
         // run <id>
@@ -269,10 +289,12 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             command: "run",
             description: "<id> - Runs program already in memory",
             behavior: function(args) {
-                var pid = parseInt(args[0]);
+                var pid = args[0];
+                pid = parseInt(pid);
+
                 var pcb = $.grep(_Kernel.processManager.processes, function(el) {
                     return el.pid === pid;
-                })[0];                
+                })[0];
 
                 if (args[0] && pcb && !_Stepover) {
                     _Kernel.processManager.set("activeSlot", pcb.slot);
@@ -282,7 +304,29 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                 } else if (args[0] && !pcb)
                     _StdIn.putText("Invalid Process ID");
                 else
-                    _StdIn.putText("Usage: run <id> - Runs program already in memory");
+                    _StdIn.putText("Usage: run <id | all> - Runs program already in memory");
+            }});
+        this.commandList.push(sc);
+
+        // runall
+        sc = new jambOS.OS.ShellCommand({
+            command: "runall",
+            description: "- Runs all programs loaded in memory",
+            behavior: function(args) {
+
+                if (_Kernel.processManager.processes.length > 0 && !_Stepover) {
+                    for (var pid in _Kernel.processManager.processes) {
+                        var pcb = _Kernel.processManager.processes[pid];
+                        _Kernel.processManager.readyQueue.push(pcb);
+                    }
+
+                    var process = _Kernel.processManager.readyQueue.shift();
+                    _Kernel.processManager.set("activeSlot", process.slot);
+                    _Kernel.processManager.execute(process);
+                    _Kernel.processManager.processes.splice(process.pid, 0);
+                } else
+                    _StdIn.putText("There are no processes to run!");
+
             }});
         this.commandList.push(sc);
 

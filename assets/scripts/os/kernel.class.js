@@ -170,6 +170,9 @@ jambOS.OS.Kernel = jambOS.util.createClass({
             case PROCESS_TERMINATION_IRQ:
                 self.processTerminationISR(params);
                 break;
+            case CONTEXT_SWITCH_IRQ:
+                self.contextSwitchISR();
+                break;
             default:
                 self.trapError("Invalid Interrupt Request. irq=" + irq + " params=[" + params + "]");
         }
@@ -184,9 +187,21 @@ jambOS.OS.Kernel = jambOS.util.createClass({
      * Terminates a process routine
      */
     processTerminationISR: function(pcb) {
+        var self = this;
         _CPU.stop();
-        this.memoryManager.deallocate(pcb);
-
+        self.memoryManager.deallocate(pcb);
+    },
+    contextSwitchISR: function() {
+        var self = this;
+        var nextProcess = self.processManager.readyQueue.shift();
+        if (nextProcess)
+            nextProcess.set("state", "ready");
+        self.processManager.set("currentProcess", nextProcess);
+        self.processManager.processCycles = 0;
+        _CPU.set({
+            pc: nextProcess.base,
+            isExecuting: true
+        });
     },
     /**
      * The built-in TIMER (not clock) Interrupt Service Routine (as opposed to an ISR coming from a device driver).
@@ -222,7 +237,7 @@ jambOS.OS.Kernel = jambOS.util.createClass({
             if (msg === "Idle")
             {
                 // We can't log every idle clock pulse because it would lag the browser very quickly.
-                if (_OSclock % 10 == 0)  // Check the CPU_CLOCK_INTERVAL in globals.js for an 
+                if (_OSclock % 10 === 0)  // Check the CPU_CLOCK_INTERVAL in globals.js for an 
                 {                        // idea of the tick rate and adjust this line accordingly.
                     _Control.hostLog(msg, "OS");
                 }

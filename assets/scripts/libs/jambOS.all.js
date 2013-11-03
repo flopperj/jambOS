@@ -39,6 +39,7 @@ var TIMER_IRQ = 0;  // Pages 23 (timer), 9 (interrupts), and 561 (interrupt prio
 var KEYBOARD_IRQ = 1;
 var PROCESS_INITIATION_IRQ = 2;
 var PROCESS_TERMINATION_IRQ = 3;
+var CONTEXT_SWITCH_IRQ = 4;
 
 // memory
 var MEMORY_BLOCK = 256;
@@ -745,7 +746,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     },
     /**
      * Resets cpu registers to default values to help stop process execution
-     * @param {jambOS.OS.ProcessControlBlock} pcb
      */
     stop: function() {
         this.set({
@@ -780,6 +780,8 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
         var opCode = _Kernel.memoryManager.memory.read(self.pc++).toString().toLowerCase();
         var operation = self.getOpCode(opCode);
+        
+        _Kernel.processManager.scheduleProcess();
 
         if (operation) {
             operation(self);
@@ -1275,6 +1277,9 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
      * @property {jambOS.OS.ProcessControlBlock} currentProcess
      */
     currentProcess: null,
+    readyQueue: [],
+    processCycles: 0,
+    schedulingQuantum: 6,
     /**
      * Constructor
      * @param {object} options
@@ -1291,7 +1296,24 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
      * @param {jambOS.OS.ProcessControlBlock} pcb
      */
     execute: function(pcb) {
+        pcb.set("state", "ready");
         _Kernel.interruptHandler(PROCESS_INITIATION_IRQ, pcb);
+    },
+    scheduleProcess: function() {
+        var self = this;
+        if (_CPU.isExecuting) {
+            self.processCycles++;
+
+            // perform a swithc when we the cycles hit our scheduling quantum to
+            // simulate the real time execution
+            if (self.readyQueue.length && self.processCycles >= self.schedulingQuantum) {
+                _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
+            } else if (self.readyQueue.length) {
+                var process = self.readyQueue[0];
+                process.set("state", "running");
+                self.set("currentProcess", process);
+            }
+        }
     },
     /**
      * Loads program to memory
@@ -1666,6 +1688,9 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
      * @property {int}      currentYPosition - current y position
      */
     currentYPosition: _DefaultFontSize,
+    lastXPosition: 0,
+    lastYPosition: _DefaultFontSize,
+    linesAdvanced: 0,
     /**
      * Constructor
      */
@@ -1795,13 +1820,23 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
         if (text !== "")
         {
             // clear blinker before drawing character
-            this.clearBlinker();
+            this.clearBlinker();            
+            
+            var offset = _DrawingContext.measureText(this.currentFont, this.currentFontSize, text);
 
+            // handle wrapping of text
+            if (this.currentXPosition > _Canvas.width - offset){
+                this.lastXPosition = this.currentXPosition;
+                this.lastYPosition = this.currentYPosition;
+                this.linesAdvanced += 1;
+                this.advanceLine();
+            }
+            
             // Draw the text at the current X and Y coordinates.
             _DrawingContext.drawText(this.currentFont, this.currentFontSize, this.currentXPosition, this.currentYPosition, text);
+            
             // Move the current X position.
-            var offset = _DrawingContext.measureText(this.currentFont, this.currentFontSize, text);
-            this.currentXPosition = this.currentXPosition + offset;
+            this.currentXPosition += offset;
         }
 
         // reset our isTyping variable so that we can show our cursor
@@ -2107,6 +2142,9 @@ jambOS.OS.DeviceDriverKeyboard = jambOS.util.createClass(jambOS.OS.DeviceDriver,
                     _CommandHistory.push(_Console.buffer);
                     _CurrentCommandIndex = _CommandHistory.length - 1;
                 }
+
+                // no lines have advanced if a user has pressed enter
+                _Console.linesAdvanced = 0;
             }
 
             // handle moving through command history with up and down
@@ -2185,6 +2223,8 @@ jambOS.OS.DeviceDriverKeyboard = jambOS.util.createClass(jambOS.OS.DeviceDriver,
             // handle backspace
             if (keyCode === 8 && _Console.buffer.length > 0) {
 
+                _Console.clearBlinker();
+
                 var charToDel = _Console.buffer.charAt(_Console.buffer.length - 1);
 
                 // remove last character from the buffer
@@ -2197,6 +2237,21 @@ jambOS.OS.DeviceDriverKeyboard = jambOS.util.createClass(jambOS.OS.DeviceDriver,
                 var yPos = (_Console.currentYPosition - _Console.currentFontSize) - 1;
                 var height = _Console.currentFontSize + (_Console.currentFontSize / 2);
                 _DrawingContext.clearRect(xPos, yPos, _Canvas.width, height);
+
+
+                var promptOffset = _DrawingContext.measureText(this.currentFont, this.currentFontSize, ">");
+
+                // handle wrapped text
+                if (_Console.currentXPosition <= 0 && _Console.linesAdvanced >= 0)
+                {
+                    _Console.currentXPosition = _Console.lastXPosition;
+                    _Console.currentYPosition = _Console.lastYPosition;
+
+                    if (_Console.linesAdvanced > 0)
+                        _Console.linesAdvanced -= 1;
+                }
+                /* else if (_Console.linesAdvanced === 0 && _Console.currentXPosition <= promptOffset)
+                 return;*/
             } else if (keyCode !== 38 && keyCode !== 40)
                 _KernelInputQueue.enqueue(chr);
         }
@@ -2722,6 +2777,26 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
 
         // processes - list the running processes and their IDs
         // kill <id> - kills the specified process id.
+        sc = new jambOS.OS.ShellCommand({
+            command: "kill",
+            description: "<id> - kills the specified process id",
+            behavior: function(args) {
+                var pid = args[0];
+                switch (pid) {
+                    case "all":
+                        break;
+                    default:
+                        pid = parseInt(pid);
+
+                        var pcb = $.grep(_Kernel.processManager.processes, function(el) {
+                            return el.pid === pid;
+                        })[0];
+
+                        break;
+                }
+            }});
+        this.commandList.push(sc);
+
 
 
         // run <id>
@@ -2729,10 +2804,12 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             command: "run",
             description: "<id> - Runs program already in memory",
             behavior: function(args) {
-                var pid = parseInt(args[0]);
+                var pid = args[0];
+                pid = parseInt(pid);
+
                 var pcb = $.grep(_Kernel.processManager.processes, function(el) {
                     return el.pid === pid;
-                })[0];                
+                })[0];
 
                 if (args[0] && pcb && !_Stepover) {
                     _Kernel.processManager.set("activeSlot", pcb.slot);
@@ -2742,7 +2819,29 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                 } else if (args[0] && !pcb)
                     _StdIn.putText("Invalid Process ID");
                 else
-                    _StdIn.putText("Usage: run <id> - Runs program already in memory");
+                    _StdIn.putText("Usage: run <id | all> - Runs program already in memory");
+            }});
+        this.commandList.push(sc);
+
+        // runall
+        sc = new jambOS.OS.ShellCommand({
+            command: "runall",
+            description: "- Runs all programs loaded in memory",
+            behavior: function(args) {
+
+                if (_Kernel.processManager.processes.length > 0 && !_Stepover) {
+                    for (var pid in _Kernel.processManager.processes) {
+                        var pcb = _Kernel.processManager.processes[pid];
+                        _Kernel.processManager.readyQueue.push(pcb);
+                    }
+
+                    var process = _Kernel.processManager.readyQueue.shift();
+                    _Kernel.processManager.set("activeSlot", process.slot);
+                    _Kernel.processManager.execute(process);
+                    _Kernel.processManager.processes.splice(process.pid, 0);
+                } else
+                    _StdIn.putText("There are no processes to run!");
+
             }});
         this.commandList.push(sc);
 
@@ -2963,6 +3062,9 @@ jambOS.OS.Kernel = jambOS.util.createClass({
             case PROCESS_TERMINATION_IRQ:
                 self.processTerminationISR(params);
                 break;
+            case CONTEXT_SWITCH_IRQ:
+                self.contextSwitchISR();
+                break;
             default:
                 self.trapError("Invalid Interrupt Request. irq=" + irq + " params=[" + params + "]");
         }
@@ -2977,9 +3079,21 @@ jambOS.OS.Kernel = jambOS.util.createClass({
      * Terminates a process routine
      */
     processTerminationISR: function(pcb) {
+        var self = this;
         _CPU.stop();
-        this.memoryManager.deallocate(pcb);
-
+        self.memoryManager.deallocate(pcb);
+    },
+    contextSwitchISR: function() {
+        var self = this;
+        var nextProcess = self.processManager.readyQueue.shift();
+        if (nextProcess)
+            nextProcess.set("state", "ready");
+        self.processManager.set("currentProcess", nextProcess);
+        self.processManager.processCycles = 0;
+        _CPU.set({
+            pc: nextProcess.base,
+            isExecuting: true
+        });
     },
     /**
      * The built-in TIMER (not clock) Interrupt Service Routine (as opposed to an ISR coming from a device driver).
@@ -3015,7 +3129,7 @@ jambOS.OS.Kernel = jambOS.util.createClass({
             if (msg === "Idle")
             {
                 // We can't log every idle clock pulse because it would lag the browser very quickly.
-                if (_OSclock % 10 == 0)  // Check the CPU_CLOCK_INTERVAL in globals.js for an 
+                if (_OSclock % 10 === 0)  // Check the CPU_CLOCK_INTERVAL in globals.js for an 
                 {                        // idea of the tick rate and adjust this line accordingly.
                     _Control.hostLog(msg, "OS");
                 }

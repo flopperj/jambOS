@@ -65,7 +65,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     },
     /**
      * Resets cpu registers to default values to help stop process execution
-     * @param {jambOS.OS.ProcessControlBlock} pcb
      */
     stop: function() {
         this.set({
@@ -100,6 +99,8 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
         var opCode = _Kernel.memoryManager.memory.read(self.pc++).toString().toLowerCase();
         var operation = self.getOpCode(opCode);
+        
+        _Kernel.processManager.scheduleProcess();
 
         if (operation) {
             operation(self);

@@ -22,6 +22,9 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
      * @property {jambOS.OS.ProcessControlBlock} currentProcess
      */
     currentProcess: null,
+    readyQueue: [],
+    processCycles: 0,
+    schedulingQuantum: 6,
     /**
      * Constructor
      * @param {object} options
@@ -38,7 +41,24 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
      * @param {jambOS.OS.ProcessControlBlock} pcb
      */
     execute: function(pcb) {
+        pcb.set("state", "ready");
         _Kernel.interruptHandler(PROCESS_INITIATION_IRQ, pcb);
+    },
+    scheduleProcess: function() {
+        var self = this;
+        if (_CPU.isExecuting) {
+            self.processCycles++;
+
+            // perform a swithc when we the cycles hit our scheduling quantum to
+            // simulate the real time execution
+            if (self.readyQueue.length && self.processCycles >= self.schedulingQuantum) {
+                _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
+            } else if (self.readyQueue.length) {
+                var process = self.readyQueue[0];
+                process.set("state", "running");
+                self.set("currentProcess", process);
+            }
+        }
     },
     /**
      * Loads program to memory

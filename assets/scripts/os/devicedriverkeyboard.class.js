@@ -217,6 +217,9 @@ jambOS.OS.DeviceDriverKeyboard = jambOS.util.createClass(jambOS.OS.DeviceDriver,
                     _CommandHistory.push(_Console.buffer);
                     _CurrentCommandIndex = _CommandHistory.length - 1;
                 }
+
+                // no lines have advanced if a user has pressed enter
+                _Console.linesAdvanced = 0;
             }
 
             // handle moving through command history with up and down
@@ -295,6 +298,8 @@ jambOS.OS.DeviceDriverKeyboard = jambOS.util.createClass(jambOS.OS.DeviceDriver,
             // handle backspace
             if (keyCode === 8 && _Console.buffer.length > 0) {
 
+                _Console.clearBlinker();
+
                 var charToDel = _Console.buffer.charAt(_Console.buffer.length - 1);
 
                 // remove last character from the buffer
@@ -307,6 +312,21 @@ jambOS.OS.DeviceDriverKeyboard = jambOS.util.createClass(jambOS.OS.DeviceDriver,
                 var yPos = (_Console.currentYPosition - _Console.currentFontSize) - 1;
                 var height = _Console.currentFontSize + (_Console.currentFontSize / 2);
                 _DrawingContext.clearRect(xPos, yPos, _Canvas.width, height);
+
+
+                var promptOffset = _DrawingContext.measureText(this.currentFont, this.currentFontSize, ">");
+
+                // handle wrapped text
+                if (_Console.currentXPosition <= 0 && _Console.linesAdvanced >= 0)
+                {
+                    _Console.currentXPosition = _Console.lastXPosition;
+                    _Console.currentYPosition = _Console.lastYPosition;
+
+                    if (_Console.linesAdvanced > 0)
+                        _Console.linesAdvanced -= 1;
+                }
+                /* else if (_Console.linesAdvanced === 0 && _Console.currentXPosition <= promptOffset)
+                 return;*/
             } else if (keyCode !== 38 && keyCode !== 40)
                 _KernelInputQueue.enqueue(chr);
         }

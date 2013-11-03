@@ -34,6 +34,9 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
      * @property {int}      currentYPosition - current y position
      */
     currentYPosition: _DefaultFontSize,
+    lastXPosition: 0,
+    lastYPosition: _DefaultFontSize,
+    linesAdvanced: 0,
     /**
      * Constructor
      */
@@ -163,13 +166,23 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
         if (text !== "")
         {
             // clear blinker before drawing character
-            this.clearBlinker();
+            this.clearBlinker();            
+            
+            var offset = _DrawingContext.measureText(this.currentFont, this.currentFontSize, text);
 
+            // handle wrapping of text
+            if (this.currentXPosition > _Canvas.width - offset){
+                this.lastXPosition = this.currentXPosition;
+                this.lastYPosition = this.currentYPosition;
+                this.linesAdvanced += 1;
+                this.advanceLine();
+            }
+            
             // Draw the text at the current X and Y coordinates.
             _DrawingContext.drawText(this.currentFont, this.currentFontSize, this.currentXPosition, this.currentYPosition, text);
+            
             // Move the current X position.
-            var offset = _DrawingContext.measureText(this.currentFont, this.currentFontSize, text);
-            this.currentXPosition = this.currentXPosition + offset;
+            this.currentXPosition += offset;
         }
 
         // reset our isTyping variable so that we can show our cursor
