@@ -83,6 +83,7 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
         }
 
         self.slots[slot].open = true;
+        self.activeSlot = pcb.slot;
 
         // update memory table
         self.updateMemoryDisplay();

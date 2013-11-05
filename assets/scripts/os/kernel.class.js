@@ -171,7 +171,7 @@ jambOS.OS.Kernel = jambOS.util.createClass({
                 self.processTerminationISR(params);
                 break;
             case CONTEXT_SWITCH_IRQ:
-                self.contextSwitchISR();
+                self.contextSwitchISR(self.processManager.get("currentProcess"));
                 break;
             default:
                 self.trapError("Invalid Interrupt Request. irq=" + irq + " params=[" + params + "]");
@@ -189,19 +189,31 @@ jambOS.OS.Kernel = jambOS.util.createClass({
     processTerminationISR: function(pcb) {
         var self = this;
         _CPU.stop();
+
         self.memoryManager.deallocate(pcb);
     },
-    contextSwitchISR: function() {
+    contextSwitchISR: function(pcb) {
+//        console.log(pcb);
         var self = this;
+        pcb.pc = _CPU.pc;
+        pcb.xReg = _CPU.xReg;
+        pcb.yReg = _CPU.yReg;
+        pcb.zFlag = _CPU.zFlag;
+        pcb.state = "waiting";
         var nextProcess = self.processManager.readyQueue.shift();
-        if (nextProcess)
+        if (nextProcess) {
             nextProcess.set("state", "ready");
-        self.processManager.set("currentProcess", nextProcess);
-        self.processManager.processCycles = 0;
-        _CPU.set({
-            pc: nextProcess.base,
-            isExecuting: true
-        });
+            self.processManager.readyQueue.push(pcb);
+            self.processManager.set("currentProcess", nextProcess);
+            self.processManager.processCycles = 0;
+            _CPU.set({
+                pc: nextProcess.pc,
+                xReg: nextProcess.xReg,
+                yReg: nextProcess.yReg,
+                zFlag: nextProcess.zFlag,
+                isExecuting: true
+            });
+        }
     },
     /**
      * The built-in TIMER (not clock) Interrupt Service Routine (as opposed to an ISR coming from a device driver).
@@ -221,6 +233,7 @@ jambOS.OS.Kernel = jambOS.util.createClass({
 // - WaitForProcessToExit
 // - CreateFile
 // - OpenFile
+// 
 // - ReadFile
 // - WriteFile
 // - CloseFile

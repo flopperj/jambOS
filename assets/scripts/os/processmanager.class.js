@@ -53,10 +53,6 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
             // simulate the real time execution
             if (self.readyQueue.length && self.processCycles >= self.schedulingQuantum) {
                 _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
-            } else if (self.readyQueue.length) {
-                var process = self.readyQueue[0];
-                process.set("state", "running");
-                self.set("currentProcess", process);
             }
         }
     },
@@ -103,12 +99,11 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         return pcb;
     },
     /**
-     * Unloads process from memory
+     * Unloads process from memoryhelp
      * 
      * @param {jambOS.OS.ProcessControlBlock} pcb
      */
     unload: function(pcb) {
-
         _Kernel.memoryManager.deallocate(pcb);
         var index = this.processes.indexOf(pcb);
         if (index > -1)

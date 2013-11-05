@@ -78,9 +78,8 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
         // update PCB status display
         _Kernel.processManager.updatePCBStatusDisplay(_Kernel.processManager.get("currentProcess"));
-        _Kernel.processManager.set("currentProcess", null);
-
-
+        _Kernel.processManager.get("currentProcess").set("state", "terminated");
+        
         // disable stepover button
         $("#btnStepOver").prop("disabled", true);
     },
@@ -99,8 +98,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
         var opCode = _Kernel.memoryManager.memory.read(self.pc++).toString().toLowerCase();
         var operation = self.getOpCode(opCode);
-        
-        _Kernel.processManager.scheduleProcess();
 
         if (operation) {
             operation(self);
@@ -159,7 +156,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
         var pcb = _Kernel.processManager.get("currentProcess");
-        
+
         // Concatenate the hex address in the correct order
         var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE) + pcb.base;
         var value = _Kernel.memoryManager.memory.read(address);
@@ -430,5 +427,9 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             _StdIn.advanceLine();
             _OsShell.putPrompt();
         }
+
+        if (_Kernel.processManager.readyQueue.length)
+            _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
     }
 });
+

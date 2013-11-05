@@ -759,7 +759,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
         // update PCB status display
         _Kernel.processManager.updatePCBStatusDisplay(_Kernel.processManager.get("currentProcess"));
-        _Kernel.processManager.set("currentProcess", null);
+        _Kernel.processManager.get("currentProcess").set("state", "terminated");
 
 
         // disable stepover button
@@ -780,8 +780,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
         var opCode = _Kernel.memoryManager.memory.read(self.pc++).toString().toLowerCase();
         var operation = self.getOpCode(opCode);
-        
-        _Kernel.processManager.scheduleProcess();
 
         if (operation) {
             operation(self);
@@ -840,7 +838,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
         var pcb = _Kernel.processManager.get("currentProcess");
-        
+
         // Concatenate the hex address in the correct order
         var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE) + pcb.base;
         var value = _Kernel.memoryManager.memory.read(address);
@@ -1111,8 +1109,12 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             _StdIn.advanceLine();
             _OsShell.putPrompt();
         }
+
+        if (_Kernel.processManager.readyQueue.length)
+            _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
     }
 });
+
 
 /**
  *==============================================================================
@@ -1199,6 +1201,7 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
         }
 
         self.slots[slot].open = true;
+        self.activeSlot = pcb.slot;
 
         // update memory table
         self.updateMemoryDisplay();
@@ -1308,10 +1311,6 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
             // simulate the real time execution
             if (self.readyQueue.length && self.processCycles >= self.schedulingQuantum) {
                 _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
-            } else if (self.readyQueue.length) {
-                var process = self.readyQueue[0];
-                process.set("state", "running");
-                self.set("currentProcess", process);
             }
         }
     },
@@ -1358,12 +1357,11 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         return pcb;
     },
     /**
-     * Unloads process from memory
+     * Unloads process from memoryhelp
      * 
      * @param {jambOS.OS.ProcessControlBlock} pcb
      */
     unload: function(pcb) {
-
         _Kernel.memoryManager.deallocate(pcb);
         var index = this.processes.indexOf(pcb);
         if (index > -1)
@@ -3063,7 +3061,7 @@ jambOS.OS.Kernel = jambOS.util.createClass({
                 self.processTerminationISR(params);
                 break;
             case CONTEXT_SWITCH_IRQ:
-                self.contextSwitchISR();
+                self.contextSwitchISR(self.processManager.get("currentProcess"));
                 break;
             default:
                 self.trapError("Invalid Interrupt Request. irq=" + irq + " params=[" + params + "]");
@@ -3081,19 +3079,47 @@ jambOS.OS.Kernel = jambOS.util.createClass({
     processTerminationISR: function(pcb) {
         var self = this;
         _CPU.stop();
+
         self.memoryManager.deallocate(pcb);
     },
-    contextSwitchISR: function() {
+    contextSwitchISR: function(pcb) {
+//        console.log(pcb);
         var self = this;
+        pcb.pc = _CPU.pc;
+        pcb.xReg = _CPU.xReg;
+        pcb.yReg = _CPU.yReg;
+        pcb.zFlag = _CPU.zFlag;
+        pcb.state = "waiting";
         var nextProcess = self.processManager.readyQueue.shift();
-        if (nextProcess)
+        if (nextProcess) {
             nextProcess.set("state", "ready");
-        self.processManager.set("currentProcess", nextProcess);
-        self.processManager.processCycles = 0;
-        _CPU.set({
-            pc: nextProcess.base,
-            isExecuting: true
-        });
+            self.processManager.readyQueue.push(pcb);
+            
+
+//            for (var key in self.processManager.processes) {
+//                if (nextProcess.pid !== self.processManager.processes[key].pid)
+//                    self.processManager.processes[key].state = "waiting";
+//                else
+//                
+//                {
+//                    var process = self.processManager.processes[key];
+//                    process.base = _CPU.pc;
+//                    process.state = "waiting";
+//                    self.processManager.readyQueue.push(nextProcess);
+//                }
+//            }
+
+
+            self.processManager.set("currentProcess", nextProcess);
+            self.processManager.processCycles = 0;
+            _CPU.set({
+                pc: nextProcess.pc,
+                xReg: nextProcess.xReg,
+                yReg: nextProcess.yReg,
+                zFlag: nextProcess.zFlag,
+                isExecuting: true
+            });
+        }
     },
     /**
      * The built-in TIMER (not clock) Interrupt Service Routine (as opposed to an ISR coming from a device driver).
@@ -3113,6 +3139,7 @@ jambOS.OS.Kernel = jambOS.util.createClass({
 // - WaitForProcessToExit
 // - CreateFile
 // - OpenFile
+// 
 // - ReadFile
 // - WriteFile
 // - CloseFile
