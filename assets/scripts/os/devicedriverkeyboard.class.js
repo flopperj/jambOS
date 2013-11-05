@@ -305,19 +305,23 @@ jambOS.OS.DeviceDriverKeyboard = jambOS.util.createClass(jambOS.OS.DeviceDriver,
                 // remove last character from the buffer
                 _Console.buffer = _Console.buffer.slice(0, -1);
 
-                var charWidth = _DrawingContext.measureText(_Console.currentFont, _Console.currentFontSize, charToDel);
-                _Console.currentXPosition -= charWidth;
 
-                var xPos = _Console.currentXPosition;
-                var yPos = (_Console.currentYPosition - _Console.currentFontSize) - 1;
-                var height = _Console.currentFontSize + (_Console.currentFontSize / 2);
-                _DrawingContext.clearRect(xPos, yPos, _Canvas.width, height);
+                var promptOffset = _DrawingContext.measureText(_Console.currentFont, _Console.currentFontSize, ">");
 
+                // make sure we do not erase our prompter
+                if (_Console.currentXPosition > promptOffset) {
 
-                var promptOffset = _DrawingContext.measureText(this.currentFont, this.currentFontSize, ">");
+                    var charWidth = _DrawingContext.measureText(_Console.currentFont, _Console.currentFontSize, charToDel);
+                    _Console.currentXPosition -= charWidth;
+
+                    var xPos = _Console.currentXPosition;
+                    var yPos = (_Console.currentYPosition - _Console.currentFontSize) - 1;
+                    var height = _Console.currentFontSize + (_Console.currentFontSize / 2);
+                    _DrawingContext.clearRect(xPos, yPos, _Canvas.width, height);
+                }
 
                 // handle wrapped text
-                if (_Console.currentXPosition <= 0 && _Console.linesAdvanced >= 0)
+                if (_Console.currentXPosition <= promptOffset && _Console.linesAdvanced >= 0)
                 {
                     _Console.currentXPosition = _Console.lastXPosition;
                     _Console.currentYPosition = _Console.lastYPosition;

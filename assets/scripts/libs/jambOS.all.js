@@ -1905,21 +1905,21 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
         if (text !== "")
         {
             // clear blinker before drawing character
-            this.clearBlinker();            
-            
+            this.clearBlinker();
+
             var offset = _DrawingContext.measureText(this.currentFont, this.currentFontSize, text);
 
             // handle wrapping of text
-            if (this.currentXPosition > _Canvas.width - offset){
+            if (this.currentXPosition > _Canvas.width - offset) {
                 this.lastXPosition = this.currentXPosition;
                 this.lastYPosition = this.currentYPosition;
                 this.linesAdvanced += 1;
                 this.advanceLine();
             }
-            
+
             // Draw the text at the current X and Y coordinates.
             _DrawingContext.drawText(this.currentFont, this.currentFontSize, this.currentXPosition, this.currentYPosition, text);
-            
+
             // Move the current X position.
             this.currentXPosition += offset;
         }
@@ -1936,8 +1936,10 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
 
         // clear blinker before we get screenshot of canvas
         this.clearBlinker();
-
-        this.currentXPosition = 0;
+        
+        // get our prompt offset that way we can make sure we are within the editable bounds
+        var promptOffset = _DrawingContext.measureText(this.currentFont, this.currentFontSize, ">");
+        this.currentXPosition = promptOffset;
         this.currentYPosition += _DefaultFontSize + _FontHeightMargin;
 
         // Handle scrolling.
@@ -2315,19 +2317,23 @@ jambOS.OS.DeviceDriverKeyboard = jambOS.util.createClass(jambOS.OS.DeviceDriver,
                 // remove last character from the buffer
                 _Console.buffer = _Console.buffer.slice(0, -1);
 
-                var charWidth = _DrawingContext.measureText(_Console.currentFont, _Console.currentFontSize, charToDel);
-                _Console.currentXPosition -= charWidth;
 
-                var xPos = _Console.currentXPosition;
-                var yPos = (_Console.currentYPosition - _Console.currentFontSize) - 1;
-                var height = _Console.currentFontSize + (_Console.currentFontSize / 2);
-                _DrawingContext.clearRect(xPos, yPos, _Canvas.width, height);
+                var promptOffset = _DrawingContext.measureText(_Console.currentFont, _Console.currentFontSize, ">");
 
+                // make sure we do not erase our prompter
+                if (_Console.currentXPosition > promptOffset) {
 
-                var promptOffset = _DrawingContext.measureText(this.currentFont, this.currentFontSize, ">");
+                    var charWidth = _DrawingContext.measureText(_Console.currentFont, _Console.currentFontSize, charToDel);
+                    _Console.currentXPosition -= charWidth;
+
+                    var xPos = _Console.currentXPosition;
+                    var yPos = (_Console.currentYPosition - _Console.currentFontSize) - 1;
+                    var height = _Console.currentFontSize + (_Console.currentFontSize / 2);
+                    _DrawingContext.clearRect(xPos, yPos, _Canvas.width, height);
+                }
 
                 // handle wrapped text
-                if (_Console.currentXPosition <= 0 && _Console.linesAdvanced >= 0)
+                if (_Console.currentXPosition <= promptOffset && _Console.linesAdvanced >= 0)
                 {
                     _Console.currentXPosition = _Console.lastXPosition;
                     _Console.currentYPosition = _Console.lastYPosition;
@@ -3058,6 +3064,21 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                     _StdIn.putText("Usage: stepover <on | off>");
                 }
             }});
+        this.commandList.push(sc);
+
+        // quantum <int>
+        sc = new jambOS.OS.ShellCommand({
+            command: "quantum",
+            description: "<int> - Changes the scheduling quantum",
+            behavior: function(args) {
+                var quantum = parseInt(args[0]);
+                if (args.length > 0 && !isNaN(quantum)) {
+                    _Kernel.processManager.set("schedulingQuantum", quantum);
+                } else {
+                    _StdIn.putText("Usage: quantum <int>");
+                }
+            }
+        });
         this.commandList.push(sc);
 
 

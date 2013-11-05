@@ -166,21 +166,21 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
         if (text !== "")
         {
             // clear blinker before drawing character
-            this.clearBlinker();            
-            
+            this.clearBlinker();
+
             var offset = _DrawingContext.measureText(this.currentFont, this.currentFontSize, text);
 
             // handle wrapping of text
-            if (this.currentXPosition > _Canvas.width - offset){
+            if (this.currentXPosition > _Canvas.width - offset) {
                 this.lastXPosition = this.currentXPosition;
                 this.lastYPosition = this.currentYPosition;
                 this.linesAdvanced += 1;
                 this.advanceLine();
             }
-            
+
             // Draw the text at the current X and Y coordinates.
             _DrawingContext.drawText(this.currentFont, this.currentFontSize, this.currentXPosition, this.currentYPosition, text);
-            
+
             // Move the current X position.
             this.currentXPosition += offset;
         }
@@ -197,8 +197,10 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
 
         // clear blinker before we get screenshot of canvas
         this.clearBlinker();
-
-        this.currentXPosition = 0;
+        
+        // get our prompt offset that way we can make sure we are within the editable bounds
+        var promptOffset = _DrawingContext.measureText(this.currentFont, this.currentFontSize, ">");
+        this.currentXPosition = promptOffset;
         this.currentYPosition += _DefaultFontSize + _FontHeightMargin;
 
         // Handle scrolling.

@@ -380,6 +380,21 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             }});
         this.commandList.push(sc);
 
+        // quantum <int>
+        sc = new jambOS.OS.ShellCommand({
+            command: "quantum",
+            description: "<int> - Changes the scheduling quantum",
+            behavior: function(args) {
+                var quantum = parseInt(args[0]);
+                if (args.length > 0 && !isNaN(quantum)) {
+                    _Kernel.processManager.set("schedulingQuantum", quantum);
+                } else {
+                    _StdIn.putText("Usage: quantum <int>");
+                }
+            }
+        });
+        this.commandList.push(sc);
+
 
         //
         // Display the initial prompt.
