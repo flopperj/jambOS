@@ -22,7 +22,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
      * @property {jambOS.OS.ProcessControlBlock} currentProcess
      */
     currentProcess: null,
-    readyQueue: [],
+    readyQueue: null,
     processCycles: 0,
     schedulingQuantum: 6,
     /**
@@ -33,7 +33,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
     initialize: function(options) {
         options || (options = {});
         this.setOptions(options);
-
+        this.readyQueue = new jambOS.OS.ReadyQueue();
         return this;
     },
     /**
@@ -51,7 +51,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
 
             // perform a swithc when we the cycles hit our scheduling quantum to
             // simulate the real time execution
-            if (self.readyQueue.length && self.processCycles >= self.schedulingQuantum) {
+            if (!self.readyQueue.isEmpty() && self.processCycles >= self.schedulingQuantum) {
                 _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
             }
         }
@@ -105,9 +105,12 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
      */
     unload: function(pcb) {
         _Kernel.memoryManager.deallocate(pcb);
-        var index = this.processes.indexOf(pcb);
-        if (index > -1)
-            this.processes.splice(index, 1);
+        
+        // remove pcb from processes list
+        for (var index in this.processes) {
+            if (this.processes[index].pid === pcb.pid)
+                this.processes.splice(index, 1);
+        }
     },
     /**
      * Updates cpu status display

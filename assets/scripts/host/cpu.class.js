@@ -79,7 +79,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         // update PCB status display
         _Kernel.processManager.updatePCBStatusDisplay(_Kernel.processManager.get("currentProcess"));
         _Kernel.processManager.get("currentProcess").set("state", "terminated");
-        
+
         // disable stepover button
         $("#btnStepOver").prop("disabled", true);
     },
@@ -428,7 +428,9 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             _OsShell.putPrompt();
         }
 
-        if (_Kernel.processManager.readyQueue.length)
+        // Perform a context switch if the ready queue is not empty.
+        // This is where the magic or realtime multi-processing occurs.
+        if (!_Kernel.processManager.readyQueue.isEmpty())
             _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
     }
 });

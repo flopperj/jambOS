@@ -83,6 +83,11 @@ jambOS.OS.Kernel = jambOS.util.createClass({
             _GLaDOS.afterStartup();
         }
     },
+    /**
+     * Shuts down OS
+     * @public
+     * @method shutdown
+     */
     shutdown: function()
     {
         this.trace("begin shutdown OS");
@@ -179,12 +184,18 @@ jambOS.OS.Kernel = jambOS.util.createClass({
     },
     /**
      * Initiates a process routine
+     * @public
+     * @method processInitiationISR
+     * @param {jambOS.OS.ProcessControlBlock} pcb 
      */
     processInitiationISR: function(pcb) {
         _CPU.start(pcb);
     },
     /**
      * Terminates a process routine
+     * @public
+     * @method processTerminationISR
+     * @param {jambOS.OS.ProcessControlBlock} pcb 
      */
     processTerminationISR: function(pcb) {
         var self = this;
@@ -192,20 +203,49 @@ jambOS.OS.Kernel = jambOS.util.createClass({
 
         self.memoryManager.deallocate(pcb);
     },
+    /**
+     * Switches what pracess is to be run next
+     * @public
+     * @method contextSwitchISR
+     * @param {jambOS.OS.ProcessControlBlock} pcb 
+     */
     contextSwitchISR: function(pcb) {
-//        console.log(pcb);
         var self = this;
-        pcb.pc = _CPU.pc;
-        pcb.xReg = _CPU.xReg;
-        pcb.yReg = _CPU.yReg;
-        pcb.zFlag = _CPU.zFlag;
-        pcb.state = "waiting";
-        var nextProcess = self.processManager.readyQueue.shift();
+
+        // Log our context switch
+        _Control.hostLog("Switching Context", "OS");
+
+        // set our pcb with appropraite values
+        pcb.set({
+            pc: _CPU.pc,
+            xReg: _CPU.xReg,
+            yReg: _CPU.yReg,
+            zFlag: _CPU.zFlag,
+            state: "waiting"
+        });
+
+        // get the next process to execute
+        var nextProcess = self.processManager.readyQueue.dequeue();
+
+        // if there is a process available then we'll set it to run
         if (nextProcess) {
-            nextProcess.set("state", "ready");
-            self.processManager.readyQueue.push(pcb);
-            self.processManager.set("currentProcess", nextProcess);
+
+            // change our pcb state to running
+            nextProcess.set("state", "running");
+
+            // Add the current pcb being passed to the ready queue
+            self.processManager.readyQueue.enqueue(pcb);
+
+            // set our current active process and slot
+            self.processManager.set({
+                currentProcess: nextProcess,
+                activeSlot: nextProcess.slot
+            });
+
+            // reset our process cycles
             self.processManager.processCycles = 0;
+
+            // set the appropraite values of the CPU from our process
             _CPU.set({
                 pc: nextProcess.pc,
                 xReg: nextProcess.xReg,

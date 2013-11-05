@@ -761,7 +761,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         _Kernel.processManager.updatePCBStatusDisplay(_Kernel.processManager.get("currentProcess"));
         _Kernel.processManager.get("currentProcess").set("state", "terminated");
 
-
         // disable stepover button
         $("#btnStepOver").prop("disabled", true);
     },
@@ -1110,7 +1109,9 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             _OsShell.putPrompt();
         }
 
-        if (_Kernel.processManager.readyQueue.length)
+        // Perform a context switch if the ready queue is not empty.
+        // This is where the magic or realtime multi-processing occurs.
+        if (!_Kernel.processManager.readyQueue.isEmpty())
             _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
     }
 });
@@ -1280,7 +1281,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
      * @property {jambOS.OS.ProcessControlBlock} currentProcess
      */
     currentProcess: null,
-    readyQueue: [],
+    readyQueue: null,
     processCycles: 0,
     schedulingQuantum: 6,
     /**
@@ -1291,7 +1292,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
     initialize: function(options) {
         options || (options = {});
         this.setOptions(options);
-
+        this.readyQueue = new jambOS.OS.ReadyQueue();
         return this;
     },
     /**
@@ -1309,7 +1310,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
 
             // perform a swithc when we the cycles hit our scheduling quantum to
             // simulate the real time execution
-            if (self.readyQueue.length && self.processCycles >= self.schedulingQuantum) {
+            if (!self.readyQueue.isEmpty() && self.processCycles >= self.schedulingQuantum) {
                 _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
             }
         }
@@ -1363,9 +1364,12 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
      */
     unload: function(pcb) {
         _Kernel.memoryManager.deallocate(pcb);
-        var index = this.processes.indexOf(pcb);
-        if (index > -1)
-            this.processes.splice(index, 1);
+        
+        // remove pcb from processes list
+        for (var index in this.processes) {
+            if (this.processes[index].pid === pcb.pid)
+                this.processes.splice(index, 1);
+        }
     },
     /**
      * Updates cpu status display
@@ -2270,26 +2274,60 @@ jambOS.OS.DeviceDriverKeyboard = jambOS.util.createClass(jambOS.OS.DeviceDriver,
  */
 
 jambOS.OS.Queue = jambOS.util.createClass({
-    // Properties
+    /**
+     * @property {string} type          - Type
+     */
+    type: "readyqueue",
+    /**
+     * @property {Array} q              - Our Queue
+     */
     q: new Array(),
-    // Methods
+    /**
+     * Gets the size of our queue
+     * @public
+     * @method getSize
+     * @return {int}                    - Size of our queue
+     */
     getSize: function() {
         return this.q.length;
     },
+    /**
+     * Checks if our queue is empty or not
+     * @public
+     * @method isEmpty
+     * @returns {boolean}   true|false
+     */
     isEmpty: function() {
         return (this.q.length === 0);
     },
+    /**
+     * Adds element to queue
+     * @public
+     * @method enqueue
+     * @param {anyType} element   
+     */
     enqueue: function(element) {
         this.q.push(element);
     },
+    /**
+     * Removes first element from queue
+     * @public
+     * @method dequeue
+     * @returns {anyType} retVal
+     */
     dequeue: function() {
         var retVal = null;
-        if (this.q.length > 0)
+        if (!this.isEmpty())
         {
             retVal = this.q.shift();
         }
         return retVal;
     },
+    /**
+     * String representation of our queue
+     * @public
+     * @returns {string} retVal
+     */
     toString: function() {
         var retVal = "";
         for (var i in this.q)
@@ -2297,6 +2335,46 @@ jambOS.OS.Queue = jambOS.util.createClass({
             retVal += "[" + this.q[i] + "] ";
         }
         return retVal;
+    }
+});
+/**
+ * =============================================================================
+ * readyqueue.class.js 
+ * 
+ * Our implementation of the ready queue based on the Queue Class
+ * 
+ * @public
+ * @class ReadyQueue
+ * @inheritsFrom jambOS.OS.Queue
+ * @memberOf jambOS.OS
+ * =============================================================================
+ */
+
+jambOS.OS.ReadyQueue = jambOS.util.createClass(jambOS.OS.Queue, /** @scope jambOS.OS.ReadyQueue.prototype */ {
+    /**
+     * @property {string} type          - Type
+     */
+    type: "readyqueue",
+    /**
+     * @property {Array} q              - Our Queue
+     */
+    q: [],
+    /**
+     * Constructor
+     * @public
+     * @param {object} options constructor arguments we wish to pass
+     */
+    initialize: function(options) {
+        options || (options = {});
+        this.setOptions(options);
+    },
+    /**
+     * Will have to work on this in the future but in the meantime we'll just return
+     * a string representation of readyqueue by it's  type.
+     * @returns {string} type
+     */
+    toString: function() {
+        return "<jambOS.OS." + this.type + ">";
     }
 });
 /**
@@ -2827,17 +2905,29 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             description: "- Runs all programs loaded in memory",
             behavior: function(args) {
 
+                // Check whether we have processes that are loaded in memory
+                // Also check whether we want to stepover our process which in 
+                // this case we do not.
                 if (_Kernel.processManager.processes.length > 0 && !_Stepover) {
-                    for (var pid in _Kernel.processManager.processes) {
-                        var pcb = _Kernel.processManager.processes[pid];
-                        _Kernel.processManager.readyQueue.push(pcb);
+
+                    // Loop through our processes and add them to the readyQueue
+                    for (var key in _Kernel.processManager.processes) {
+                        var pcb = _Kernel.processManager.processes[key];
+                        _Kernel.processManager.readyQueue.enqueue(pcb);
                     }
 
-                    var process = _Kernel.processManager.readyQueue.shift();
+                    // Get first process from the readyQueue
+                    var process = _Kernel.processManager.readyQueue.dequeue();
+
+                    // Set our active slot in which to base our operations from
                     _Kernel.processManager.set("activeSlot", process.slot);
+
+                    // Execute our process
                     _Kernel.processManager.execute(process);
-                    _Kernel.processManager.processes.splice(process.pid, 0);
-                } else
+
+                } else if (_Kernel.processes.length > 0 && _StepOver)
+                    _StdIn.putText("Please turn off the StepOver command to run all processes");
+                else
                     _StdIn.putText("There are no processes to run!");
 
             }});
@@ -2973,6 +3063,11 @@ jambOS.OS.Kernel = jambOS.util.createClass({
             _GLaDOS.afterStartup();
         }
     },
+    /**
+     * Shuts down OS
+     * @public
+     * @method shutdown
+     */
     shutdown: function()
     {
         this.trace("begin shutdown OS");
@@ -3069,12 +3164,18 @@ jambOS.OS.Kernel = jambOS.util.createClass({
     },
     /**
      * Initiates a process routine
+     * @public
+     * @method processInitiationISR
+     * @param {jambOS.OS.ProcessControlBlock} pcb 
      */
     processInitiationISR: function(pcb) {
         _CPU.start(pcb);
     },
     /**
      * Terminates a process routine
+     * @public
+     * @method processTerminationISR
+     * @param {jambOS.OS.ProcessControlBlock} pcb 
      */
     processTerminationISR: function(pcb) {
         var self = this;
@@ -3082,36 +3183,49 @@ jambOS.OS.Kernel = jambOS.util.createClass({
 
         self.memoryManager.deallocate(pcb);
     },
+    /**
+     * Switches what pracess is to be run next
+     * @public
+     * @method contextSwitchISR
+     * @param {jambOS.OS.ProcessControlBlock} pcb 
+     */
     contextSwitchISR: function(pcb) {
-//        console.log(pcb);
         var self = this;
-        pcb.pc = _CPU.pc;
-        pcb.xReg = _CPU.xReg;
-        pcb.yReg = _CPU.yReg;
-        pcb.zFlag = _CPU.zFlag;
-        pcb.state = "waiting";
-        var nextProcess = self.processManager.readyQueue.shift();
+
+        // Log our context switch
+        _Control.hostLog("Switching Context", "OS");
+
+        // set our pcb with appropraite values
+        pcb.set({
+            pc: _CPU.pc,
+            xReg: _CPU.xReg,
+            yReg: _CPU.yReg,
+            zFlag: _CPU.zFlag,
+            state: "waiting"
+        });
+
+        // get the next process to execute
+        var nextProcess = self.processManager.readyQueue.dequeue();
+
+        // if there is a process available then we'll set it to run
         if (nextProcess) {
-            nextProcess.set("state", "ready");
-            self.processManager.readyQueue.push(pcb);
-            
 
-//            for (var key in self.processManager.processes) {
-//                if (nextProcess.pid !== self.processManager.processes[key].pid)
-//                    self.processManager.processes[key].state = "waiting";
-//                else
-//                
-//                {
-//                    var process = self.processManager.processes[key];
-//                    process.base = _CPU.pc;
-//                    process.state = "waiting";
-//                    self.processManager.readyQueue.push(nextProcess);
-//                }
-//            }
+            // change our pcb state to running
+            nextProcess.set("state", "running");
 
+            // Add the current pcb being passed to the ready queue
+            self.processManager.readyQueue.enqueue(pcb);
 
-            self.processManager.set("currentProcess", nextProcess);
+            // set our current active process and slot
+            self.processManager.set({
+                currentProcess: nextProcess,
+                activeSlot: nextProcess.slot
+            });
+
+            // reset our process cycles
             self.processManager.processCycles = 0;
+
+            // set the appropraite values of the CPU from our process
             _CPU.set({
                 pc: nextProcess.pc,
                 xReg: nextProcess.xReg,
