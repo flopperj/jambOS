@@ -75,7 +75,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             zFlag: 0,
             isExecuting: false
         });
-
+        
         // update PCB status display
         _Kernel.processManager.updatePCBStatusDisplay(_Kernel.processManager.get("currentProcess"));
         _Kernel.processManager.get("currentProcess").set("state", "terminated");
@@ -310,7 +310,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      * Break (which is really a system call) 
      * opCode: 00
      */
-    breakOperation: function(self) {
+    breakOperation: function() {
         _Kernel.interruptHandler(PROCESS_TERMINATION_IRQ, _Kernel.processManager.get("currentProcess"));
     },
     /**
@@ -426,12 +426,18 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
             _StdIn.advanceLine();
             _OsShell.putPrompt();
+
+            // set state of current process if its terminated
+            // This is very helpful before we switch contexts
+            if (currentByte === "00")
+                _Kernel.processManager.currentProcess.set("state", "terminated");
         }
 
         // Perform a context switch if the ready queue is not empty.
         // This is where the magic or realtime multi-processing occurs.
         if (!_Kernel.processManager.readyQueue.isEmpty())
             _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
+
     }
 });
 

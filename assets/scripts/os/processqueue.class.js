@@ -1,21 +1,21 @@
 /**
  * =============================================================================
- * readyqueue.class.js 
+ * processqueue.class.js 
  * 
- * Our implementation of the ready queue based on the Queue Class
+ * Our implementation of the process queue based on the Queue Class
  * 
  * @public
- * @class ReadyQueue
+ * @class ProcessQueue
  * @inheritsFrom jambOS.OS.Queue
  * @memberOf jambOS.OS
  * =============================================================================
  */
 
-jambOS.OS.ReadyQueue = jambOS.util.createClass(jambOS.OS.Queue, /** @scope jambOS.OS.ReadyQueue.prototype */ {
+jambOS.OS.ProcessQueue = jambOS.util.createClass(jambOS.OS.Queue, /** @scope jambOS.OS.ReadyQueue.prototype */ {
     /**
      * @property {string} type          - Type
      */
-    type: "readyqueue",
+    type: "processqueue",
     /**
      * @property {Array} q              - Our Queue
      */

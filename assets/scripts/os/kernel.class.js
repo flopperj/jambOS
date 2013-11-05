@@ -201,7 +201,8 @@ jambOS.OS.Kernel = jambOS.util.createClass({
         var self = this;
         _CPU.stop();
 
-        self.memoryManager.deallocate(pcb);
+        // unload process
+        self.processManager.unload(pcb);
     },
     /**
      * Switches what pracess is to be run next
@@ -218,23 +219,27 @@ jambOS.OS.Kernel = jambOS.util.createClass({
         // set our pcb with appropraite values
         pcb.set({
             pc: _CPU.pc,
+            acc: _CPU.acc,
             xReg: _CPU.xReg,
             yReg: _CPU.yReg,
             zFlag: _CPU.zFlag,
-            state: "waiting"
+            state: pcb.state !== "terminated" ? "waiting" : pcb.state
         });
 
         // get the next process to execute
         var nextProcess = self.processManager.readyQueue.dequeue();
 
+        console.log(nextProcess.pid + " <-- next process");
+
         // if there is a process available then we'll set it to run
         if (nextProcess) {
 
-            // change our pcb state to running
+            // change our next pcb state to running
             nextProcess.set("state", "running");
 
             // Add the current pcb being passed to the ready queue
-            self.processManager.readyQueue.enqueue(pcb);
+            if (pcb.state !== "terminated")
+                self.processManager.readyQueue.enqueue(pcb);
 
             // set our current active process and slot
             self.processManager.set({
@@ -242,17 +247,16 @@ jambOS.OS.Kernel = jambOS.util.createClass({
                 activeSlot: nextProcess.slot
             });
 
-            // reset our process cycles
-            self.processManager.processCycles = 0;
-
             // set the appropraite values of the CPU from our process
             _CPU.set({
                 pc: nextProcess.pc,
+                acc: nextProcess.acc,
                 xReg: nextProcess.xReg,
                 yReg: nextProcess.yReg,
                 zFlag: nextProcess.zFlag,
                 isExecuting: true
             });
+
         }
     },
     /**

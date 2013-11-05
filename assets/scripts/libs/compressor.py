@@ -50,7 +50,7 @@ SCRIPTS = [
            "../os/devicedriver.class.js",
            "../os/devicedriverkeyboard.class.js",
            "../os/queue.class.js",
-           "../os/readyqueue.class.js",
+           "../os/processqueue.class.js",
            "../os/systemservices.class.js",
            "../os/shellcommand.class.js",
            "../os/usercommand.class.js",

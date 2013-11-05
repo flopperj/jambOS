@@ -33,7 +33,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
     initialize: function(options) {
         options || (options = {});
         this.setOptions(options);
-        this.readyQueue = new jambOS.OS.ReadyQueue();
+        this.readyQueue = new jambOS.OS.ProcessQueue();
         return this;
     },
     /**
@@ -104,12 +104,15 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
      * @param {jambOS.OS.ProcessControlBlock} pcb
      */
     unload: function(pcb) {
-        _Kernel.memoryManager.deallocate(pcb);
-        
+
         // remove pcb from processes list
         for (var index in this.processes) {
-            if (this.processes[index].pid === pcb.pid)
+            var process = this.processes[index];
+            if (process.pid === pcb.pid || process.state === "terminated") {
+                console.log("unloading pid => " + process.pid);
                 this.processes.splice(index, 1);
+                _Kernel.memoryManager.deallocate(process);
+            }
         }
     },
     /**
