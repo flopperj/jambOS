@@ -38,7 +38,7 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
             // unless its the first slot which we'll use 0 as the base and 
             // the block size minus 1 as the limit
             var base = i > 0 ? self.slots[i - 1].limit + 1 : 0;
-            var limit = i > 0 ? self.slots[ i - 1].limit + MEMORY_BLOCK : MEMORY_BLOCK - 1;
+            var limit = i > 0 ? self.slots[ i - 1].limit + MEMORY_BLOCK_SIZE : MEMORY_BLOCK_SIZE - 1;
 
             self.slots.push({
                 base: base,
@@ -59,6 +59,8 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
     },
     /**
      * Allocates memory slots to a process
+     * @public
+     * @method allocate
      * @param {jambOS.OS.ProcessControlBlock} pcb
      */
     allocate: function(pcb) {
@@ -69,7 +71,9 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
         _Kernel.processManager.set("currentProcess", pcb);
     },
     /**
-     * Deallocates memory slots to a process
+     * Deallocates memory slots of a process
+     * @public
+     * @method deallocate
      * @param {jambOS.OS.ProcessControlBlock} pcb
      */
     deallocate: function(pcb) {
@@ -82,15 +86,26 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
             self.memory.write(i, 00);
         }
 
+        // open our slot
         self.slots[slot].open = true;
-        self.activeSlot = pcb.slot;
+
+        // set lowest posible slot as our active slot
+        for (var key in self.slots) {
+            if (self.slots[key].open) {
+                self.activeSlot = key;
+                break;
+            }
+        }
 
         // update memory table
         self.updateMemoryDisplay();
     },
     /**
      * Validates if memory address is within available allocated slot
+     * @public
+     * @method validateAddress
      * @param {int} address 
+     * @returns {boolean} isValid
      */
     validateAddress: function(address) {
         var self = this;

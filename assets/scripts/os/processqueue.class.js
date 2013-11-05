@@ -31,10 +31,16 @@ jambOS.OS.ProcessQueue = jambOS.util.createClass(jambOS.OS.Queue, /** @scope jam
     },
     /**
      * Will have to work on this in the future but in the meantime we'll just return
-     * a string representation of readyqueue by it's  type.
+     * a string containing the process queue's pids
      * @returns {string} type
      */
     toString: function() {
-        return "<jambOS.OS." + this.type + ">";
+
+        var processQueue = "";
+
+        for (var key in this.q)
+            processQueue += "{" + this.q[key].pidd + "}";
+
+        return processQueue;
     }
 });

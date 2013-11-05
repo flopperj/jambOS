@@ -226,6 +226,16 @@ jambOS.util.rot13 = function(str) {
     return retVal;
 };
 
+/**
+ * Performs a deep copy of an object
+ * @param {object} obj        
+ * @returns {object} newObject
+ */
+jambOS.util.clone = function(obj) {
+    var newObject = $.extend(true, {}, obj)
+    return newObject;
+};
+
 // initialize host
 $(document).ready(function() {
     _Control = new jambOS.host.Control();

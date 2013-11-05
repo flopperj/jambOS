@@ -75,7 +75,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             zFlag: 0,
             isExecuting: false
         });
-        
+
         // update PCB status display
         _Kernel.processManager.updatePCBStatusDisplay(_Kernel.processManager.get("currentProcess"));
         _Kernel.processManager.get("currentProcess").set("state", "terminated");
@@ -354,7 +354,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
             if (self.pc > _Kernel.processManager.get("currentProcess").limit)
             {
-                self.pc -= MEMORY_BLOCK;
+                self.pc -= MEMORY_BLOCK_SIZE;
             }
         }
     },
@@ -429,8 +429,35 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
             // set state of current process if its terminated
             // This is very helpful before we switch contexts
-            if (currentByte === "00")
-                _Kernel.processManager.currentProcess.set("state", "terminated");
+            if (currentByte === "00") {
+                var currentProcess = _Kernel.processManager.get("currentProcess");
+                var previousProcess = _Kernel.processManager.get("previousProcess");
+
+
+                // if our previous process program counter is the same as the next we'll
+                // just have to move it a block size up
+                if (previousProcess && previousProcess.get("pc") === self.get("pc"))
+                    self.pc += MEMORY_BLOCK_SIZE;
+
+                // set our current process with appropraite cpu values
+                currentProcess.set({
+                    pc: self.pc,
+                    acc: self.acc,
+                    xReg: self.xReg,
+                    yReg: self.yReg,
+                    zFlag: self.zFlag,
+                    state: "terminated"
+                });
+
+
+                // set our current process with the appropriate data from before
+                _Kernel.processManager.set({
+                    currentProcess: currentProcess
+                });
+
+                // update process diplay
+                _Kernel.processManager.updatePCBStatusDisplay(currentProcess);
+            }
         }
 
         // Perform a context switch if the ready queue is not empty.

@@ -208,38 +208,39 @@ jambOS.OS.Kernel = jambOS.util.createClass({
      * Switches what pracess is to be run next
      * @public
      * @method contextSwitchISR
-     * @param {jambOS.OS.ProcessControlBlock} pcb 
+     * @param {jambOS.OS.ProcessControlBlock} process 
      */
-    contextSwitchISR: function(pcb) {
+    contextSwitchISR: function(process) {
         var self = this;
 
         // Log our context switch
         _Control.hostLog("Switching Context", "OS");
 
-        // set our pcb with appropraite values
-        pcb.set({
+        // set our process with appropraite values
+        process.set({
             pc: _CPU.pc,
             acc: _CPU.acc,
             xReg: _CPU.xReg,
             yReg: _CPU.yReg,
             zFlag: _CPU.zFlag,
-            state: pcb.state !== "terminated" ? "waiting" : pcb.state
+            state: process.state !== "terminated" ? "waiting" : process.state
         });
 
-        // get the next process to execute
-        var nextProcess = self.processManager.readyQueue.dequeue();
+        // set our previous process
+        self.processManager.set("previousProcess", process);
 
-        console.log(nextProcess.pid + " <-- next process");
+        // get the next process to execute from ready queue
+        var nextProcess = self.processManager.readyQueue.dequeue();
 
         // if there is a process available then we'll set it to run
         if (nextProcess) {
 
-            // change our next pcb state to running
+            // change our next process state to running
             nextProcess.set("state", "running");
 
-            // Add the current pcb being passed to the ready queue
-            if (pcb.state !== "terminated")
-                self.processManager.readyQueue.enqueue(pcb);
+            // Add the current process being passed to the ready queue
+            if (process.state !== "terminated")
+                self.processManager.readyQueue.enqueue(process);
 
             // set our current active process and slot
             self.processManager.set({
@@ -247,7 +248,8 @@ jambOS.OS.Kernel = jambOS.util.createClass({
                 activeSlot: nextProcess.slot
             });
 
-            // set the appropraite values of the CPU from our process
+            // set the appropraite values of the CPU from our process to continue
+            // executing
             _CPU.set({
                 pc: nextProcess.pc,
                 acc: nextProcess.acc,

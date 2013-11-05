@@ -42,7 +42,7 @@ var PROCESS_TERMINATION_IRQ = 3;
 var CONTEXT_SWITCH_IRQ = 4;
 
 // memory
-var MEMORY_BLOCK = 256;
+var MEMORY_BLOCK_SIZE = 256;
 var ALLOCATABLE_MEMORY_SLOTS = 3;
 var HEX_BASE = 16;
 
@@ -332,6 +332,16 @@ jambOS.util.rot13 = function(str) {
         }
     }
     return retVal;
+};
+
+/**
+ * Performs a deep copy of an object
+ * @param {object} obj        
+ * @returns {object} newObject
+ */
+jambOS.util.clone = function(obj) {
+    var newObject = $.extend(true, {}, obj)
+    return newObject;
 };
 
 // initialize host
@@ -756,7 +766,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             zFlag: 0,
             isExecuting: false
         });
-        
+
         // update PCB status display
         _Kernel.processManager.updatePCBStatusDisplay(_Kernel.processManager.get("currentProcess"));
         _Kernel.processManager.get("currentProcess").set("state", "terminated");
@@ -1035,7 +1045,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
             if (self.pc > _Kernel.processManager.get("currentProcess").limit)
             {
-                self.pc -= MEMORY_BLOCK;
+                self.pc -= MEMORY_BLOCK_SIZE;
             }
         }
     },
@@ -1110,8 +1120,35 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
             // set state of current process if its terminated
             // This is very helpful before we switch contexts
-            if (currentByte === "00")
-                _Kernel.processManager.currentProcess.set("state", "terminated");
+            if (currentByte === "00") {
+                var currentProcess = _Kernel.processManager.get("currentProcess");
+                var previousProcess = _Kernel.processManager.get("previousProcess");
+
+
+                // if our previous process program counter is the same as the next we'll
+                // just have to move it a block size up
+                if (previousProcess && previousProcess.get("pc") === self.get("pc"))
+                    self.pc += MEMORY_BLOCK_SIZE;
+
+                // set our current process with appropraite cpu values
+                currentProcess.set({
+                    pc: self.pc,
+                    acc: self.acc,
+                    xReg: self.xReg,
+                    yReg: self.yReg,
+                    zFlag: self.zFlag,
+                    state: "terminated"
+                });
+
+
+                // set our current process with the appropriate data from before
+                _Kernel.processManager.set({
+                    currentProcess: currentProcess
+                });
+
+                // update process diplay
+                _Kernel.processManager.updatePCBStatusDisplay(currentProcess);
+            }
         }
 
         // Perform a context switch if the ready queue is not empty.
@@ -1163,7 +1200,7 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
             // unless its the first slot which we'll use 0 as the base and 
             // the block size minus 1 as the limit
             var base = i > 0 ? self.slots[i - 1].limit + 1 : 0;
-            var limit = i > 0 ? self.slots[ i - 1].limit + MEMORY_BLOCK : MEMORY_BLOCK - 1;
+            var limit = i > 0 ? self.slots[ i - 1].limit + MEMORY_BLOCK_SIZE : MEMORY_BLOCK_SIZE - 1;
 
             self.slots.push({
                 base: base,
@@ -1184,6 +1221,8 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
     },
     /**
      * Allocates memory slots to a process
+     * @public
+     * @method allocate
      * @param {jambOS.OS.ProcessControlBlock} pcb
      */
     allocate: function(pcb) {
@@ -1194,7 +1233,9 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
         _Kernel.processManager.set("currentProcess", pcb);
     },
     /**
-     * Deallocates memory slots to a process
+     * Deallocates memory slots of a process
+     * @public
+     * @method deallocate
      * @param {jambOS.OS.ProcessControlBlock} pcb
      */
     deallocate: function(pcb) {
@@ -1207,15 +1248,26 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
             self.memory.write(i, 00);
         }
 
+        // open our slot
         self.slots[slot].open = true;
-        self.activeSlot = pcb.slot;
+
+        // set lowest posible slot as our active slot
+        for (var key in self.slots) {
+            if (self.slots[key].open) {
+                self.activeSlot = key;
+                break;
+            }
+        }
 
         // update memory table
         self.updateMemoryDisplay();
     },
     /**
      * Validates if memory address is within available allocated slot
+     * @public
+     * @method validateAddress
      * @param {int} address 
+     * @returns {boolean} isValid
      */
     validateAddress: function(address) {
         var self = this;
@@ -1287,8 +1339,21 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
      * @property {jambOS.OS.ProcessControlBlock} currentProcess
      */
     currentProcess: null,
+    /**
+     * @property {jambOS.OS.ProcessControlBlock} previousProcess    
+     */
+    previousProcess: null,
+    /**
+     * @property {jambOS.OS.ProcessQueue} readyQueue
+     */
     readyQueue: null,
+    /**
+     * @property {int} processCycles
+     */
     processCycles: 0,
+    /**
+     * @property {int} schedulingQuantum
+     */
     schedulingQuantum: 6,
     /**
      * Constructor
@@ -1309,6 +1374,11 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         pcb.set("state", "ready");
         _Kernel.interruptHandler(PROCESS_INITIATION_IRQ, pcb);
     },
+    /**
+     * Shechules a process
+     * @public
+     * @method scheduleProcess
+     */
     scheduleProcess: function() {
         var self = this;
         if (_CPU.isExecuting) {
@@ -1365,23 +1435,27 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
     },
     /**
      * Unloads process from memoryhelp
-     * 
+     * @public
+     * @method unload
      * @param {jambOS.OS.ProcessControlBlock} pcb
      */
     unload: function(pcb) {
+        var self = this;
+        var tempProcesses = jambOS.util.clone(self.processes);
 
         // remove pcb from processes list
-        for (var index in this.processes) {
-            var process = this.processes[index];
+        // also make sure all other terminated prcoesses are removed
+        $.each(tempProcesses, function(index, process) {
             if (process.pid === pcb.pid || process.state === "terminated") {
-                console.log("unloading pid => " + process.pid);
-                this.processes.splice(index, 1);
                 _Kernel.memoryManager.deallocate(process);
+                self.processes.splice(index, 1);
             }
-        }
+        });
     },
     /**
      * Updates cpu status display
+     * @public
+     * @method updateCpuStatusDisplay
      * @param {jambOS.host.Cpu} cpu
      */
     updateCpuStatusDisplay: function(cpu) {
@@ -2379,11 +2453,17 @@ jambOS.OS.ProcessQueue = jambOS.util.createClass(jambOS.OS.Queue, /** @scope jam
     },
     /**
      * Will have to work on this in the future but in the meantime we'll just return
-     * a string representation of readyqueue by it's  type.
+     * a string containing the process queue's pids
      * @returns {string} type
      */
     toString: function() {
-        return "<jambOS.OS." + this.type + ">";
+
+        var processQueue = "";
+
+        for (var key in this.q)
+            processQueue += "{" + this.q[key].pidd + "}";
+
+        return processQueue;
     }
 });
 /**
@@ -3197,38 +3277,39 @@ jambOS.OS.Kernel = jambOS.util.createClass({
      * Switches what pracess is to be run next
      * @public
      * @method contextSwitchISR
-     * @param {jambOS.OS.ProcessControlBlock} pcb 
+     * @param {jambOS.OS.ProcessControlBlock} process 
      */
-    contextSwitchISR: function(pcb) {
+    contextSwitchISR: function(process) {
         var self = this;
 
         // Log our context switch
         _Control.hostLog("Switching Context", "OS");
 
-        // set our pcb with appropraite values
-        pcb.set({
+        // set our process with appropraite values
+        process.set({
             pc: _CPU.pc,
             acc: _CPU.acc,
             xReg: _CPU.xReg,
             yReg: _CPU.yReg,
             zFlag: _CPU.zFlag,
-            state: pcb.state !== "terminated" ? "waiting" : pcb.state
+            state: process.state !== "terminated" ? "waiting" : process.state
         });
 
-        // get the next process to execute
-        var nextProcess = self.processManager.readyQueue.dequeue();
+        // set our previous process
+        self.processManager.set("previousProcess", process);
 
-        console.log(nextProcess.pid + " <-- next process");
+        // get the next process to execute from ready queue
+        var nextProcess = self.processManager.readyQueue.dequeue();
 
         // if there is a process available then we'll set it to run
         if (nextProcess) {
 
-            // change our next pcb state to running
+            // change our next process state to running
             nextProcess.set("state", "running");
 
-            // Add the current pcb being passed to the ready queue
-            if (pcb.state !== "terminated")
-                self.processManager.readyQueue.enqueue(pcb);
+            // Add the current process being passed to the ready queue
+            if (process.state !== "terminated")
+                self.processManager.readyQueue.enqueue(process);
 
             // set our current active process and slot
             self.processManager.set({
@@ -3236,7 +3317,8 @@ jambOS.OS.Kernel = jambOS.util.createClass({
                 activeSlot: nextProcess.slot
             });
 
-            // set the appropraite values of the CPU from our process
+            // set the appropraite values of the CPU from our process to continue
+            // executing
             _CPU.set({
                 pc: nextProcess.pc,
                 acc: nextProcess.acc,

@@ -22,8 +22,21 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
      * @property {jambOS.OS.ProcessControlBlock} currentProcess
      */
     currentProcess: null,
+    /**
+     * @property {jambOS.OS.ProcessControlBlock} previousProcess    
+     */
+    previousProcess: null,
+    /**
+     * @property {jambOS.OS.ProcessQueue} readyQueue
+     */
     readyQueue: null,
+    /**
+     * @property {int} processCycles
+     */
     processCycles: 0,
+    /**
+     * @property {int} schedulingQuantum
+     */
     schedulingQuantum: 6,
     /**
      * Constructor
@@ -44,6 +57,11 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         pcb.set("state", "ready");
         _Kernel.interruptHandler(PROCESS_INITIATION_IRQ, pcb);
     },
+    /**
+     * Shechules a process
+     * @public
+     * @method scheduleProcess
+     */
     scheduleProcess: function() {
         var self = this;
         if (_CPU.isExecuting) {
@@ -100,23 +118,27 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
     },
     /**
      * Unloads process from memoryhelp
-     * 
+     * @public
+     * @method unload
      * @param {jambOS.OS.ProcessControlBlock} pcb
      */
     unload: function(pcb) {
+        var self = this;
+        var tempProcesses = jambOS.util.clone(self.processes);
 
         // remove pcb from processes list
-        for (var index in this.processes) {
-            var process = this.processes[index];
+        // also make sure all other terminated prcoesses are removed
+        $.each(tempProcesses, function(index, process) {
             if (process.pid === pcb.pid || process.state === "terminated") {
-                console.log("unloading pid => " + process.pid);
-                this.processes.splice(index, 1);
                 _Kernel.memoryManager.deallocate(process);
+                self.processes.splice(index, 1);
             }
-        }
+        });
     },
     /**
      * Updates cpu status display
+     * @public
+     * @method updateCpuStatusDisplay
      * @param {jambOS.host.Cpu} cpu
      */
     updateCpuStatusDisplay: function(cpu) {
