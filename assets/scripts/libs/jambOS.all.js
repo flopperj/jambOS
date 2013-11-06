@@ -778,7 +778,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             zFlag: 0,
             isExecuting: false
         });
-        
+
         _Kernel.processManager.get("currentProcess").set("state", "terminated");
 
         // disable stepover button
@@ -796,9 +796,15 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
         // update cpu status display in real time
         _Kernel.processManager.updateCpuStatusDisplay(self);
-        
+
         // update PCB status display in real time
         _Kernel.processManager.updatePCBStatusDisplay();
+
+        // check if our program counter is within our memory addresses bounds
+        if (self.pc > (MEMORY_BLOCK_SIZE * ALLOCATABLE_MEMORY_SLOTS)){
+            self.stop();
+            _Kernel.trapError("Invalid Operation!", false);
+        }
 
         var opCode = _Kernel.memoryManager.memory.read(self.pc++).toString().toLowerCase();
         var operation = self.getOpCode(opCode);
@@ -1473,21 +1479,19 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         var self = this;
         var tempProcesses = jambOS.util.clone(self.residentList);
         
-//        console.log(tempProcesses);
-
         var arrayLength = self.residentList.length;
 
         // remove pcb from residentList list
         // also make sure all other terminated prcoesses are removed
         $.each(tempProcesses, function(index, process) {
             if (process.pid === pcb.pid || process.state === "terminated") {
-//                _Kernel.memoryManager.deallocate(process);
-//
-//                // remove processes starting from the last index
-//                for (var i = arrayLength - 1; i >= 0; i--) {
-//                    if (self.residentList[i] && (self.residentList[i].state === "terminated" || self.residentList[i] === pcb.pid))
-//                        self.residentList.splice(i, 1);
-//                }
+                _Kernel.memoryManager.deallocate(process);
+
+                // remove processes starting from the last index
+                for (var i = arrayLength - 1; i >= 0; i--) {
+                    if (self.residentList[i] && (self.residentList[i].state === "terminated" || self.residentList[i] === pcb.pid))
+                        self.residentList.splice(i, 1);
+                }
 
                 // we don't want to forget to reset the current process
                 if (self.get("currentProcess").pid === process.pid)

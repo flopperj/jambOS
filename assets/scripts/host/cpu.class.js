@@ -81,7 +81,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             zFlag: 0,
             isExecuting: false
         });
-        
+
         _Kernel.processManager.get("currentProcess").set("state", "terminated");
 
         // disable stepover button
@@ -99,9 +99,15 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
         // update cpu status display in real time
         _Kernel.processManager.updateCpuStatusDisplay(self);
-        
+
         // update PCB status display in real time
         _Kernel.processManager.updatePCBStatusDisplay();
+
+        // check if our program counter is within our memory addresses bounds
+        if (self.pc > (MEMORY_BLOCK_SIZE * ALLOCATABLE_MEMORY_SLOTS)){
+            self.stop();
+            _Kernel.trapError("Invalid Operation!", false);
+        }
 
         var opCode = _Kernel.memoryManager.memory.read(self.pc++).toString().toLowerCase();
         var operation = self.getOpCode(opCode);
