@@ -325,12 +325,13 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                         _Kernel.processManager.readyQueue.enqueue(pcb);
                     }
                     
-                    // update process table with pcb data from the ready queue
-                    _Kernel.processManager.updatePCBStatusDisplay();
-                    
 
                     // Get first process from the readyQueue
                     var process = _Kernel.processManager.readyQueue.dequeue();
+                    
+                    // update process table with pcb data from the ready queue
+                    _Kernel.processManager.updatePCBStatusDisplay();
+                    
 
                     // Set our active slot in which to base our operations from
                     _Kernel.processManager.set("activeSlot", process.slot);

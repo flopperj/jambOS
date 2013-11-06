@@ -1446,13 +1446,25 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
     unload: function(pcb) {
         var self = this;
         var tempProcesses = jambOS.util.clone(self.processes);
+        
+        var arrayLength = self.processes.length;
 
         // remove pcb from processes list
         // also make sure all other terminated prcoesses are removed
         $.each(tempProcesses, function(index, process) {
             if (process.pid === pcb.pid || process.state === "terminated") {
                 _Kernel.memoryManager.deallocate(process);
-                self.processes.splice(index, 1);
+                
+                // remove processes stating from the last index
+                for (var i = arrayLength - 1; i >= 0; i--) {
+                    if (self.processes[i] && self.processes[i].state === "terminated")
+                        self.processes.splice(i, 1);
+                }
+
+                // we don't want to forget to reset the current process
+                if (self.get("currentProcess").pid === process.pid)
+                    self.set("currentProcess", null);
+
             }
         });
     },
@@ -2367,7 +2379,7 @@ jambOS.OS.DeviceDriverKeyboard = jambOS.util.createClass(jambOS.OS.DeviceDriver,
                 }
 
                 // handle wrapped text
-                if (_Console.currentXPosition <= promptOffset && _Console.linesAdvanced >= 0)
+                if (_Console.currentXPosition <= promptOffset && _Console.linesAdvanced > 0)
                 {
                     _Console.currentXPosition = _Console.lastXPosition;
                     _Console.currentYPosition = _Console.lastYPosition;
@@ -3045,12 +3057,13 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                         _Kernel.processManager.readyQueue.enqueue(pcb);
                     }
                     
-                    // update process table with pcb data from the ready queue
-                    _Kernel.processManager.updatePCBStatusDisplay();
-                    
 
                     // Get first process from the readyQueue
                     var process = _Kernel.processManager.readyQueue.dequeue();
+                    
+                    // update process table with pcb data from the ready queue
+                    _Kernel.processManager.updatePCBStatusDisplay();
+                    
 
                     // Set our active slot in which to base our operations from
                     _Kernel.processManager.set("activeSlot", process.slot);

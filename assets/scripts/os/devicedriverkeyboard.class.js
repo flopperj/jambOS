@@ -321,7 +321,7 @@ jambOS.OS.DeviceDriverKeyboard = jambOS.util.createClass(jambOS.OS.DeviceDriver,
                 }
 
                 // handle wrapped text
-                if (_Console.currentXPosition <= promptOffset && _Console.linesAdvanced >= 0)
+                if (_Console.currentXPosition <= promptOffset && _Console.linesAdvanced > 0)
                 {
                     _Console.currentXPosition = _Console.lastXPosition;
                     _Console.currentYPosition = _Console.lastYPosition;

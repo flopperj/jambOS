@@ -125,13 +125,25 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
     unload: function(pcb) {
         var self = this;
         var tempProcesses = jambOS.util.clone(self.processes);
+        
+        var arrayLength = self.processes.length;
 
         // remove pcb from processes list
         // also make sure all other terminated prcoesses are removed
         $.each(tempProcesses, function(index, process) {
             if (process.pid === pcb.pid || process.state === "terminated") {
                 _Kernel.memoryManager.deallocate(process);
-                self.processes.splice(index, 1);
+                
+                // remove processes stating from the last index
+                for (var i = arrayLength - 1; i >= 0; i--) {
+                    if (self.processes[i] && self.processes[i].state === "terminated")
+                        self.processes.splice(i, 1);
+                }
+
+                // we don't want to forget to reset the current process
+                if (self.get("currentProcess").pid === process.pid)
+                    self.set("currentProcess", null);
+
             }
         });
     },
