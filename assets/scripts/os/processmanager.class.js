@@ -95,7 +95,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
     unload: function(pcb) {
         var self = this;
         var tempProcesses = jambOS.util.clone(self.residentList);
-
+        
         var arrayLength = self.residentList.length;
 
         // remove pcb from residentList list

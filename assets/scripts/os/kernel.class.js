@@ -237,6 +237,8 @@ jambOS.OS.Kernel = jambOS.util.createClass({
 
             // change our next process state to running
             nextProcess.set("state", "running");
+            
+            console.log(nextProcess.pid + " <--- next process");
 
             // Add the current process being passed to the ready queue
             if (process.state !== "terminated")

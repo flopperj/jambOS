@@ -1472,6 +1472,8 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
     unload: function(pcb) {
         var self = this;
         var tempProcesses = jambOS.util.clone(self.residentList);
+        
+//        console.log(tempProcesses);
 
         var arrayLength = self.residentList.length;
 
@@ -1479,13 +1481,13 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         // also make sure all other terminated prcoesses are removed
         $.each(tempProcesses, function(index, process) {
             if (process.pid === pcb.pid || process.state === "terminated") {
-                _Kernel.memoryManager.deallocate(process);
-
-                // remove processes starting from the last index
-                for (var i = arrayLength - 1; i >= 0; i--) {
-                    if (self.residentList[i] && (self.residentList[i].state === "terminated" || self.residentList[i] === pcb.pid))
-                        self.residentList.splice(i, 1);
-                }
+//                _Kernel.memoryManager.deallocate(process);
+//
+//                // remove processes starting from the last index
+//                for (var i = arrayLength - 1; i >= 0; i--) {
+//                    if (self.residentList[i] && (self.residentList[i].state === "terminated" || self.residentList[i] === pcb.pid))
+//                        self.residentList.splice(i, 1);
+//                }
 
                 // we don't want to forget to reset the current process
                 if (self.get("currentProcess").pid === process.pid)
@@ -3426,6 +3428,8 @@ jambOS.OS.Kernel = jambOS.util.createClass({
 
             // change our next process state to running
             nextProcess.set("state", "running");
+            
+            console.log(nextProcess.pid + " <--- next process");
 
             // Add the current process being passed to the ready queue
             if (process.state !== "terminated")
