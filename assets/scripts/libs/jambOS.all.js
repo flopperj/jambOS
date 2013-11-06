@@ -773,7 +773,10 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      * Resets cpu registers to default values to help stop process execution
      */
     stop: function() {
-        this.set({
+        var self = this;
+        
+        // reset our registers
+        self.set({
             pc: 0,
             acc: 0,
             xReg: 0,
@@ -781,8 +784,14 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             zFlag: 0,
             isExecuting: false
         });
-
-        _Kernel.processManager.get("currentProcess").set("state", "terminated");
+        
+        
+        // make sure all processes on the residentList are terminated and clear 
+        // up the ready queue
+        $.each(_Kernel.processManager.residentList, function() {
+            this.set("state", "terminated");
+            self.scheduler.readyQueue.dequeue();
+        });
 
         // disable stepover button
         $("#btnStepOver").prop("disabled", true);
@@ -1029,7 +1038,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      * Break (which is really a system call) 
      * opCode: 00
      */
-    breakOperation: function() {
+    breakOperation: function() {        
         _Kernel.interruptHandler(PROCESS_TERMINATION_IRQ, _Kernel.processManager.get("currentProcess"));
     },
     /**
@@ -1513,28 +1522,25 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
      */
     unload: function(pcb) {
         var self = this;
-        var tempProcesses = jambOS.util.clone(self.residentList);
 
-        var arrayLength = self.residentList.length;
+        var residentListLength = self.residentList.length;
 
-        // remove pcb from residentList list
+        // remove processes starting from the back of the residentList
         // also make sure all other terminated prcoesses are removed
-        $.each(tempProcesses, function(index, process) {
-            if (process.pid === pcb.pid || process.state === "terminated") {
-                _Kernel.memoryManager.deallocate(process);
+        for (var i = residentListLength - 1; i >= 0; i--) {
+            if (self.residentList[i] && (self.residentList[i].state === "terminated" || self.residentList[i] === pcb.pid)) {
 
-                // remove processes starting from the last index
-                for (var i = arrayLength - 1; i >= 0; i--) {
-                    if (self.residentList[i] && (self.residentList[i].state === "terminated" || self.residentList[i] === pcb.pid))
-                        self.residentList.splice(i, 1);
-                }
+                // deallocate memory of process
+                _Kernel.memoryManager.deallocate(self.residentList[i]);
 
-                // we don't want to forget to reset the current process
-                if (self.get("currentProcess") && self.get("currentProcess").pid === process.pid)
-                    self.set("currentProcess", null);
-
+                // remove from resident list
+                self.residentList.splice(i, 1);
             }
-        });
+        }
+
+        // we don't want to forget to reset the current process
+        if (self.get("currentProcess") && self.get("currentProcess").pid === pcb.pid)
+            self.set("currentProcess", null);
     },
     /**
      * Updates cpu status display

@@ -73,7 +73,10 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      * Resets cpu registers to default values to help stop process execution
      */
     stop: function() {
-        this.set({
+        var self = this;
+        
+        // reset our registers
+        self.set({
             pc: 0,
             acc: 0,
             xReg: 0,
@@ -81,8 +84,14 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             zFlag: 0,
             isExecuting: false
         });
-
-        _Kernel.processManager.get("currentProcess").set("state", "terminated");
+        
+        
+        // make sure all processes on the residentList are terminated and clear 
+        // up the ready queue
+        $.each(_Kernel.processManager.residentList, function() {
+            this.set("state", "terminated");
+            self.scheduler.readyQueue.dequeue();
+        });
 
         // disable stepover button
         $("#btnStepOver").prop("disabled", true);
@@ -329,7 +338,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      * Break (which is really a system call) 
      * opCode: 00
      */
-    breakOperation: function() {
+    breakOperation: function() {        
         _Kernel.interruptHandler(PROCESS_TERMINATION_IRQ, _Kernel.processManager.get("currentProcess"));
     },
     /**

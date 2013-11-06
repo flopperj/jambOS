@@ -95,28 +95,25 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
      */
     unload: function(pcb) {
         var self = this;
-        var tempProcesses = jambOS.util.clone(self.residentList);
 
-        var arrayLength = self.residentList.length;
+        var residentListLength = self.residentList.length;
 
-        // remove pcb from residentList list
+        // remove processes starting from the back of the residentList
         // also make sure all other terminated prcoesses are removed
-        $.each(tempProcesses, function(index, process) {
-            if (process.pid === pcb.pid || process.state === "terminated") {
-                _Kernel.memoryManager.deallocate(process);
+        for (var i = residentListLength - 1; i >= 0; i--) {
+            if (self.residentList[i] && (self.residentList[i].state === "terminated" || self.residentList[i] === pcb.pid)) {
 
-                // remove processes starting from the last index
-                for (var i = arrayLength - 1; i >= 0; i--) {
-                    if (self.residentList[i] && (self.residentList[i].state === "terminated" || self.residentList[i] === pcb.pid))
-                        self.residentList.splice(i, 1);
-                }
+                // deallocate memory of process
+                _Kernel.memoryManager.deallocate(self.residentList[i]);
 
-                // we don't want to forget to reset the current process
-                if (self.get("currentProcess") && self.get("currentProcess").pid === process.pid)
-                    self.set("currentProcess", null);
-
+                // remove from resident list
+                self.residentList.splice(i, 1);
             }
-        });
+        }
+
+        // we don't want to forget to reset the current process
+        if (self.get("currentProcess") && self.get("currentProcess").pid === pcb.pid)
+            self.set("currentProcess", null);
     },
     /**
      * Updates cpu status display
