@@ -57,6 +57,7 @@ jambOS.OS.ProcessControlBlock = jambOS.util.createClass(/** @scope jambOS.OS.Pro
      * @property {int} limit                - Memory limit for a process
      */
     limit: 0,
+    timeslice: 0,
     /**
      * Constructor
      * @param {object} options

@@ -322,7 +322,7 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                 if (_Kernel.processManager.residentList.length > 0 && !_Stepover) {
 
                     // Loop through our residentList and add them to the readyQueue
-                    $.each(_Kernel.processManager.residentList, function(){                        
+                    $.each(_Kernel.processManager.residentList, function() {
                         _CPU.scheduler.readyQueue.enqueue(this);
                     });
 
@@ -393,6 +393,7 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                 var quantum = parseInt(args[0]);
                 if (args.length > 0 && !isNaN(quantum)) {
                     _CPU.scheduler.set("quantum", quantum);
+                    _StdIn.putText("Scheduling quantum set to: " + quantum);
                 } else {
                     _StdIn.putText("Usage: quantum <int>");
                 }

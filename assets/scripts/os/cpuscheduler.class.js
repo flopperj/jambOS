@@ -36,11 +36,14 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
     scheduleProcess: function() {
         var self = this;
         if (_CPU.isExecuting) {
+
             self.processCycles++;
 
             // perform a swithc when we the cycles hit our scheduling quantum to
             // simulate the real time execution
-            if (!self.readyQueue.isEmpty() && self.processCycles >= self.quantum) {
+            if (!self.readyQueue.isEmpty() && self.processCycles === self.quantum) {
+                self.processCycles = 0;
+                _Kernel.processManager.currentProcess.timeslice = 0;
                 _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
             }
         }
@@ -51,17 +54,20 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
      * @method switchContext
      * @param {jambOS.OS.ProcessControlBlock} process 
      */
-    switchContext: function(process) {
+    switchContext: function() {
         var self = this;
+        
+        var process = _Kernel.processManager.currentProcess;
 
         // Log our context switch
         _Control.hostLog("Switching Context", "OS");
-        
+
         console.log("Process: " + process.pid + ", state: " + process.state);
+        console.log(_CPU.pc);
 
         // set our process with appropraite values
         process.set({
-            pc: _CPU.pc,
+            pc: _CPU.pc - process.base,
             acc: _CPU.acc,
             xReg: _CPU.xReg,
             yReg: _CPU.yReg,
@@ -74,6 +80,8 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
 
         // get the next process to execute from ready queue
         var nextProcess = _CPU.scheduler.readyQueue.dequeue();
+        console.log("Process: " + nextProcess.pid + ", state: " + nextProcess.state);
+        console.log(nextProcess.base);
 
         // if there is a process available then we'll set it to run
         if (nextProcess) {
@@ -81,7 +89,7 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
             // Add the current process being passed to the ready queue
             if (process.state !== "terminated")
                 _CPU.scheduler.readyQueue.enqueue(process);
-            
+
             // change our next process state to running
             nextProcess.set("state", "running");
 
@@ -95,7 +103,7 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
             // set the appropraite values of the CPU from our process to continue
             // executing
             _CPU.set({
-                pc: nextProcess.pc,
+                pc: nextProcess.pc + nextProcess.base,
                 acc: nextProcess.acc,
                 xReg: nextProcess.xReg,
                 yReg: nextProcess.yReg,

@@ -74,7 +74,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      */
     stop: function() {
         var self = this;
-        
+
         // reset our registers
         self.set({
             pc: 0,
@@ -84,14 +84,19 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             zFlag: 0,
             isExecuting: false
         });
-        
-        
+
+
         // make sure all processes on the residentList are terminated and clear 
         // up the ready queue
         $.each(_Kernel.processManager.residentList, function() {
             this.set("state", "terminated");
             self.scheduler.readyQueue.dequeue();
         });
+        var currentProcess = _Kernel.processManager.currentProcess;
+        if (currentProcess) {
+            var nextProcess = self.scheduler.readyQueue.dequeue();
+            self.scheduler.readyQueue.enqueue(nextProcess);
+        }
 
         // disable stepover button
         $("#btnStepOver").prop("disabled", true);
@@ -105,12 +110,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
         // TODO: Accumulate CPU usage and profiling statistics here.
         // Do the real work here. Be sure to set this.isExecuting appropriately.
-
-
-        // Perform a context switch if the ready queue is not empty.
-        // This is where the magic or realtime multi-processing occurs.
-        if (!self.scheduler.readyQueue.isEmpty())
-            _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
 
         // update cpu status display in real time
         _Kernel.processManager.updateCpuStatusDisplay(self);
@@ -129,10 +128,17 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
         if (operation) {
             operation(self);
+            console.log(self.pc);
+            console.log(opCode);
 
             if (_Kernel.processManager.get("currentProcess"))
                 _Kernel.processManager.get("currentProcess").set({acc: self.acc, pc: self.pc, xReg: self.xReg, yReg: self.yReg, zFlag: self.zFlag, state: "running"});
 
+
+            // Perform a context switch if the ready queue is not empty.
+            // This is where the magic or realtime multi-processing occurs.
+            if (!self.scheduler.readyQueue.isEmpty())
+                self.scheduler.scheduleProcess();
         }
 
     },
@@ -338,7 +344,25 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      * Break (which is really a system call) 
      * opCode: 00
      */
-    breakOperation: function() {        
+    breakOperation: function(self) {
+        console.log("Terminated!");
+//        var firstProcess = _Kernel.processManager.residentList[0];
+//        var lastProcess = _Kernel.processManager.residentList[ALLOCATABLE_MEMORY_SLOTS - 1];
+//        var previousProcess = _Kernel.processManager.previousProcess;
+//        var currentProcess = _Kernel.processManager.currentProcess;
+//
+//        var processesWithZeroTime = $.grep(_Kernel.processManager.residentList, function(el) {
+//            return el.timeslice === 0;
+//        });
+//        
+//        var hasTerminated = (previousProcess.pid > firstProcess.pid &&
+//                previousProcess.pid < currentProcess.pid &&
+//                currentProcess.pid === lastProcess.pid &&
+//                previousProcess.timeslice === currentProcess.timeslice &&
+//                currentProcess.timeslice === 0);
+//        
+//        console.log(self.scheduler.readyQueue);
+
         _Kernel.interruptHandler(PROCESS_TERMINATION_IRQ, _Kernel.processManager.get("currentProcess"));
     },
     /**
