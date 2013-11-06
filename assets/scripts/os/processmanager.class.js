@@ -27,18 +27,6 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
      */
     previousProcess: null,
     /**
-     * @property {jambOS.OS.ProcessQueue} readyQueue
-     */
-    readyQueue: null,
-    /**
-     * @property {int} processCycles
-     */
-    processCycles: 0,
-    /**
-     * @property {int} schedulingQuantum
-     */
-    schedulingQuantum: 6,
-    /**
      * Constructor
      * @param {object} options
      * @returns {jambOS.OS.ProcessManager}
@@ -46,7 +34,6 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
     initialize: function(options) {
         options || (options = {});
         this.setOptions(options);
-        this.readyQueue = new jambOS.OS.ProcessQueue();
         return this;
     },
     /**
@@ -56,23 +43,6 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
     execute: function(pcb) {
         pcb.set("state", "ready");
         _Kernel.interruptHandler(PROCESS_INITIATION_IRQ, pcb);
-    },
-    /**
-     * Shechules a process
-     * @public
-     * @method scheduleProcess
-     */
-    scheduleProcess: function() {
-        var self = this;
-        if (_CPU.isExecuting) {
-            self.processCycles++;
-
-            // perform a swithc when we the cycles hit our scheduling quantum to
-            // simulate the real time execution
-            if (!self.readyQueue.isEmpty() && self.processCycles >= self.schedulingQuantum) {
-                _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
-            }
-        }
     },
     /**
      * Loads program to memory
@@ -174,7 +144,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         var self = this;
         var tableRows = "";
         var currentProcess = jambOS.util.clone(self.get("currentProcess"));
-        var pcbs = $.map(jambOS.util.clone(self.readyQueue.q), function(value, index) {
+        var pcbs = $.map(jambOS.util.clone(_CPU.scheduler.readyQueue.q), function(value, index) {
             return [value];
         });
 

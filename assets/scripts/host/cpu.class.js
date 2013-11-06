@@ -44,9 +44,15 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      */
     isExecuting: false,
     /**
+     * @property {jambOS.OS.CPUScheduler} scheduler 
+     */
+    scheduler: null,
+    /**
      * Constructor
      */
     initialize: function() {
+        // set up our cpu scheduler
+        this.scheduler = new jambOS.OS.CPUScheduler();
         return this;
     },
     /**
@@ -460,7 +466,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
         // Perform a context switch if the ready queue is not empty.
         // This is where the magic or realtime multi-processing occurs.
-        if (!_Kernel.processManager.readyQueue.isEmpty())
+        if (!self.scheduler.readyQueue.isEmpty())
             _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
 
     }

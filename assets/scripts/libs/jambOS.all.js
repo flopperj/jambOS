@@ -741,9 +741,15 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      */
     isExecuting: false,
     /**
+     * @property {jambOS.OS.CPUScheduler} scheduler 
+     */
+    scheduler: null,
+    /**
      * Constructor
      */
     initialize: function() {
+        // set up our cpu scheduler
+        this.scheduler = new jambOS.OS.CPUScheduler();
         return this;
     },
     /**
@@ -1157,9 +1163,59 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
         // Perform a context switch if the ready queue is not empty.
         // This is where the magic or realtime multi-processing occurs.
-        if (!_Kernel.processManager.readyQueue.isEmpty())
+        if (!self.scheduler.readyQueue.isEmpty())
             _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
 
+    }
+});
+
+
+/**
+ *==============================================================================
+ * cpuscheduler.class.js
+ *    
+ * @class CPUScheduler
+ * @memberOf jambOS.OS
+ * @param {object} - Array Object containing the default values to be 
+ *                             passed to the class
+ *==============================================================================
+ */
+jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUScheduler.prototype */ {
+    /**
+     * @property {int} processCycles
+     */
+    processCycles: 0,
+    /**
+     * @property {int} quantum
+     */
+    quantum: 6,
+    /**
+     * @property {jambOS.OS.ProcessQueue} readyQueue
+     */
+    readyQueue: null,
+    /**
+     * Constructor
+     */
+    initialize: function() {
+        // initalize our ready queue
+        this.readyQueue = new jambOS.OS.ProcessQueue();
+    },
+    /**
+     * Shechules a process
+     * @public
+     * @method scheduleProcess
+     */
+    scheduleProcess: function() {
+        var self = this;
+        if (_CPU.isExecuting) {
+            self.processCycles++;
+
+            // perform a swithc when we the cycles hit our scheduling quantum to
+            // simulate the real time execution
+            if (!self.readyQueue.isEmpty() && self.processCycles >= self.quantum) {
+                _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
+            }
+        }
     }
 });
 
@@ -1348,18 +1404,6 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
      */
     previousProcess: null,
     /**
-     * @property {jambOS.OS.ProcessQueue} readyQueue
-     */
-    readyQueue: null,
-    /**
-     * @property {int} processCycles
-     */
-    processCycles: 0,
-    /**
-     * @property {int} schedulingQuantum
-     */
-    schedulingQuantum: 6,
-    /**
      * Constructor
      * @param {object} options
      * @returns {jambOS.OS.ProcessManager}
@@ -1367,7 +1411,6 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
     initialize: function(options) {
         options || (options = {});
         this.setOptions(options);
-        this.readyQueue = new jambOS.OS.ProcessQueue();
         return this;
     },
     /**
@@ -1377,23 +1420,6 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
     execute: function(pcb) {
         pcb.set("state", "ready");
         _Kernel.interruptHandler(PROCESS_INITIATION_IRQ, pcb);
-    },
-    /**
-     * Shechules a process
-     * @public
-     * @method scheduleProcess
-     */
-    scheduleProcess: function() {
-        var self = this;
-        if (_CPU.isExecuting) {
-            self.processCycles++;
-
-            // perform a swithc when we the cycles hit our scheduling quantum to
-            // simulate the real time execution
-            if (!self.readyQueue.isEmpty() && self.processCycles >= self.schedulingQuantum) {
-                _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
-            }
-        }
     },
     /**
      * Loads program to memory
@@ -1495,7 +1521,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         var self = this;
         var tableRows = "";
         var currentProcess = jambOS.util.clone(self.get("currentProcess"));
-        var pcbs = $.map(jambOS.util.clone(self.readyQueue.q), function(value, index) {
+        var pcbs = $.map(jambOS.util.clone(_CPU.scheduler.readyQueue.q), function(value, index) {
             return [value];
         });
 
@@ -3056,12 +3082,12 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                     // Loop through our residentList and add them to the readyQueue
                     for (var key in _Kernel.processManager.residentList) {
                         var pcb = _Kernel.processManager.residentList[key];
-                        _Kernel.processManager.readyQueue.enqueue(pcb);
+                        _CPU.scheduler.readyQueue.enqueue(pcb);
                     }
 
 
                     // Get first process from the readyQueue
-                    var process = _Kernel.processManager.readyQueue.dequeue();
+                    var process = _CPU.scheduler.readyQueue.dequeue();
 
                     // update process table with pcb data from the ready queue
                     _Kernel.processManager.updatePCBStatusDisplay();
@@ -3126,7 +3152,7 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             behavior: function(args) {
                 var quantum = parseInt(args[0]);
                 if (args.length > 0 && !isNaN(quantum)) {
-                    _Kernel.processManager.set("schedulingQuantum", quantum);
+                    _CPU.scheduler.set("quantum", quantum);
                 } else {
                     _StdIn.putText("Usage: quantum <int>");
                 }
@@ -3393,7 +3419,7 @@ jambOS.OS.Kernel = jambOS.util.createClass({
         self.processManager.set("previousProcess", process);
 
         // get the next process to execute from ready queue
-        var nextProcess = self.processManager.readyQueue.dequeue();
+        var nextProcess = _CPU.scheduler.readyQueue.dequeue();
 
         // if there is a process available then we'll set it to run
         if (nextProcess) {
@@ -3403,7 +3429,7 @@ jambOS.OS.Kernel = jambOS.util.createClass({
 
             // Add the current process being passed to the ready queue
             if (process.state !== "terminated")
-                self.processManager.readyQueue.enqueue(process);
+                _CPU.scheduler.readyQueue.enqueue(process);
 
             // set our current active process and slot
             self.processManager.set({

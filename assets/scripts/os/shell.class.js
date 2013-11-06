@@ -324,12 +324,12 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                     // Loop through our residentList and add them to the readyQueue
                     for (var key in _Kernel.processManager.residentList) {
                         var pcb = _Kernel.processManager.residentList[key];
-                        _Kernel.processManager.readyQueue.enqueue(pcb);
+                        _CPU.scheduler.readyQueue.enqueue(pcb);
                     }
 
 
                     // Get first process from the readyQueue
-                    var process = _Kernel.processManager.readyQueue.dequeue();
+                    var process = _CPU.scheduler.readyQueue.dequeue();
 
                     // update process table with pcb data from the ready queue
                     _Kernel.processManager.updatePCBStatusDisplay();
@@ -394,7 +394,7 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             behavior: function(args) {
                 var quantum = parseInt(args[0]);
                 if (args.length > 0 && !isNaN(quantum)) {
-                    _Kernel.processManager.set("schedulingQuantum", quantum);
+                    _CPU.scheduler.set("quantum", quantum);
                 } else {
                     _StdIn.putText("Usage: quantum <int>");
                 }

@@ -230,7 +230,7 @@ jambOS.OS.Kernel = jambOS.util.createClass({
         self.processManager.set("previousProcess", process);
 
         // get the next process to execute from ready queue
-        var nextProcess = self.processManager.readyQueue.dequeue();
+        var nextProcess = _CPU.scheduler.readyQueue.dequeue();
 
         // if there is a process available then we'll set it to run
         if (nextProcess) {
@@ -240,7 +240,7 @@ jambOS.OS.Kernel = jambOS.util.createClass({
 
             // Add the current process being passed to the ready queue
             if (process.state !== "terminated")
-                self.processManager.readyQueue.enqueue(process);
+                _CPU.scheduler.readyQueue.enqueue(process);
 
             // set our current active process and slot
             self.processManager.set({
