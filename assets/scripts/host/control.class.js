@@ -91,6 +91,12 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
             if (_CPU)
                 _CPU.cycle();
         });
+
+        // control register analysis tabs
+        $('#analysisTabs li a').click(function(e) {
+            e.preventDefault();
+            $(this).tab('show');
+        });
     },
     /**
      * Helps keep a the log textarea updated

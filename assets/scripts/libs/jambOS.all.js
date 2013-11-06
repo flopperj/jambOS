@@ -442,6 +442,12 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
             if (_CPU)
                 _CPU.cycle();
         });
+
+        // control register analysis tabs
+        $('#analysisTabs li a').click(function(e) {
+            e.preventDefault();
+            $(this).tab('show');
+        });
     },
     /**
      * Helps keep a the log textarea updated
@@ -766,9 +772,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             zFlag: 0,
             isExecuting: false
         });
-
-        // update PCB status display
-        _Kernel.processManager.updatePCBStatusDisplay(_Kernel.processManager.get("currentProcess"));
+        
         _Kernel.processManager.get("currentProcess").set("state", "terminated");
 
         // disable stepover button
@@ -784,8 +788,11 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         // TODO: Accumulate CPU usage and profiling statistics here.
         // Do the real work here. Be sure to set this.isExecuting appropriately.
 
-        // update cpu status display
+        // update cpu status display in real time
         _Kernel.processManager.updateCpuStatusDisplay(self);
+        
+        // update PCB status display in real time
+        _Kernel.processManager.updatePCBStatusDisplay();
 
         var opCode = _Kernel.memoryManager.memory.read(self.pc++).toString().toLowerCase();
         var operation = self.getOpCode(opCode);
@@ -1145,9 +1152,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
                 _Kernel.processManager.set({
                     currentProcess: currentProcess
                 });
-
-                // update process diplay
-                _Kernel.processManager.updatePCBStatusDisplay(currentProcess);
             }
         }
 
@@ -1473,23 +1477,53 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
 
     },
     /**
-     * Updates pcb status display
-     * @param {jambOS.OS.ProcessControlBlock} pcb
+     * Updates the process status table results
      */
-    updatePCBStatusDisplay: function(pcb) {
-        var id = pcb.pid;
-        var pc = pcb.pc;
-        var acc = pcb.acc;
-        var xReg = pcb.xReg;
-        var yReg = parseInt(pcb.yReg, 16);
-        var zFlag = pcb.zFlag;
+    updatePCBStatusDisplay: function() {
+        var self = this;
+        var tableRows = "";
+        var currentProcess = jambOS.util.clone(self.get("currentProcess"));
+        var pcbs = $.map(jambOS.util.clone(self.readyQueue.q), function(value, index) {
+            return [value];
+        });
 
-        $("#pcbStatus .pid").text(id);
-        $("#pcbStatus .pc").text(pc);
-        $("#pcbStatus .acc").text(acc);
-        $("#pcbStatus .x-register").text(xReg);
-        $("#pcbStatus .y-register").text(yReg);
-        $("#pcbStatus .z-flag").text(zFlag);
+        pcbs.push(currentProcess);
+
+        // loop through the ready queue and get all processes that are ready to
+        // be executed
+        $.each(pcbs.reverse(), function() {
+            var process = this;
+            var id = process.pid;
+            var pc = process.pc;
+            var acc = process.acc;
+            var xReg = process.xReg;
+            var yReg = parseInt(process.yReg, 16);
+            var zFlag = process.zFlag;
+
+            tableRows += "<tr class='" + (currentProcess.pid === process.pid ? "active" : "") + "'>\n\
+                                <td>\n\
+                                    " + id + "\n\
+                                </td>\n\
+                                <td>\n\
+                                    " + pc + "\n\
+                                </td>\n\
+                                <td>\n\
+                                    " + acc + "\n\
+                                </td>\n\
+                                <td>\n\
+                                    " + xReg + "\n\
+                                </td>\n\
+                                <td>\n\
+                                    " + yReg + "\n\
+                                </td>\n\
+                                <td>\n\
+                                    " + zFlag + "\n\
+                                </td>\n\
+                              </tr>";
+
+            // clear process status table and populate data
+            $("#pcbStatus table tbody").empty().append(tableRows);
+        });
 
     }
 });
@@ -1939,7 +1973,7 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
         
         // get our prompt offset that way we can make sure we are within the editable bounds
         var promptOffset = _DrawingContext.measureText(this.currentFont, this.currentFontSize, ">");
-        this.currentXPosition = promptOffset;
+        this.currentXPosition = 0;
         this.currentYPosition += _DefaultFontSize + _FontHeightMargin;
 
         // Handle scrolling.
@@ -3010,6 +3044,10 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                         var pcb = _Kernel.processManager.processes[key];
                         _Kernel.processManager.readyQueue.enqueue(pcb);
                     }
+                    
+                    // update process table with pcb data from the ready queue
+                    _Kernel.processManager.updatePCBStatusDisplay();
+                    
 
                     // Get first process from the readyQueue
                     var process = _Kernel.processManager.readyQueue.dequeue();
@@ -3444,10 +3482,6 @@ jambOS.OS.Kernel = jambOS.util.createClass({
  */
 jambOS.OS.ProcessControlBlock = jambOS.util.createClass(/** @scope jambOS.OS.ProcessControlBlock.prototype */ {
     /**
-     * @property {int} limit                - Memory limit for a process
-     */
-    limit: 0,
-    /**
      * @property {int} pid                  - process id
      */
     pid: 0,
@@ -3455,6 +3489,22 @@ jambOS.OS.ProcessControlBlock = jambOS.util.createClass(/** @scope jambOS.OS.Pro
      * @property {int} pc                   - Program Counter
      */
     pc: 0,
+    /**
+     * @property {int} acc                  - Accumulator
+     */
+    acc: 0,
+    /**
+     * @property {int} xReg                 - X Register
+     */
+    xReg: 0,
+    /**
+     * @property {int} yReg                 - Y Register
+     */
+    yReg: 0,
+    /**
+     * @property {int} zFlag                - zero flag
+     */
+    zFlag: 0,
     /**
      * @property {int} priority             - Process Priority
      */
@@ -3468,26 +3518,22 @@ jambOS.OS.ProcessControlBlock = jambOS.util.createClass(/** @scope jambOS.OS.Pro
      */
     state: "new",
     /**
-     * @property {int} xReg                 - X Register
-     */
-    xReg: 0,
-    /**
-     * @property {int} yReg                 - Y Register
-     */
-    yReg: 0,
-    /**
-     * @property {int} zFlag                - zero flag
-     */
-    zFlag: 0, 
-    /**
      * @property {int} slot                 - slot in which the process is loaded
      */
     slot: 0,
     /**
+     * @property {int} base                 - Base for a process
+     */
+    base: 0,
+    /**
+     * @property {int} limit                - Memory limit for a process
+     */
+    limit: 0,
+    /**
      * Constructor
      * @param {object} options
      */
-    initialize: function(options){        
+    initialize: function(options) {
         options || (options = {});
         this.setOptions(options);
     }

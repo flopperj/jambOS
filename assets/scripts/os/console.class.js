@@ -200,7 +200,7 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
         
         // get our prompt offset that way we can make sure we are within the editable bounds
         var promptOffset = _DrawingContext.measureText(this.currentFont, this.currentFontSize, ">");
-        this.currentXPosition = promptOffset;
+        this.currentXPosition = 0;
         this.currentYPosition += _DefaultFontSize + _FontHeightMargin;
 
         // Handle scrolling.

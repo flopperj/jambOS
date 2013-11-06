@@ -156,23 +156,53 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
 
     },
     /**
-     * Updates pcb status display
-     * @param {jambOS.OS.ProcessControlBlock} pcb
+     * Updates the process status table results
      */
-    updatePCBStatusDisplay: function(pcb) {
-        var id = pcb.pid;
-        var pc = pcb.pc;
-        var acc = pcb.acc;
-        var xReg = pcb.xReg;
-        var yReg = parseInt(pcb.yReg, 16);
-        var zFlag = pcb.zFlag;
+    updatePCBStatusDisplay: function() {
+        var self = this;
+        var tableRows = "";
+        var currentProcess = jambOS.util.clone(self.get("currentProcess"));
+        var pcbs = $.map(jambOS.util.clone(self.readyQueue.q), function(value, index) {
+            return [value];
+        });
 
-        $("#pcbStatus .pid").text(id);
-        $("#pcbStatus .pc").text(pc);
-        $("#pcbStatus .acc").text(acc);
-        $("#pcbStatus .x-register").text(xReg);
-        $("#pcbStatus .y-register").text(yReg);
-        $("#pcbStatus .z-flag").text(zFlag);
+        pcbs.push(currentProcess);
+
+        // loop through the ready queue and get all processes that are ready to
+        // be executed
+        $.each(pcbs.reverse(), function() {
+            var process = this;
+            var id = process.pid;
+            var pc = process.pc;
+            var acc = process.acc;
+            var xReg = process.xReg;
+            var yReg = parseInt(process.yReg, 16);
+            var zFlag = process.zFlag;
+
+            tableRows += "<tr class='" + (currentProcess.pid === process.pid ? "active" : "") + "'>\n\
+                                <td>\n\
+                                    " + id + "\n\
+                                </td>\n\
+                                <td>\n\
+                                    " + pc + "\n\
+                                </td>\n\
+                                <td>\n\
+                                    " + acc + "\n\
+                                </td>\n\
+                                <td>\n\
+                                    " + xReg + "\n\
+                                </td>\n\
+                                <td>\n\
+                                    " + yReg + "\n\
+                                </td>\n\
+                                <td>\n\
+                                    " + zFlag + "\n\
+                                </td>\n\
+                              </tr>";
+
+            // clear process status table and populate data
+            $("#pcbStatus table tbody").empty().append(tableRows);
+        });
 
     }
 });

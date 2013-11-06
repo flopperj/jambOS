@@ -324,6 +324,10 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                         var pcb = _Kernel.processManager.processes[key];
                         _Kernel.processManager.readyQueue.enqueue(pcb);
                     }
+                    
+                    // update process table with pcb data from the ready queue
+                    _Kernel.processManager.updatePCBStatusDisplay();
+                    
 
                     // Get first process from the readyQueue
                     var process = _Kernel.processManager.readyQueue.dequeue();

@@ -10,10 +10,6 @@
  */
 jambOS.OS.ProcessControlBlock = jambOS.util.createClass(/** @scope jambOS.OS.ProcessControlBlock.prototype */ {
     /**
-     * @property {int} limit                - Memory limit for a process
-     */
-    limit: 0,
-    /**
      * @property {int} pid                  - process id
      */
     pid: 0,
@@ -21,6 +17,22 @@ jambOS.OS.ProcessControlBlock = jambOS.util.createClass(/** @scope jambOS.OS.Pro
      * @property {int} pc                   - Program Counter
      */
     pc: 0,
+    /**
+     * @property {int} acc                  - Accumulator
+     */
+    acc: 0,
+    /**
+     * @property {int} xReg                 - X Register
+     */
+    xReg: 0,
+    /**
+     * @property {int} yReg                 - Y Register
+     */
+    yReg: 0,
+    /**
+     * @property {int} zFlag                - zero flag
+     */
+    zFlag: 0,
     /**
      * @property {int} priority             - Process Priority
      */
@@ -34,26 +46,22 @@ jambOS.OS.ProcessControlBlock = jambOS.util.createClass(/** @scope jambOS.OS.Pro
      */
     state: "new",
     /**
-     * @property {int} xReg                 - X Register
-     */
-    xReg: 0,
-    /**
-     * @property {int} yReg                 - Y Register
-     */
-    yReg: 0,
-    /**
-     * @property {int} zFlag                - zero flag
-     */
-    zFlag: 0, 
-    /**
      * @property {int} slot                 - slot in which the process is loaded
      */
     slot: 0,
     /**
+     * @property {int} base                 - Base for a process
+     */
+    base: 0,
+    /**
+     * @property {int} limit                - Memory limit for a process
+     */
+    limit: 0,
+    /**
      * Constructor
      * @param {object} options
      */
-    initialize: function(options){        
+    initialize: function(options) {
         options || (options = {});
         this.setOptions(options);
     }

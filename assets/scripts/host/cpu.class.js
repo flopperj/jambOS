@@ -75,9 +75,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             zFlag: 0,
             isExecuting: false
         });
-
-        // update PCB status display
-        _Kernel.processManager.updatePCBStatusDisplay(_Kernel.processManager.get("currentProcess"));
+        
         _Kernel.processManager.get("currentProcess").set("state", "terminated");
 
         // disable stepover button
@@ -93,8 +91,11 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         // TODO: Accumulate CPU usage and profiling statistics here.
         // Do the real work here. Be sure to set this.isExecuting appropriately.
 
-        // update cpu status display
+        // update cpu status display in real time
         _Kernel.processManager.updateCpuStatusDisplay(self);
+        
+        // update PCB status display in real time
+        _Kernel.processManager.updatePCBStatusDisplay();
 
         var opCode = _Kernel.memoryManager.memory.read(self.pc++).toString().toLowerCase();
         var operation = self.getOpCode(opCode);
@@ -454,9 +455,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
                 _Kernel.processManager.set({
                     currentProcess: currentProcess
                 });
-
-                // update process diplay
-                _Kernel.processManager.updatePCBStatusDisplay(currentProcess);
             }
         }
 
