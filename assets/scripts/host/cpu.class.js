@@ -97,6 +97,12 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         // TODO: Accumulate CPU usage and profiling statistics here.
         // Do the real work here. Be sure to set this.isExecuting appropriately.
 
+
+        // Perform a context switch if the ready queue is not empty.
+        // This is where the magic or realtime multi-processing occurs.
+        if (!self.scheduler.readyQueue.isEmpty())
+            _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
+
         // update cpu status display in real time
         _Kernel.processManager.updateCpuStatusDisplay(self);
 
@@ -323,14 +329,8 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      * Break (which is really a system call) 
      * opCode: 00
      */
-    breakOperation: function(self) {
-        var lastIndex = _Kernel.processManager.residentList.length - 1;
-        var lastProcess = _Kernel.processManager.residentList[lastIndex];
-        console.log(self.pc);
-
-        // break only after we have cleared out all processes on the ready queue
-//        if (self.pc >= lastProcess.lastAddressOccupied)
-            _Kernel.interruptHandler(PROCESS_TERMINATION_IRQ, _Kernel.processManager.get("currentProcess"));
+    breakOperation: function() {
+        _Kernel.interruptHandler(PROCESS_TERMINATION_IRQ, _Kernel.processManager.get("currentProcess"));
     },
     /**
      * Compare a byte in memory to the X reg sets the Z (zero) flag if equal 
@@ -445,41 +445,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
             _StdIn.advanceLine();
             _OsShell.putPrompt();
-
-            // set state of current process if its terminated
-            // This is very helpful before we switch contexts
-            if (currentByte === "00") {
-                var currentProcess = _Kernel.processManager.get("currentProcess");
-                var previousProcess = _Kernel.processManager.get("previousProcess");
-
-
-                // if our previous process program counter is the same as the next we'll
-                // just have to move it a block size up
-                if (previousProcess && previousProcess.get("pc") === self.get("pc"))
-                    self.pc += MEMORY_BLOCK_SIZE;
-
-                // set our current process with appropraite cpu values
-                currentProcess.set({
-                    pc: self.pc,
-                    acc: self.acc,
-                    xReg: self.xReg,
-                    yReg: self.yReg,
-                    zFlag: self.zFlag,
-                    state: "terminated"
-                });
-
-
-                // set our current process with the appropriate data from before
-                _Kernel.processManager.set({
-                    currentProcess: currentProcess
-                });
-            }
         }
-
-        // Perform a context switch if the ready queue is not empty.
-        // This is where the magic or realtime multi-processing occurs.
-        if (!self.scheduler.readyQueue.isEmpty())
-            _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
 
     }
 });

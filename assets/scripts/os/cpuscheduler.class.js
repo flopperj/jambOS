@@ -56,6 +56,8 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
 
         // Log our context switch
         _Control.hostLog("Switching Context", "OS");
+        
+        console.log("Process: " + process.pid + ", state: " + process.state);
 
         // set our process with appropraite values
         process.set({
@@ -73,15 +75,11 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
         // get the next process to execute from ready queue
         var nextProcess = _CPU.scheduler.readyQueue.dequeue();
 
-        console.log(process);
-
         // if there is a process available then we'll set it to run
         if (nextProcess) {
 
-            console.log(nextProcess.pid + " <--- next process");
-
             // Add the current process being passed to the ready queue
-//            if (nextProcess.state !== "terminated")
+            if (process.state !== "terminated")
                 _CPU.scheduler.readyQueue.enqueue(process);
             
             // change our next process state to running

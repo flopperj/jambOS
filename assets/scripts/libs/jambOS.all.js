@@ -435,10 +435,10 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
         });
 
         // load first default program
-//        $("#taProgramInput").val("A9 03 8D 41 00 A9 01 8D 40 00 AC 40 00 A2 01 FF EE 40 00 AE 40 00 EC 41 00 D0 EF A9 44 8D 42 00 A9 4F 8D 43 00 A9 4E 8D 44 00 A9 45 8D 45 00 A9 00 8D 46 00 A2 02 A0 42 FF 00");
+        $("#taProgramInput").val("A9 03 8D 41 00 A9 01 8D 40 00 AC 40 00 A2 01 FF EE 40 00 AE 40 00 EC 41 00 D0 EF A9 44 8D 42 00 A9 4F 8D 43 00 A9 4E 8D 44 00 A9 45 8D 45 00 A9 00 8D 46 00 A2 02 A0 42 FF 00");
 
-// counting program
-        $("#taProgramInput").val("A9 00 8D 00 00 A9 00 8D 4B 00 A9 00 8D 4B 00 A2 09 EC 4B 00 D0 07 A2 01 EC 00 00 D0 05 A2 00 EC 00 00 D0 26 A0 4C A2 02 FF AC 4B 00 A2 01 FF A9 01 6D 4B 00 8D 4B 00 A2 02 EC 4B 00 D0 05 A0 55 A2 02 FF A2 01 EC 00 00 D0 C5 00 00 63 6F 75 6E 74 69 6E 67 00 68 65 6C 6C 6F 20 77 6F 72 6C 64 00");
+        // counting program
+//        $("#taProgramInput").val("A9 00 8D 00 00 A9 00 8D 4B 00 A9 00 8D 4B 00 A2 09 EC 4B 00 D0 07 A2 01 EC 00 00 D0 05 A2 00 EC 00 00 D0 26 A0 4C A2 02 FF AC 4B 00 A2 01 FF A9 01 6D 4B 00 8D 4B 00 A2 02 EC 4B 00 D0 05 A0 55 A2 02 FF A2 01 EC 00 00 D0 C5 00 00 63 6F 75 6E 74 69 6E 67 00 68 65 6C 6C 6F 20 77 6F 72 6C 64 00");
 
         // Step over
         $("#btnStepOver").click(function() {
@@ -797,6 +797,12 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         // TODO: Accumulate CPU usage and profiling statistics here.
         // Do the real work here. Be sure to set this.isExecuting appropriately.
 
+
+        // Perform a context switch if the ready queue is not empty.
+        // This is where the magic or realtime multi-processing occurs.
+        if (!self.scheduler.readyQueue.isEmpty())
+            _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
+
         // update cpu status display in real time
         _Kernel.processManager.updateCpuStatusDisplay(self);
 
@@ -1023,14 +1029,8 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      * Break (which is really a system call) 
      * opCode: 00
      */
-    breakOperation: function(self) {
-        var lastIndex = _Kernel.processManager.residentList.length - 1;
-        var lastProcess = _Kernel.processManager.residentList[lastIndex];
-        console.log(self.pc);
-
-        // break only after we have cleared out all processes on the ready queue
-//        if (self.pc >= lastProcess.lastAddressOccupied)
-            _Kernel.interruptHandler(PROCESS_TERMINATION_IRQ, _Kernel.processManager.get("currentProcess"));
+    breakOperation: function() {
+        _Kernel.interruptHandler(PROCESS_TERMINATION_IRQ, _Kernel.processManager.get("currentProcess"));
     },
     /**
      * Compare a byte in memory to the X reg sets the Z (zero) flag if equal 
@@ -1145,41 +1145,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
             _StdIn.advanceLine();
             _OsShell.putPrompt();
-
-            // set state of current process if its terminated
-            // This is very helpful before we switch contexts
-            if (currentByte === "00") {
-                var currentProcess = _Kernel.processManager.get("currentProcess");
-                var previousProcess = _Kernel.processManager.get("previousProcess");
-
-
-                // if our previous process program counter is the same as the next we'll
-                // just have to move it a block size up
-                if (previousProcess && previousProcess.get("pc") === self.get("pc"))
-                    self.pc += MEMORY_BLOCK_SIZE;
-
-                // set our current process with appropraite cpu values
-                currentProcess.set({
-                    pc: self.pc,
-                    acc: self.acc,
-                    xReg: self.xReg,
-                    yReg: self.yReg,
-                    zFlag: self.zFlag,
-                    state: "terminated"
-                });
-
-
-                // set our current process with the appropriate data from before
-                _Kernel.processManager.set({
-                    currentProcess: currentProcess
-                });
-            }
         }
-
-        // Perform a context switch if the ready queue is not empty.
-        // This is where the magic or realtime multi-processing occurs.
-        if (!self.scheduler.readyQueue.isEmpty())
-            _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
 
     }
 });
@@ -1243,6 +1209,8 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
 
         // Log our context switch
         _Control.hostLog("Switching Context", "OS");
+        
+        console.log("Process: " + process.pid + ", state: " + process.state);
 
         // set our process with appropraite values
         process.set({
@@ -1260,15 +1228,11 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
         // get the next process to execute from ready queue
         var nextProcess = _CPU.scheduler.readyQueue.dequeue();
 
-        console.log(process);
-
         // if there is a process available then we'll set it to run
         if (nextProcess) {
 
-            console.log(nextProcess.pid + " <--- next process");
-
             // Add the current process being passed to the ready queue
-//            if (nextProcess.state !== "terminated")
+            if (process.state !== "terminated")
                 _CPU.scheduler.readyQueue.enqueue(process);
             
             // change our next process state to running
@@ -1533,8 +1497,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
             yReg: 0,
             zFlag: 0,
             slot: activeSlot,
-            state: "new",
-            lastAddressOccupied: (program.length + base) - 1
+            state: "new"
         });
 
         this.residentList.push(pcb);
@@ -3620,7 +3583,6 @@ jambOS.OS.ProcessControlBlock = jambOS.util.createClass(/** @scope jambOS.OS.Pro
      * @property {int} limit                - Memory limit for a process
      */
     limit: 0,
-    lastAddressOccupied: 0,
     /**
      * Constructor
      * @param {object} options

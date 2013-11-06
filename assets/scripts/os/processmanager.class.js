@@ -79,8 +79,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
             yReg: 0,
             zFlag: 0,
             slot: activeSlot,
-            state: "new",
-            lastAddressOccupied: (program.length + base) - 1
+            state: "new"
         });
 
         this.residentList.push(pcb);
