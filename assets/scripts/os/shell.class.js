@@ -266,19 +266,21 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             command: "kill",
             description: "<id> - kills the specified process id",
             behavior: function(args) {
-                var pid = args[0];
-                switch (pid) {
-                    case "all":
-                        break;
-                    default:
-                        pid = parseInt(pid);
+                var pid = parseInt(args[0]);
 
-                        var pcb = $.grep(_Kernel.processManager.processes, function(el) {
-                            return el.pid === pid;
-                        })[0];
+                if (!isNaN(pid)) {
+                    var pcb = $.grep(_Kernel.processManager.residentList, function(el) {
+                        return el.pid === pid;
+                    })[0];
 
-                        break;
-                }
+                    if (pcb) {
+                        pcb.set("state", "terminated");
+                        _Kernel.processManager.unload(pcb);
+                        _StdIn.putText("Deleted process: " + pcb.pid)
+                    } else
+                        _StdIn.putText("Invalid process!");
+                } else
+                    _StdIn.putText("Usage: kill <int>");
             }});
         this.commandList.push(sc);
 
@@ -292,7 +294,7 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                 var pid = args[0];
                 pid = parseInt(pid);
 
-                var pcb = $.grep(_Kernel.processManager.processes, function(el) {
+                var pcb = $.grep(_Kernel.processManager.residentList, function(el) {
                     return el.pid === pid;
                 })[0];
 
@@ -317,21 +319,21 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                 // Check whether we have processes that are loaded in memory
                 // Also check whether we want to stepover our process which in 
                 // this case we do not.
-                if (_Kernel.processManager.processes.length > 0 && !_Stepover) {
+                if (_Kernel.processManager.residentList.length > 0 && !_Stepover) {
 
-                    // Loop through our processes and add them to the readyQueue
-                    for (var key in _Kernel.processManager.processes) {
-                        var pcb = _Kernel.processManager.processes[key];
+                    // Loop through our residentList and add them to the readyQueue
+                    for (var key in _Kernel.processManager.residentList) {
+                        var pcb = _Kernel.processManager.residentList[key];
                         _Kernel.processManager.readyQueue.enqueue(pcb);
                     }
-                    
+
 
                     // Get first process from the readyQueue
                     var process = _Kernel.processManager.readyQueue.dequeue();
-                    
+
                     // update process table with pcb data from the ready queue
                     _Kernel.processManager.updatePCBStatusDisplay();
-                    
+
 
                     // Set our active slot in which to base our operations from
                     _Kernel.processManager.set("activeSlot", process.slot);
@@ -339,7 +341,7 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                     // Execute our process
                     _Kernel.processManager.execute(process);
 
-                } else if (_Kernel.processes.length > 0 && _StepOver)
+                } else if (_Kernel.processManager.residentList.length > 0 && _StepOver)
                     _StdIn.putText("Please turn off the StepOver command to run all processes");
                 else
                     _StdIn.putText("There are no processes to run!");
@@ -395,6 +397,26 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                     _Kernel.processManager.set("schedulingQuantum", quantum);
                 } else {
                     _StdIn.putText("Usage: quantum <int>");
+                }
+            }
+        });
+        this.commandList.push(sc);
+
+        // residentList        
+        sc = new jambOS.OS.ShellCommand({
+            command: "residentlist",
+            description: "- Displays the pids of all active processes",
+            behavior: function() {
+                var residentList = _Kernel.processManager.residentList;
+
+                if (residentList.length) {
+                    var processIDs = "";
+                    $.each(residentList, function() {
+                        processIDs += "[" + this.pid + "]";
+                    });
+                    _StdIn.putText(processIDs);
+                } else {
+                    _StdIn.putText("No active processes available!");
                 }
             }
         });

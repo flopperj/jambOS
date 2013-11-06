@@ -330,10 +330,10 @@ jambOS.OS.Kernel = jambOS.util.createClass({
         // erase previous command
         _DrawingContext.clearRect(xPos, yPos, width, height);
 
-        // print message on display in blue    
-        _DrawingContext.fillStyle = "blue";
+        // print message on display in red    
+        _DrawingContext.fillStyle = "red";
         _DrawingContext.font = "bold 12px Arial";
-        _DrawingContext.fillText("OS ERROR - TRAP: => " + msg, xPos, _Console.currentYPosition);
+        _DrawingContext.fillText("OS ERROR: " + msg, xPos, _Console.currentYPosition);
         _Console.currentXPosition = _Canvas.width;
         _StdIn.advanceLine();
 

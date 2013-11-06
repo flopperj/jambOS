@@ -11,9 +11,9 @@
 jambOS.OS.ProcessManager = jambOS.util.createClass({
     type: "processmanager",
     /**
-     * @property {[jambOS.OS.ProcessControlBlock]} processes
+     * @property {[jambOS.OS.ProcessControlBlock]} residentList
      */
-    processes: [],
+    residentList: [],
     /**
      * @property {int} currentProcessID
      */
@@ -92,7 +92,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         if (activeSlot < ALLOCATABLE_MEMORY_SLOTS)
             _Kernel.memoryManager.activeSlot++;
         else
-            return _Kernel.trapError("No memory is available! \n Deallocate processes from memory before proceeding!", false);
+            return _Kernel.trapError("Insufficient Memory!", false);
 
         var base = slots[activeSlot].base;
         var limit = slots[activeSlot].limit;
@@ -111,7 +111,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
             slot: activeSlot
         });
 
-        this.processes.push(pcb);
+        this.residentList.push(pcb);
         _Kernel.memoryManager.allocate(pcb);
 
         return pcb;
@@ -124,20 +124,20 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
      */
     unload: function(pcb) {
         var self = this;
-        var tempProcesses = jambOS.util.clone(self.processes);
-        
-        var arrayLength = self.processes.length;
+        var tempProcesses = jambOS.util.clone(self.residentList);
 
-        // remove pcb from processes list
+        var arrayLength = self.residentList.length;
+
+        // remove pcb from residentList list
         // also make sure all other terminated prcoesses are removed
         $.each(tempProcesses, function(index, process) {
             if (process.pid === pcb.pid || process.state === "terminated") {
                 _Kernel.memoryManager.deallocate(process);
-                
-                // remove processes stating from the last index
+
+                // remove processes starting from the last index
                 for (var i = arrayLength - 1; i >= 0; i--) {
-                    if (self.processes[i] && self.processes[i].state === "terminated")
-                        self.processes.splice(i, 1);
+                    if (self.residentList[i] && (self.residentList[i].state === "terminated" || self.residentList[i] === pcb.pid))
+                        self.residentList.splice(i, 1);
                 }
 
                 // we don't want to forget to reset the current process

@@ -1332,9 +1332,9 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
 jambOS.OS.ProcessManager = jambOS.util.createClass({
     type: "processmanager",
     /**
-     * @property {[jambOS.OS.ProcessControlBlock]} processes
+     * @property {[jambOS.OS.ProcessControlBlock]} residentList
      */
-    processes: [],
+    residentList: [],
     /**
      * @property {int} currentProcessID
      */
@@ -1413,7 +1413,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         if (activeSlot < ALLOCATABLE_MEMORY_SLOTS)
             _Kernel.memoryManager.activeSlot++;
         else
-            return _Kernel.trapError("No memory is available! \n Deallocate processes from memory before proceeding!", false);
+            return _Kernel.trapError("Insufficient Memory!", false);
 
         var base = slots[activeSlot].base;
         var limit = slots[activeSlot].limit;
@@ -1432,7 +1432,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
             slot: activeSlot
         });
 
-        this.processes.push(pcb);
+        this.residentList.push(pcb);
         _Kernel.memoryManager.allocate(pcb);
 
         return pcb;
@@ -1445,20 +1445,20 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
      */
     unload: function(pcb) {
         var self = this;
-        var tempProcesses = jambOS.util.clone(self.processes);
-        
-        var arrayLength = self.processes.length;
+        var tempProcesses = jambOS.util.clone(self.residentList);
 
-        // remove pcb from processes list
+        var arrayLength = self.residentList.length;
+
+        // remove pcb from residentList list
         // also make sure all other terminated prcoesses are removed
         $.each(tempProcesses, function(index, process) {
             if (process.pid === pcb.pid || process.state === "terminated") {
                 _Kernel.memoryManager.deallocate(process);
-                
-                // remove processes stating from the last index
+
+                // remove processes starting from the last index
                 for (var i = arrayLength - 1; i >= 0; i--) {
-                    if (self.processes[i] && self.processes[i].state === "terminated")
-                        self.processes.splice(i, 1);
+                    if (self.residentList[i] && (self.residentList[i].state === "terminated" || self.residentList[i] === pcb.pid))
+                        self.residentList.splice(i, 1);
                 }
 
                 // we don't want to forget to reset the current process
@@ -2998,19 +2998,21 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             command: "kill",
             description: "<id> - kills the specified process id",
             behavior: function(args) {
-                var pid = args[0];
-                switch (pid) {
-                    case "all":
-                        break;
-                    default:
-                        pid = parseInt(pid);
+                var pid = parseInt(args[0]);
 
-                        var pcb = $.grep(_Kernel.processManager.processes, function(el) {
-                            return el.pid === pid;
-                        })[0];
+                if (!isNaN(pid)) {
+                    var pcb = $.grep(_Kernel.processManager.residentList, function(el) {
+                        return el.pid === pid;
+                    })[0];
 
-                        break;
-                }
+                    if (pcb) {
+                        pcb.set("state", "terminated");
+                        _Kernel.processManager.unload(pcb);
+                        _StdIn.putText("Deleted process: " + pcb.pid)
+                    } else
+                        _StdIn.putText("Invalid process!");
+                } else
+                    _StdIn.putText("Usage: kill <int>");
             }});
         this.commandList.push(sc);
 
@@ -3024,7 +3026,7 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                 var pid = args[0];
                 pid = parseInt(pid);
 
-                var pcb = $.grep(_Kernel.processManager.processes, function(el) {
+                var pcb = $.grep(_Kernel.processManager.residentList, function(el) {
                     return el.pid === pid;
                 })[0];
 
@@ -3049,21 +3051,21 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                 // Check whether we have processes that are loaded in memory
                 // Also check whether we want to stepover our process which in 
                 // this case we do not.
-                if (_Kernel.processManager.processes.length > 0 && !_Stepover) {
+                if (_Kernel.processManager.residentList.length > 0 && !_Stepover) {
 
-                    // Loop through our processes and add them to the readyQueue
-                    for (var key in _Kernel.processManager.processes) {
-                        var pcb = _Kernel.processManager.processes[key];
+                    // Loop through our residentList and add them to the readyQueue
+                    for (var key in _Kernel.processManager.residentList) {
+                        var pcb = _Kernel.processManager.residentList[key];
                         _Kernel.processManager.readyQueue.enqueue(pcb);
                     }
-                    
+
 
                     // Get first process from the readyQueue
                     var process = _Kernel.processManager.readyQueue.dequeue();
-                    
+
                     // update process table with pcb data from the ready queue
                     _Kernel.processManager.updatePCBStatusDisplay();
-                    
+
 
                     // Set our active slot in which to base our operations from
                     _Kernel.processManager.set("activeSlot", process.slot);
@@ -3071,7 +3073,7 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                     // Execute our process
                     _Kernel.processManager.execute(process);
 
-                } else if (_Kernel.processes.length > 0 && _StepOver)
+                } else if (_Kernel.processManager.residentList.length > 0 && _StepOver)
                     _StdIn.putText("Please turn off the StepOver command to run all processes");
                 else
                     _StdIn.putText("There are no processes to run!");
@@ -3127,6 +3129,26 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                     _Kernel.processManager.set("schedulingQuantum", quantum);
                 } else {
                     _StdIn.putText("Usage: quantum <int>");
+                }
+            }
+        });
+        this.commandList.push(sc);
+
+        // residentList        
+        sc = new jambOS.OS.ShellCommand({
+            command: "residentlist",
+            description: "- Displays the pids of all active processes",
+            behavior: function() {
+                var residentList = _Kernel.processManager.residentList;
+
+                if (residentList.length) {
+                    var processIDs = "";
+                    $.each(residentList, function() {
+                        processIDs += "[" + this.pid + "]";
+                    });
+                    _StdIn.putText(processIDs);
+                } else {
+                    _StdIn.putText("No active processes available!");
                 }
             }
         });
@@ -3471,10 +3493,10 @@ jambOS.OS.Kernel = jambOS.util.createClass({
         // erase previous command
         _DrawingContext.clearRect(xPos, yPos, width, height);
 
-        // print message on display in blue    
-        _DrawingContext.fillStyle = "blue";
+        // print message on display in red    
+        _DrawingContext.fillStyle = "red";
         _DrawingContext.font = "bold 12px Arial";
-        _DrawingContext.fillText("OS ERROR - TRAP: => " + msg, xPos, _Console.currentYPosition);
+        _DrawingContext.fillText("OS ERROR: " + msg, xPos, _Console.currentYPosition);
         _Console.currentXPosition = _Canvas.width;
         _StdIn.advanceLine();
 
