@@ -39,7 +39,7 @@ jambOS.OS.ProcessQueue = jambOS.util.createClass(jambOS.OS.Queue, /** @scope jam
         var processQueue = "";
 
         for (var key in this.q)
-            processQueue += "{" + this.q[key].pidd + "}";
+            processQueue += "{" + this.q[key].pid + "}";
 
         return processQueue;
     }

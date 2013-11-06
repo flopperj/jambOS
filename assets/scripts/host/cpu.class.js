@@ -104,7 +104,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         _Kernel.processManager.updatePCBStatusDisplay();
 
         // check if our program counter is within our memory addresses bounds
-        if (self.pc > (MEMORY_BLOCK_SIZE * ALLOCATABLE_MEMORY_SLOTS)){
+        if (self.pc > (MEMORY_BLOCK_SIZE * ALLOCATABLE_MEMORY_SLOTS)) {
             self.stop();
             _Kernel.trapError("Invalid Operation!", false);
         }
@@ -323,8 +323,14 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      * Break (which is really a system call) 
      * opCode: 00
      */
-    breakOperation: function() {
-        _Kernel.interruptHandler(PROCESS_TERMINATION_IRQ, _Kernel.processManager.get("currentProcess"));
+    breakOperation: function(self) {
+        var lastIndex = _Kernel.processManager.residentList.length - 1;
+        var lastProcess = _Kernel.processManager.residentList[lastIndex];
+        console.log(self.pc);
+
+        // break only after we have cleared out all processes on the ready queue
+//        if (self.pc >= lastProcess.lastAddressOccupied)
+            _Kernel.interruptHandler(PROCESS_TERMINATION_IRQ, _Kernel.processManager.get("currentProcess"));
     },
     /**
      * Compare a byte in memory to the X reg sets the Z (zero) flag if equal 

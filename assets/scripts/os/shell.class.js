@@ -314,7 +314,7 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
         sc = new jambOS.OS.ShellCommand({
             command: "runall",
             description: "- Runs all programs loaded in memory",
-            behavior: function(args) {
+            behavior: function() {
 
                 // Check whether we have processes that are loaded in memory
                 // Also check whether we want to stepover our process which in 
@@ -322,11 +322,9 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                 if (_Kernel.processManager.residentList.length > 0 && !_Stepover) {
 
                     // Loop through our residentList and add them to the readyQueue
-                    for (var key in _Kernel.processManager.residentList) {
-                        var pcb = _Kernel.processManager.residentList[key];
-                        _CPU.scheduler.readyQueue.enqueue(pcb);
-                    }
-
+                    $.each(_Kernel.processManager.residentList, function(){                        
+                        _CPU.scheduler.readyQueue.enqueue(this);
+                    });
 
                     // Get first process from the readyQueue
                     var process = _CPU.scheduler.readyQueue.dequeue();

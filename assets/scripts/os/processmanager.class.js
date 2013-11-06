@@ -78,7 +78,9 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
             xReg: 0,
             yReg: 0,
             zFlag: 0,
-            slot: activeSlot
+            slot: activeSlot,
+            state: "new",
+            lastAddressOccupied: (program.length + base) - 1
         });
 
         this.residentList.push(pcb);
@@ -95,7 +97,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
     unload: function(pcb) {
         var self = this;
         var tempProcesses = jambOS.util.clone(self.residentList);
-        
+
         var arrayLength = self.residentList.length;
 
         // remove pcb from residentList list
@@ -111,7 +113,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
                 }
 
                 // we don't want to forget to reset the current process
-                if (self.get("currentProcess").pid === process.pid)
+                if (self.get("currentProcess") && self.get("currentProcess").pid === process.pid)
                     self.set("currentProcess", null);
 
             }

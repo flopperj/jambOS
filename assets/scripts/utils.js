@@ -105,7 +105,7 @@
          * @return {String}                        - String representation of a
          *                                           Klass object
          */
-        klass.prototype.toString = function() {
+        klass.prototype.toString = klass.prototype.toString !== null && typeof klass.prototype.toString === "function" ? klass.prototype.toString :  function() {
             return "#<jambOS." + this.type.toUpperCase() + ">";
         };
 

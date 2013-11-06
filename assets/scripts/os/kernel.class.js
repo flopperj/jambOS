@@ -212,56 +212,7 @@ jambOS.OS.Kernel = jambOS.util.createClass({
      */
     contextSwitchISR: function(process) {
         var self = this;
-
-        // Log our context switch
-        _Control.hostLog("Switching Context", "OS");
-
-        // set our process with appropraite values
-        process.set({
-            pc: _CPU.pc,
-            acc: _CPU.acc,
-            xReg: _CPU.xReg,
-            yReg: _CPU.yReg,
-            zFlag: _CPU.zFlag,
-            state: process.state !== "terminated" ? "waiting" : process.state
-        });
-
-        // set our previous process
-        self.processManager.set("previousProcess", process);
-
-        // get the next process to execute from ready queue
-        var nextProcess = _CPU.scheduler.readyQueue.dequeue();
-
-        // if there is a process available then we'll set it to run
-        if (nextProcess) {
-
-            // change our next process state to running
-            nextProcess.set("state", "running");
-            
-            console.log(nextProcess.pid + " <--- next process");
-
-            // Add the current process being passed to the ready queue
-            if (process.state !== "terminated")
-                _CPU.scheduler.readyQueue.enqueue(process);
-
-            // set our current active process and slot
-            self.processManager.set({
-                currentProcess: nextProcess,
-                activeSlot: nextProcess.slot
-            });
-
-            // set the appropraite values of the CPU from our process to continue
-            // executing
-            _CPU.set({
-                pc: nextProcess.pc,
-                acc: nextProcess.acc,
-                xReg: nextProcess.xReg,
-                yReg: nextProcess.yReg,
-                zFlag: nextProcess.zFlag,
-                isExecuting: true
-            });
-
-        }
+        _CPU.scheduler.switchContext(process);
     },
     /**
      * The built-in TIMER (not clock) Interrupt Service Routine (as opposed to an ISR coming from a device driver).

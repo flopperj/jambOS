@@ -44,6 +44,68 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
                 _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
             }
         }
+    },
+    /**
+     * Switches what pracess is to be run next
+     * @public
+     * @method switchContext
+     * @param {jambOS.OS.ProcessControlBlock} process 
+     */
+    switchContext: function(process) {
+        var self = this;
+
+        // Log our context switch
+        _Control.hostLog("Switching Context", "OS");
+
+        // set our process with appropraite values
+        process.set({
+            pc: _CPU.pc,
+            acc: _CPU.acc,
+            xReg: _CPU.xReg,
+            yReg: _CPU.yReg,
+            zFlag: _CPU.zFlag,
+            state: process.state !== "terminated" ? "waiting" : process.state
+        });
+
+        // set our previous process
+        _Kernel.processManager.set("previousProcess", process);
+
+        // get the next process to execute from ready queue
+        var nextProcess = _CPU.scheduler.readyQueue.dequeue();
+
+        console.log(process);
+
+        // if there is a process available then we'll set it to run
+        if (nextProcess) {
+
+            console.log(nextProcess.pid + " <--- next process");
+
+            // Add the current process being passed to the ready queue
+//            if (nextProcess.state !== "terminated")
+                _CPU.scheduler.readyQueue.enqueue(process);
+            
+            // change our next process state to running
+            nextProcess.set("state", "running");
+
+
+            // set our current active process and slot
+            _Kernel.processManager.set({
+                currentProcess: nextProcess,
+                activeSlot: nextProcess.slot
+            });
+
+            // set the appropraite values of the CPU from our process to continue
+            // executing
+            _CPU.set({
+                pc: nextProcess.pc,
+                acc: nextProcess.acc,
+                xReg: nextProcess.xReg,
+                yReg: nextProcess.yReg,
+                zFlag: nextProcess.zFlag,
+                isExecuting: true
+            });
+
+        }
     }
 });
 
