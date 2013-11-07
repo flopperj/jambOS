@@ -60,7 +60,8 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      * @param {jambOS.OS.ProcessControlBlock} pcb
      */
     start: function(pcb) {
-        _Kernel.processManager.set({
+        var self = this;
+        self.scheduler.set({
             currentProcess: pcb,
             activeSlot: pcb.slot
         });
@@ -96,7 +97,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
         // make sure all processes on the residentList are terminated and clear 
         // up the ready queue
-        $.each(_Kernel.processManager.residentList, function() {
+        $.each(self.scheduler.residentList, function() {
             this.set("state", "terminated");
             self.scheduler.readyQueue.dequeue();
         });
@@ -139,8 +140,8 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
             operation(self);
 
-            if (_Kernel.processManager.get("currentProcess"))
-                _Kernel.processManager.get("currentProcess").set({acc: self.acc, pc: self.pc, xReg: self.xReg, yReg: self.yReg, zFlag: self.zFlag, state: "running"});
+            if (self.scheduler.get("currentProcess"))
+                self.scheduler.get("currentProcess").set({acc: self.acc, pc: self.pc, xReg: self.xReg, yReg: self.yReg, zFlag: self.zFlag, state: "running"});
 
 
             // Perform a context switch if the ready queue is not empty.
@@ -197,7 +198,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeOne = _Kernel.memoryManager.memory.read(self.pc++);
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
-        var pcb = _Kernel.processManager.get("currentProcess");
+        var pcb = self.scheduler.get("currentProcess");
 
         // Concatenate the hex address in the correct order
         var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE) + pcb.base;
@@ -222,7 +223,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeOne = _Kernel.memoryManager.memory.read(self.pc++);
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
-        var pcb = _Kernel.processManager.get("currentProcess");
+        var pcb = self.scheduler.get("currentProcess");
 
         // Concatenate the hex address in the correct order
         var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE) + pcb.base;
@@ -252,7 +253,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeOne = _Kernel.memoryManager.memory.read(self.pc++);
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
-        var pcb = _Kernel.processManager.get("currentProcess");
+        var pcb = self.scheduler.get("currentProcess");
 
         // Concatenate the hex address in the correct order
         var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE) + pcb.base;
@@ -288,7 +289,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeOne = _Kernel.memoryManager.memory.read(self.pc++);
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
-        var pcb = _Kernel.processManager.get("currentProcess");
+        var pcb = self.scheduler.get("currentProcess");
 
         // Concatenate the hex address in the correct order
         var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE) + pcb.base;
@@ -324,7 +325,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeOne = _Kernel.memoryManager.memory.read(self.pc++);
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
-        var pcb = _Kernel.processManager.get("currentProcess");
+        var pcb = self.scheduler.get("currentProcess");
 
         // Concatenate the hex address in the correct order
         var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE) + pcb.base;
@@ -353,14 +354,14 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      * opCode: 00
      */
     breakOperation: function(self) {
-        var lastProcess = _Kernel.processManager.residentList[_Kernel.processManager.residentList.length - 1];
-        var currentProcess = _Kernel.processManager.currentProcess;
-        
-        _Kernel.processManager.currentProcess.state = "terminated";
-        
+        var lastProcess = self.scheduler.residentList[self.scheduler.residentList.length - 1];
+        var currentProcess = self.scheduler.currentProcess;
+
+        self.scheduler.currentProcess.state = "terminated";
+
         // we want to terminate everything
         if (currentProcess.pid === lastProcess.pid)
-            _Kernel.interruptHandler(PROCESS_TERMINATION_IRQ, _Kernel.processManager.get("currentProcess"));
+            _Kernel.interruptHandler(PROCESS_TERMINATION_IRQ, self.scheduler.get("currentProcess"));
     },
     /**
      * Compare a byte in memory to the X reg sets the Z (zero) flag if equal 
@@ -373,7 +374,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeOne = _Kernel.memoryManager.memory.read(self.pc++);
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
-        var pcb = _Kernel.processManager.get("currentProcess");
+        var pcb = self.scheduler.get("currentProcess");
 
         // Concatenate the hex address in the correct order
         var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE) + pcb.base;
@@ -401,7 +402,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             var branchValue = parseInt(_Kernel.memoryManager.memory.read(self.pc++), HEX_BASE);
             self.pc += branchValue;
 
-            if (self.pc > _Kernel.processManager.get("currentProcess").limit)
+            if (self.pc > self.scheduler.get("currentProcess").limit)
             {
                 self.pc -= MEMORY_BLOCK_SIZE;
             }
@@ -417,7 +418,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeOne = _Kernel.memoryManager.memory.read(self.pc++);
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
-        var pcb = _Kernel.processManager.get("currentProcess");
+        var pcb = self.scheduler.get("currentProcess");
         var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE) + pcb.base;
         var value = _Kernel.memoryManager.memory.read(address);
 
@@ -458,7 +459,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
         } else {
 
-            var pcb = _Kernel.processManager.get("currentProcess");
+            var pcb = self.scheduler.get("currentProcess");
 
             var address = parseInt(self.yReg, HEX_BASE) + pcb.base;
 

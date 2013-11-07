@@ -22,6 +22,22 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
      */
     readyQueue: null,
     /**
+     * @property {[jambOS.OS.ProcessControlBlock]} residentList
+     */
+    residentList: [],
+    /**
+     * @property {int} currentProcessID
+     */
+    currentProcessID: 0,
+    /**
+     * @property {jambOS.OS.ProcessControlBlock} currentProcess
+     */
+    currentProcess: null,
+    /**
+     * @property {jambOS.OS.ProcessControlBlock} previousProcess    
+     */
+    previousProcess: null,
+    /**
      * Constructor
      */
     initialize: function() {
@@ -56,7 +72,7 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
     switchContext: function() {
         var self = this;
 
-        var process = _Kernel.processManager.currentProcess;
+        var process = self.currentProcess;
 
         // Log our context switch
         _Kernel.trace("Switching Context");
@@ -74,9 +90,6 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
             state: process.state !== "terminated" ? "waiting" : process.state
         });
 
-        // set our previous process
-        _Kernel.processManager.set("previousProcess", process);
-
         // get the next process to execute from ready queue
         var nextProcess = _CPU.scheduler.readyQueue.dequeue();
 
@@ -90,12 +103,14 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
             // change our next process state to running
             nextProcess.set("state", "running");
 
-
-            // set our current active process and slot
-            _Kernel.processManager.set({
-                currentProcess: nextProcess,
-                activeSlot: nextProcess.slot
+            // set our current active process as well as previous
+            self.set({
+                previousProcess: process,
+                currentProcess: nextProcess
             });
+
+            // set active memory slot
+            _Kernel.memoryManager.set("activeSlot", nextProcess.slot);
 
             // set the appropraite values of the CPU from our process to continue
             // executing

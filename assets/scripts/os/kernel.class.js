@@ -176,7 +176,7 @@ jambOS.OS.Kernel = jambOS.util.createClass({
                 self.processTerminationISR(params);
                 break;
             case CONTEXT_SWITCH_IRQ:
-                self.contextSwitchISR(self.processManager.get("currentProcess"));
+                self.contextSwitchISR(_CPU.scheduler.get("currentProcess"));
                 break;
             default:
                 self.trapError("Invalid Interrupt Request. irq=" + irq + " params=[" + params + "]");
