@@ -764,10 +764,18 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             currentProcess: pcb,
             activeSlot: pcb.slot
         });
+
         this.set({
             pc: pcb.base,
             isExecuting: true
         });
+
+        // Log our switch to kernel mode
+        _Kernel.trace("Switching to Kernel Mode");
+
+        // Switch to Kernel mode
+        _MODE = 0;
+
     },
     /**
      * Resets cpu registers to default values to help stop process execution
@@ -792,6 +800,12 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             this.set("state", "terminated");
             self.scheduler.readyQueue.dequeue();
         });
+
+        // Log our switch to user mode
+        _Kernel.trace("Switching to User Mode");
+
+        // Switch to user mode
+        _MODE = 1;
 
         // disable stepover button
         $("#btnStepOver").prop("disabled", true);
@@ -822,9 +836,8 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var operation = self.getOpCode(opCode);
 
         if (operation) {
+
             operation(self);
-            console.log(self.pc);
-            console.log(opCode);
 
             if (_Kernel.processManager.get("currentProcess"))
                 _Kernel.processManager.get("currentProcess").set({acc: self.acc, pc: self.pc, xReg: self.xReg, yReg: self.yReg, zFlag: self.zFlag, state: "running"});
@@ -1040,10 +1053,12 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      * opCode: 00
      */
     breakOperation: function(self) {
-        console.log("Terminated!");
         var lastProcess = _Kernel.processManager.residentList[_Kernel.processManager.residentList.length - 1];
         var currentProcess = _Kernel.processManager.currentProcess;
+        
         _Kernel.processManager.currentProcess.state = "terminated";
+        
+        // we want to terminate everything
         if (currentProcess.pid === lastProcess.pid)
             _Kernel.interruptHandler(PROCESS_TERMINATION_IRQ, _Kernel.processManager.get("currentProcess"));
     },
@@ -1211,7 +1226,6 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
             // simulate the real time execution
             if (!self.readyQueue.isEmpty() && self.processCycles === self.quantum) {
                 self.processCycles = 0;
-                _Kernel.processManager.currentProcess.timeslice = 0;
                 _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
             }
         }
@@ -1228,7 +1242,7 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
         var process = _Kernel.processManager.currentProcess;
 
         // Log our context switch
-        _Control.hostLog("Switching Context", "OS");
+        _Kernel.trace("Switching Context");
 
         console.log("Process: " + process.pid + ", state: " + process.state);
         console.log(_CPU.pc);
@@ -1248,8 +1262,6 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
 
         // get the next process to execute from ready queue
         var nextProcess = _CPU.scheduler.readyQueue.dequeue();
-        console.log("Process: " + nextProcess.pid + ", state: " + nextProcess.state);
-        console.log(nextProcess.base);
 
         // if there is a process available then we'll set it to run
         if (nextProcess) {
@@ -3605,7 +3617,6 @@ jambOS.OS.ProcessControlBlock = jambOS.util.createClass(/** @scope jambOS.OS.Pro
      * @property {int} limit                - Memory limit for a process
      */
     limit: 0,
-    timeslice: 0,
     /**
      * Constructor
      * @param {object} options

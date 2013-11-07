@@ -64,10 +64,18 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             currentProcess: pcb,
             activeSlot: pcb.slot
         });
+
         this.set({
             pc: pcb.base,
             isExecuting: true
         });
+
+        // Log our switch to kernel mode
+        _Kernel.trace("Switching to Kernel Mode");
+
+        // Switch to Kernel mode
+        _MODE = 0;
+
     },
     /**
      * Resets cpu registers to default values to help stop process execution
@@ -92,6 +100,12 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             this.set("state", "terminated");
             self.scheduler.readyQueue.dequeue();
         });
+
+        // Log our switch to user mode
+        _Kernel.trace("Switching to User Mode");
+
+        // Switch to user mode
+        _MODE = 1;
 
         // disable stepover button
         $("#btnStepOver").prop("disabled", true);
@@ -122,9 +136,8 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var operation = self.getOpCode(opCode);
 
         if (operation) {
+
             operation(self);
-            console.log(self.pc);
-            console.log(opCode);
 
             if (_Kernel.processManager.get("currentProcess"))
                 _Kernel.processManager.get("currentProcess").set({acc: self.acc, pc: self.pc, xReg: self.xReg, yReg: self.yReg, zFlag: self.zFlag, state: "running"});
@@ -340,10 +353,12 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      * opCode: 00
      */
     breakOperation: function(self) {
-        console.log("Terminated!");
         var lastProcess = _Kernel.processManager.residentList[_Kernel.processManager.residentList.length - 1];
         var currentProcess = _Kernel.processManager.currentProcess;
+        
         _Kernel.processManager.currentProcess.state = "terminated";
+        
+        // we want to terminate everything
         if (currentProcess.pid === lastProcess.pid)
             _Kernel.interruptHandler(PROCESS_TERMINATION_IRQ, _Kernel.processManager.get("currentProcess"));
     },

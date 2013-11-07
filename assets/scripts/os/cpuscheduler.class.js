@@ -43,7 +43,6 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
             // simulate the real time execution
             if (!self.readyQueue.isEmpty() && self.processCycles === self.quantum) {
                 self.processCycles = 0;
-                _Kernel.processManager.currentProcess.timeslice = 0;
                 _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
             }
         }
@@ -60,7 +59,7 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
         var process = _Kernel.processManager.currentProcess;
 
         // Log our context switch
-        _Control.hostLog("Switching Context", "OS");
+        _Kernel.trace("Switching Context");
 
         console.log("Process: " + process.pid + ", state: " + process.state);
         console.log(_CPU.pc);
@@ -80,8 +79,6 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
 
         // get the next process to execute from ready queue
         var nextProcess = _CPU.scheduler.readyQueue.dequeue();
-        console.log("Process: " + nextProcess.pid + ", state: " + nextProcess.state);
-        console.log(nextProcess.base);
 
         // if there is a process available then we'll set it to run
         if (nextProcess) {
