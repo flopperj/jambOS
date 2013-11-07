@@ -630,7 +630,7 @@ jambOS.host.Device = jambOS.util.createClass({
  *                             passed to the class
  *==============================================================================
  */
-jambOS.host.Memory = jambOS.util.createClass( /** @scopee jambOS.host.Memory.prototype */{
+jambOS.host.Memory = jambOS.util.createClass(/** @scopee jambOS.host.Memory.prototype */{
     /**
      * @property {int} size             - Size of Memory
      */
@@ -645,12 +645,13 @@ jambOS.host.Memory = jambOS.util.createClass( /** @scopee jambOS.host.Memory.pro
     type: "memory",
     /**
      * Constructor
+     * @public
      * @param {object} options
      * @returns {jambOS.host.Memory}
      */
     initialize: function(options) {
         var self = this;
-    
+
         options || (options = {});
         self.setOptions(options);
 
@@ -658,11 +659,13 @@ jambOS.host.Memory = jambOS.util.createClass( /** @scopee jambOS.host.Memory.pro
         for (var i = 0; i < self.size; i++) {
             self.write(i, 00);
         }
-        
+
         return this;
     },
     /**
      * Reads data from storage
+     * @public
+     * @method read
      * @param {string} address
      * @returns data
      */
@@ -673,6 +676,7 @@ jambOS.host.Memory = jambOS.util.createClass( /** @scopee jambOS.host.Memory.pro
      * Writes to storage
      * 
      * @public
+     * @method write
      * @param {string} address
      * @param {object} data
      */
@@ -683,6 +687,7 @@ jambOS.host.Memory = jambOS.util.createClass( /** @scopee jambOS.host.Memory.pro
      * Inserts data to storage starting from the specified storage address
      * 
      * @public
+     * @method insert
      * @param {int} start starting address point
      * @param {array} data data to add to storage
      */
@@ -693,7 +698,7 @@ jambOS.host.Memory = jambOS.util.createClass( /** @scopee jambOS.host.Memory.pro
         // write to memory
         for (var i = 0; i < data.length; i++) {
             self.write(i + start, data[i]);
-        }        
+        }
 
         _Kernel.memoryManager.updateMemoryDisplay();
     }
@@ -757,24 +762,37 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     },
     /**
      * Sets cpu registers ready for process execution
+     * @public
+     * @method start
      * @param {jambOS.OS.ProcessControlBlock} pcb
      */
     start: function(pcb) {
-        _Kernel.processManager.set({
-            currentProcess: pcb,
-            activeSlot: pcb.slot
-        });
-        this.set({
-            pc: pcb.base,
+        var self = this;
+
+        // set current process in scheduler
+        self.scheduler.set("currentProcess", pcb);
+
+        // set cpu with process' pc and start execution
+        self.set({
+            pc: pcb.pc,
             isExecuting: true
         });
+
+        // Log our switch to kernel mode
+        _Kernel.trace("Switching to Kernel Mode");
+
+        // Switch to Kernel mode
+        _MODE = 0;
+
     },
     /**
      * Resets cpu registers to default values to help stop process execution
+     * @public
+     * @method stop
      */
     stop: function() {
         var self = this;
-        
+
         // reset our registers
         self.set({
             pc: 0,
@@ -784,20 +802,28 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             zFlag: 0,
             isExecuting: false
         });
-        
-        
+
+
         // make sure all processes on the residentList are terminated and clear 
         // up the ready queue
-        $.each(_Kernel.processManager.residentList, function() {
+        $.each(self.scheduler.residentList, function() {
             this.set("state", "terminated");
             self.scheduler.readyQueue.dequeue();
         });
+
+        // Log our switch to user mode
+        _Kernel.trace("Switching to User Mode");
+
+        // Switch to user mode
+        _MODE = 1;
 
         // disable stepover button
         $("#btnStepOver").prop("disabled", true);
     },
     /**
      * Called every clock cycle
+     * @public
+     * @method cycle
      */
     cycle: function() {
         var self = this;
@@ -805,12 +831,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
         // TODO: Accumulate CPU usage and profiling statistics here.
         // Do the real work here. Be sure to set this.isExecuting appropriately.
-
-
-        // Perform a context switch if the ready queue is not empty.
-        // This is where the magic or realtime multi-processing occurs.
-        if (!self.scheduler.readyQueue.isEmpty())
-            _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
 
         // update cpu status display in real time
         _Kernel.processManager.updateCpuStatusDisplay(self);
@@ -824,16 +844,36 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             _Kernel.trapError("Invalid Operation!", false);
         }
 
+        // get execution operation
         var opCode = _Kernel.memoryManager.memory.read(self.pc++).toString().toLowerCase();
         var operation = self.getOpCode(opCode);
 
+        // execute operation
         if (operation) {
+
             operation(self);
 
-            if (_Kernel.processManager.get("currentProcess"))
-                _Kernel.processManager.get("currentProcess").set({acc: self.acc, pc: self.pc, xReg: self.xReg, yReg: self.yReg, zFlag: self.zFlag, state: "running"});
+            if (self.scheduler.get("currentProcess"))
+                self.scheduler.get("currentProcess").set({acc: self.acc, pc: self.pc, xReg: self.xReg, yReg: self.yReg, zFlag: self.zFlag, state: "running"});
+        } else {
+
+            // log invalid opcode
+            _Kernel.trace("Invalid Operation!");
+
+            // trap the error ?
+//            _Kernel.trapError("Invalid Operation!", false);
+
+            // change background color of active process
+            // Found that trapping the error would be just too much on the
+            // console!
+            $("#pcbStatus table tbody tr.active").addClass("error").removeClass("active");
 
         }
+
+        // Perform a context switch if the ready queue is not empty.
+        // This is where the magic or realtime multi-processing occurs.
+        if (!self.scheduler.readyQueue.isEmpty())
+            self.scheduler.scheduleProcess();
 
     },
     /*------------------Operations -----------------------*/
@@ -883,7 +923,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeOne = _Kernel.memoryManager.memory.read(self.pc++);
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
-        var pcb = _Kernel.processManager.get("currentProcess");
+        var pcb = self.scheduler.get("currentProcess");
 
         // Concatenate the hex address in the correct order
         var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE) + pcb.base;
@@ -908,7 +948,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeOne = _Kernel.memoryManager.memory.read(self.pc++);
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
-        var pcb = _Kernel.processManager.get("currentProcess");
+        var pcb = self.scheduler.get("currentProcess");
 
         // Concatenate the hex address in the correct order
         var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE) + pcb.base;
@@ -938,7 +978,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeOne = _Kernel.memoryManager.memory.read(self.pc++);
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
-        var pcb = _Kernel.processManager.get("currentProcess");
+        var pcb = self.scheduler.get("currentProcess");
 
         // Concatenate the hex address in the correct order
         var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE) + pcb.base;
@@ -974,7 +1014,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeOne = _Kernel.memoryManager.memory.read(self.pc++);
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
-        var pcb = _Kernel.processManager.get("currentProcess");
+        var pcb = self.scheduler.get("currentProcess");
 
         // Concatenate the hex address in the correct order
         var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE) + pcb.base;
@@ -1010,7 +1050,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeOne = _Kernel.memoryManager.memory.read(self.pc++);
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
-        var pcb = _Kernel.processManager.get("currentProcess");
+        var pcb = self.scheduler.get("currentProcess");
 
         // Concatenate the hex address in the correct order
         var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE) + pcb.base;
@@ -1020,9 +1060,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         {
             // Place contents of the memory location in the y register
             self.yReg = parseInt(value, HEX_BASE);
-        } else {
-            // TODO: Halt the OS
-            // TODO: Show error in log
         }
     },
     /**
@@ -1037,9 +1074,20 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     /**
      * Break (which is really a system call) 
      * opCode: 00
+     * @param {jambOS.host.Cpu} self 
      */
-    breakOperation: function() {        
-        _Kernel.interruptHandler(PROCESS_TERMINATION_IRQ, _Kernel.processManager.get("currentProcess"));
+    breakOperation: function(self) {
+
+        var lastProcess = self.scheduler.residentList[self.scheduler.residentList.length - 1];
+        var currentProcess = self.scheduler.currentProcess;
+
+        // set the current process state to terminated
+        self.scheduler.currentProcess.state = "terminated";
+
+        // we want to terminate everything after all processes have been
+        // executed or when we are only executing one process
+        if (currentProcess.pid === lastProcess.pid || self.scheduler.readyQueue.isEmpty())
+            _Kernel.interruptHandler(PROCESS_TERMINATION_IRQ, self.scheduler.get("currentProcess"));
     },
     /**
      * Compare a byte in memory to the X reg sets the Z (zero) flag if equal 
@@ -1052,7 +1100,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeOne = _Kernel.memoryManager.memory.read(self.pc++);
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
-        var pcb = _Kernel.processManager.get("currentProcess");
+        var pcb = self.scheduler.get("currentProcess");
 
         // Concatenate the hex address in the correct order
         var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE) + pcb.base;
@@ -1080,7 +1128,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             var branchValue = parseInt(_Kernel.memoryManager.memory.read(self.pc++), HEX_BASE);
             self.pc += branchValue;
 
-            if (self.pc > _Kernel.processManager.get("currentProcess").limit)
+            if (self.pc > self.scheduler.get("currentProcess").limit)
             {
                 self.pc -= MEMORY_BLOCK_SIZE;
             }
@@ -1096,7 +1144,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var byteCodeOne = _Kernel.memoryManager.memory.read(self.pc++);
         var byteCodeTwo = _Kernel.memoryManager.memory.read(self.pc++);
 
-        var pcb = _Kernel.processManager.get("currentProcess");
+        var pcb = self.scheduler.get("currentProcess");
         var address = parseInt((byteCodeTwo + byteCodeOne), HEX_BASE) + pcb.base;
         var value = _Kernel.memoryManager.memory.read(address);
 
@@ -1109,9 +1157,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             var hexValue = _Kernel.memoryManager.decimalToHex(decimalValue);
 
             _Kernel.memoryManager.memory.write(address, hexValue);
-        } else {
-            // TODO: Halt the OS
-            // TODO: Show error in log
         }
     },
     /**
@@ -1137,7 +1182,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
         } else {
 
-            var pcb = _Kernel.processManager.get("currentProcess");
+            var pcb = self.scheduler.get("currentProcess");
 
             var address = parseInt(self.yReg, HEX_BASE) + pcb.base;
 
@@ -1184,6 +1229,22 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
      */
     readyQueue: null,
     /**
+     * @property {[jambOS.OS.ProcessControlBlock]} residentList
+     */
+    residentList: [],
+    /**
+     * @property {int} currentProcessID
+     */
+    currentProcessID: 0,
+    /**
+     * @property {jambOS.OS.ProcessControlBlock} currentProcess
+     */
+    currentProcess: null,
+    /**
+     * @property {jambOS.OS.ProcessControlBlock} previousProcess    
+     */
+    previousProcess: null,
+    /**
      * Constructor
      */
     initialize: function() {
@@ -1198,11 +1259,13 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
     scheduleProcess: function() {
         var self = this;
         if (_CPU.isExecuting) {
+
             self.processCycles++;
 
             // perform a swithc when we the cycles hit our scheduling quantum to
             // simulate the real time execution
-            if (!self.readyQueue.isEmpty() && self.processCycles >= self.quantum) {
+            if (!self.readyQueue.isEmpty() && self.processCycles === self.quantum) {
+                self.processCycles = 0;
                 _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
             }
         }
@@ -1211,15 +1274,17 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
      * Switches what pracess is to be run next
      * @public
      * @method switchContext
-     * @param {jambOS.OS.ProcessControlBlock} process 
      */
-    switchContext: function(process) {
+    switchContext: function() {
         var self = this;
 
+        var process = self.currentProcess;
+
         // Log our context switch
-        _Control.hostLog("Switching Context", "OS");
-        
+        _Kernel.trace("Switching Context");
+
         console.log("Process: " + process.pid + ", state: " + process.state);
+        console.log(_CPU.pc);
 
         // set our process with appropraite values
         process.set({
@@ -1231,9 +1296,6 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
             state: process.state !== "terminated" ? "waiting" : process.state
         });
 
-        // set our previous process
-        _Kernel.processManager.set("previousProcess", process);
-
         // get the next process to execute from ready queue
         var nextProcess = _CPU.scheduler.readyQueue.dequeue();
 
@@ -1241,18 +1303,20 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
         if (nextProcess) {
 
             // Add the current process being passed to the ready queue
-            if (process.state !== "terminated")
+            if (process !== null && process.state !== "terminated")
                 _CPU.scheduler.readyQueue.enqueue(process);
-            
+
             // change our next process state to running
             nextProcess.set("state", "running");
 
-
-            // set our current active process and slot
-            _Kernel.processManager.set({
-                currentProcess: nextProcess,
-                activeSlot: nextProcess.slot
+            // set our current active process as well as previous
+            self.set({
+                previousProcess: process,
+                currentProcess: nextProcess
             });
+
+            // set active memory slot
+            _Kernel.memoryManager.set("activeSlot", nextProcess.slot);
 
             // set the appropraite values of the CPU from our process to continue
             // executing
@@ -1340,7 +1404,7 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
         var activeSlot = pcb.slot;
         self.slots[activeSlot].open = false;
         pcb.set({base: self.slots[activeSlot].base, limit: self.slots[activeSlot].limit});
-        _Kernel.processManager.set("currentProcess", pcb);
+        _CPU.scheduler.set("currentProcess", pcb);
     },
     /**
      * Deallocates memory slots of a process
@@ -1381,12 +1445,13 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
      */
     validateAddress: function(address) {
         var self = this;
-        var activeSlot = _Kernel.processManager.get("currentProcess").slot;
-        var isValid = (address <= self.slots[activeSlot].limit && address >= self.slots[activeSlot].base)
+        var activeSlot = _CPU.scheduler.get("currentProcess").slot;
+        var isValid = (address <= self.slots[activeSlot].limit && address >= self.slots[activeSlot].base);
         return isValid;
     },
     /**
      * Updates content that is on memory for display on the OS 
+     * @public
      * @method updateDisplay
      */
     updateMemoryDisplay: function() {
@@ -1436,23 +1501,10 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
  *==============================================================================
  */
 jambOS.OS.ProcessManager = jambOS.util.createClass({
+    /**
+     * @property {string} type
+     */
     type: "processmanager",
-    /**
-     * @property {[jambOS.OS.ProcessControlBlock]} residentList
-     */
-    residentList: [],
-    /**
-     * @property {int} currentProcessID
-     */
-    currentProcessID: 0,
-    /**
-     * @property {jambOS.OS.ProcessControlBlock} currentProcess
-     */
-    currentProcess: null,
-    /**
-     * @property {jambOS.OS.ProcessControlBlock} previousProcess    
-     */
-    previousProcess: null,
     /**
      * Constructor
      * @param {object} options
@@ -1491,15 +1543,18 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         else
             return _Kernel.trapError("Insufficient Memory!", false);
 
+        // get our base and limit addresses
         var base = slots[activeSlot].base;
         var limit = slots[activeSlot].limit;
 
+        // write program to memory slots
         _Kernel.memoryManager.memory.insert(base, program);
 
-        var pid = this.currentProcessID++;
+        var pid = _CPU.scheduler.currentProcessID++;
+        var pc = base;
         var pcb = new jambOS.OS.ProcessControlBlock({
             pid: pid,
-            pc: 0,
+            pc: pc,
             base: base,
             limit: limit,
             xReg: 0,
@@ -1509,7 +1564,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
             state: "new"
         });
 
-        this.residentList.push(pcb);
+        _CPU.scheduler.residentList.push(pcb);
         _Kernel.memoryManager.allocate(pcb);
 
         return pcb;
@@ -1523,18 +1578,18 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
     unload: function(pcb) {
         var self = this;
 
-        var residentListLength = self.residentList.length;
+        var residentListLength = _CPU.scheduler.residentList.length;
 
         // remove processes starting from the back of the residentList
         // also make sure all other terminated prcoesses are removed
         for (var i = residentListLength - 1; i >= 0; i--) {
-            if (self.residentList[i] && (self.residentList[i].state === "terminated" || self.residentList[i] === pcb.pid)) {
+            if (_CPU.scheduler.residentList[i] && (_CPU.scheduler.residentList[i].state === "terminated" || _CPU.scheduler.residentList[i] === pcb.pid)) {
 
                 // deallocate memory of process
-                _Kernel.memoryManager.deallocate(self.residentList[i]);
+                _Kernel.memoryManager.deallocate(_CPU.scheduler.residentList[i]);
 
                 // remove from resident list
-                self.residentList.splice(i, 1);
+                _CPU.scheduler.residentList.splice(i, 1);
             }
         }
 
@@ -1568,7 +1623,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
     updatePCBStatusDisplay: function() {
         var self = this;
         var tableRows = "";
-        var currentProcess = jambOS.util.clone(self.get("currentProcess"));
+        var currentProcess = jambOS.util.clone(_CPU.scheduler.get("currentProcess"));
         var pcbs = $.map(jambOS.util.clone(_CPU.scheduler.readyQueue.q), function(value, index) {
             return [value];
         });
@@ -1591,7 +1646,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
                                     " + id + "\n\
                                 </td>\n\
                                 <td>\n\
-                                    " + pc + "\n\
+                                    " + (currentProcess.pid === process.pid ? _CPU.pc : pc) + "\n\
                                 </td>\n\
                                 <td>\n\
                                     " + acc + "\n\
@@ -2186,10 +2241,6 @@ jambOS.OS.DeviceDriverKeyboard = jambOS.util.createClass(jambOS.OS.DeviceDriver,
         if (!valid) {
             // throw an error but do not kill the OS
             _Kernel.trapError("Oh bummer, I wish I could have had some use for that key! :(", false);
-
-            // move to new line
-            _Console.advanceLine();
-            _StdIn.putText(">");
         }
 
 
@@ -3075,7 +3126,7 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                 var pid = parseInt(args[0]);
 
                 if (!isNaN(pid)) {
-                    var pcb = $.grep(_Kernel.processManager.residentList, function(el) {
+                    var pcb = $.grep(_CPU.scheduler.residentList, function(el) {
                         return el.pid === pid;
                     })[0];
 
@@ -3100,12 +3151,12 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                 var pid = args[0];
                 pid = parseInt(pid);
 
-                var pcb = $.grep(_Kernel.processManager.residentList, function(el) {
+                var pcb = $.grep(_CPU.scheduler.residentList, function(el) {
                     return el.pid === pid;
                 })[0];
 
                 if (args[0] && pcb && !_Stepover) {
-                    _Kernel.processManager.set("activeSlot", pcb.slot);
+                    _Kernel.memoryManager.set("activeSlot", pcb.slot);
                     _Kernel.processManager.execute(pcb);
                 } else if (args[0] && pcb && _Stepover) {
                     _StdIn.putText("stepover is ON. Use the stepover button to run program.");
@@ -3125,10 +3176,13 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                 // Check whether we have processes that are loaded in memory
                 // Also check whether we want to stepover our process which in 
                 // this case we do not.
-                if (_Kernel.processManager.residentList.length > 0 && !_Stepover) {
+                if (_CPU.scheduler.residentList.length > 0 && !_Stepover) {
+                    
+                    // initialize new ready queue
+                    _CPU.scheduler.readyQueue = new jambOS.OS.ProcessQueue();
 
                     // Loop through our residentList and add them to the readyQueue
-                    $.each(_Kernel.processManager.residentList, function(){                        
+                    $.each(_CPU.scheduler.residentList, function() {
                         _CPU.scheduler.readyQueue.enqueue(this);
                     });
 
@@ -3140,12 +3194,12 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
 
 
                     // Set our active slot in which to base our operations from
-                    _Kernel.processManager.set("activeSlot", process.slot);
+                    _Kernel.memoryManager.set("activeSlot", process.slot);
 
                     // Execute our process
                     _Kernel.processManager.execute(process);
 
-                } else if (_Kernel.processManager.residentList.length > 0 && _StepOver)
+                } else if (_CPU.scheduler.residentList.length > 0 && _StepOver)
                     _StdIn.putText("Please turn off the StepOver command to run all processes");
                 else
                     _StdIn.putText("There are no processes to run!");
@@ -3199,6 +3253,7 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                 var quantum = parseInt(args[0]);
                 if (args.length > 0 && !isNaN(quantum)) {
                     _CPU.scheduler.set("quantum", quantum);
+                    _StdIn.putText("Scheduling quantum set to: " + quantum);
                 } else {
                     _StdIn.putText("Usage: quantum <int>");
                 }
@@ -3211,7 +3266,7 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             command: "residentlist",
             description: "- Displays the pids of all active processes",
             behavior: function() {
-                var residentList = _Kernel.processManager.residentList;
+                var residentList = _CPU.scheduler.residentList;
 
                 if (residentList.length) {
                     var processIDs = "";
@@ -3411,7 +3466,7 @@ jambOS.OS.Kernel = jambOS.util.createClass({
                 self.processTerminationISR(params);
                 break;
             case CONTEXT_SWITCH_IRQ:
-                self.contextSwitchISR(self.processManager.get("currentProcess"));
+                self.contextSwitchISR(_CPU.scheduler.get("currentProcess"));
                 break;
             default:
                 self.trapError("Invalid Interrupt Request. irq=" + irq + " params=[" + params + "]");
@@ -3436,7 +3491,7 @@ jambOS.OS.Kernel = jambOS.util.createClass({
         var self = this;
         _CPU.stop();
 
-        // unload process
+        // Unload process
         self.processManager.unload(pcb);
     },
     /**
@@ -3524,6 +3579,7 @@ jambOS.OS.Kernel = jambOS.util.createClass({
         _DrawingContext.fillText("OS ERROR: " + msg, xPos, _Console.currentYPosition);
         _Console.currentXPosition = _Canvas.width;
         _StdIn.advanceLine();
+        _OsShell.putPrompt();
 
         if (killSwitch)
             this.shutdown();

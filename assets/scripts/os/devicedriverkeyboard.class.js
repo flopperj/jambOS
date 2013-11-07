@@ -54,10 +54,6 @@ jambOS.OS.DeviceDriverKeyboard = jambOS.util.createClass(jambOS.OS.DeviceDriver,
         if (!valid) {
             // throw an error but do not kill the OS
             _Kernel.trapError("Oh bummer, I wish I could have had some use for that key! :(", false);
-
-            // move to new line
-            _Console.advanceLine();
-            _StdIn.putText(">");
         }
 
 

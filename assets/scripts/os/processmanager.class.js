@@ -9,23 +9,10 @@
  *==============================================================================
  */
 jambOS.OS.ProcessManager = jambOS.util.createClass({
+    /**
+     * @property {string} type
+     */
     type: "processmanager",
-    /**
-     * @property {[jambOS.OS.ProcessControlBlock]} residentList
-     */
-    residentList: [],
-    /**
-     * @property {int} currentProcessID
-     */
-    currentProcessID: 0,
-    /**
-     * @property {jambOS.OS.ProcessControlBlock} currentProcess
-     */
-    currentProcess: null,
-    /**
-     * @property {jambOS.OS.ProcessControlBlock} previousProcess    
-     */
-    previousProcess: null,
     /**
      * Constructor
      * @param {object} options
@@ -64,15 +51,18 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         else
             return _Kernel.trapError("Insufficient Memory!", false);
 
+        // get our base and limit addresses
         var base = slots[activeSlot].base;
         var limit = slots[activeSlot].limit;
 
+        // write program to memory slots
         _Kernel.memoryManager.memory.insert(base, program);
 
-        var pid = this.currentProcessID++;
+        var pid = _CPU.scheduler.currentProcessID++;
+        var pc = base;
         var pcb = new jambOS.OS.ProcessControlBlock({
             pid: pid,
-            pc: 0,
+            pc: pc,
             base: base,
             limit: limit,
             xReg: 0,
@@ -82,7 +72,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
             state: "new"
         });
 
-        this.residentList.push(pcb);
+        _CPU.scheduler.residentList.push(pcb);
         _Kernel.memoryManager.allocate(pcb);
 
         return pcb;
@@ -96,18 +86,18 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
     unload: function(pcb) {
         var self = this;
 
-        var residentListLength = self.residentList.length;
+        var residentListLength = _CPU.scheduler.residentList.length;
 
         // remove processes starting from the back of the residentList
         // also make sure all other terminated prcoesses are removed
         for (var i = residentListLength - 1; i >= 0; i--) {
-            if (self.residentList[i] && (self.residentList[i].state === "terminated" || self.residentList[i] === pcb.pid)) {
+            if (_CPU.scheduler.residentList[i] && (_CPU.scheduler.residentList[i].state === "terminated" || _CPU.scheduler.residentList[i] === pcb.pid)) {
 
                 // deallocate memory of process
-                _Kernel.memoryManager.deallocate(self.residentList[i]);
+                _Kernel.memoryManager.deallocate(_CPU.scheduler.residentList[i]);
 
                 // remove from resident list
-                self.residentList.splice(i, 1);
+                _CPU.scheduler.residentList.splice(i, 1);
             }
         }
 
@@ -141,7 +131,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
     updatePCBStatusDisplay: function() {
         var self = this;
         var tableRows = "";
-        var currentProcess = jambOS.util.clone(self.get("currentProcess"));
+        var currentProcess = jambOS.util.clone(_CPU.scheduler.get("currentProcess"));
         var pcbs = $.map(jambOS.util.clone(_CPU.scheduler.readyQueue.q), function(value, index) {
             return [value];
         });
@@ -164,7 +154,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
                                     " + id + "\n\
                                 </td>\n\
                                 <td>\n\
-                                    " + pc + "\n\
+                                    " + (currentProcess.pid === process.pid ? _CPU.pc : pc) + "\n\
                                 </td>\n\
                                 <td>\n\
                                     " + acc + "\n\

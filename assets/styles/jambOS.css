@@ -122,6 +122,11 @@ h1, label{
     font-weight: bold;
 }
 
+#pcbStatus .content table tbody tr.error td{
+    background: rgba(236, 19, 19, 0.41);
+    font-weight: bold;
+}
+
 .card{
     box-shadow: 0 3px 0 rgba(0, 0, 0, 0.1);
     -moz-box-shadow: 0 3px 0 rgba(0, 0, 0, 0.1);

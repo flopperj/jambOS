@@ -176,7 +176,7 @@ jambOS.OS.Kernel = jambOS.util.createClass({
                 self.processTerminationISR(params);
                 break;
             case CONTEXT_SWITCH_IRQ:
-                self.contextSwitchISR(self.processManager.get("currentProcess"));
+                self.contextSwitchISR(_CPU.scheduler.get("currentProcess"));
                 break;
             default:
                 self.trapError("Invalid Interrupt Request. irq=" + irq + " params=[" + params + "]");
@@ -201,7 +201,7 @@ jambOS.OS.Kernel = jambOS.util.createClass({
         var self = this;
         _CPU.stop();
 
-        // unload process
+        // Unload process
         self.processManager.unload(pcb);
     },
     /**
@@ -289,6 +289,7 @@ jambOS.OS.Kernel = jambOS.util.createClass({
         _DrawingContext.fillText("OS ERROR: " + msg, xPos, _Console.currentYPosition);
         _Console.currentXPosition = _Canvas.width;
         _StdIn.advanceLine();
+        _OsShell.putPrompt();
 
         if (killSwitch)
             this.shutdown();

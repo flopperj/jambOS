@@ -269,7 +269,7 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                 var pid = parseInt(args[0]);
 
                 if (!isNaN(pid)) {
-                    var pcb = $.grep(_Kernel.processManager.residentList, function(el) {
+                    var pcb = $.grep(_CPU.scheduler.residentList, function(el) {
                         return el.pid === pid;
                     })[0];
 
@@ -294,12 +294,12 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                 var pid = args[0];
                 pid = parseInt(pid);
 
-                var pcb = $.grep(_Kernel.processManager.residentList, function(el) {
+                var pcb = $.grep(_CPU.scheduler.residentList, function(el) {
                     return el.pid === pid;
                 })[0];
 
                 if (args[0] && pcb && !_Stepover) {
-                    _Kernel.processManager.set("activeSlot", pcb.slot);
+                    _Kernel.memoryManager.set("activeSlot", pcb.slot);
                     _Kernel.processManager.execute(pcb);
                 } else if (args[0] && pcb && _Stepover) {
                     _StdIn.putText("stepover is ON. Use the stepover button to run program.");
@@ -319,10 +319,13 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                 // Check whether we have processes that are loaded in memory
                 // Also check whether we want to stepover our process which in 
                 // this case we do not.
-                if (_Kernel.processManager.residentList.length > 0 && !_Stepover) {
+                if (_CPU.scheduler.residentList.length > 0 && !_Stepover) {
+                    
+                    // initialize new ready queue
+                    _CPU.scheduler.readyQueue = new jambOS.OS.ProcessQueue();
 
                     // Loop through our residentList and add them to the readyQueue
-                    $.each(_Kernel.processManager.residentList, function(){                        
+                    $.each(_CPU.scheduler.residentList, function() {
                         _CPU.scheduler.readyQueue.enqueue(this);
                     });
 
@@ -334,12 +337,12 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
 
 
                     // Set our active slot in which to base our operations from
-                    _Kernel.processManager.set("activeSlot", process.slot);
+                    _Kernel.memoryManager.set("activeSlot", process.slot);
 
                     // Execute our process
                     _Kernel.processManager.execute(process);
 
-                } else if (_Kernel.processManager.residentList.length > 0 && _StepOver)
+                } else if (_CPU.scheduler.residentList.length > 0 && _StepOver)
                     _StdIn.putText("Please turn off the StepOver command to run all processes");
                 else
                     _StdIn.putText("There are no processes to run!");
@@ -393,6 +396,7 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                 var quantum = parseInt(args[0]);
                 if (args.length > 0 && !isNaN(quantum)) {
                     _CPU.scheduler.set("quantum", quantum);
+                    _StdIn.putText("Scheduling quantum set to: " + quantum);
                 } else {
                     _StdIn.putText("Usage: quantum <int>");
                 }
@@ -405,7 +409,7 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             command: "residentlist",
             description: "- Displays the pids of all active processes",
             behavior: function() {
-                var residentList = _Kernel.processManager.residentList;
+                var residentList = _CPU.scheduler.residentList;
 
                 if (residentList.length) {
                     var processIDs = "";
