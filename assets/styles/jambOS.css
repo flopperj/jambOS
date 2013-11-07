@@ -117,14 +117,44 @@ h1, label{
     color: #000;
 }
 
-#pcbStatus .content table tr.active td{
-    background-color: rgba(131, 85, 27, 0.41)!important;
+#pcbStatus .content table tr.active td,
+#cpuStatus .content table tr.active td{
+    background: rgba(89, 131, 27, 0.41);
     font-weight: bold;
 }
 
-#pcbStatus .content table tbody tr.error td{
+#pcbStatus .content table tbody tr.error td,
+#cpuStatus .content table tbody tr.error td{
     background: rgba(236, 19, 19, 0.41);
     font-weight: bold;
+}
+
+/* process results legend */
+#processResultsLegend, #cpuResultsLegend{
+    display: block;
+    width: 100%;
+    font-weight: strong;
+    border-top: 1px solid #ccc;
+    padding: 10px 0;
+}
+#processResultsLegend .successful-op,
+#processResultsLegend .invalid-op,
+#cpuResultsLegend .successful-op,
+#cpuResultsLegend .invalid-op{
+    display: block;
+    width: 20px;
+    height: 20px;
+    margin: 0 10px;
+}
+
+#processResultsLegend .successful-op,
+#cpuResultsLegend .successful-op{
+    background: rgba(89, 131, 27, 0.41);    
+}
+
+#processResultsLegend .invalid-op,
+#cpuResultsLegend .invalid-op{
+    background: rgba(236, 19, 19, 0.41);  
 }
 
 .card{

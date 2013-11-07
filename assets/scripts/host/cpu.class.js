@@ -162,6 +162,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             // Found that trapping the error would be just too much on the
             // console!
             $("#pcbStatus table tbody tr.active").addClass("error").removeClass("active");
+            
 
         }
 

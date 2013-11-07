@@ -866,7 +866,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             // change background color of active process
             // Found that trapping the error would be just too much on the
             // console!
-            $("#pcbStatus table tbody tr.active").addClass("error").removeClass("active");
+            $("#pcbStatus table tbody tr.active, #cpuStatus table tbody tr").addClass("error").removeClass("active");
 
         }
 
@@ -1282,10 +1282,7 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
 
         // Log our context switch
         _Kernel.trace("Switching Context");
-
-        console.log("Process: " + process.pid + ", state: " + process.state);
-        console.log(_CPU.pc);
-
+        
         // set our process with appropraite values
         process.set({
             pc: _CPU.pc,
