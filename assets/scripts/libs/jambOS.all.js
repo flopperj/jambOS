@@ -842,13 +842,25 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
             if (self.scheduler.get("currentProcess"))
                 self.scheduler.get("currentProcess").set({acc: self.acc, pc: self.pc, xReg: self.xReg, yReg: self.yReg, zFlag: self.zFlag, state: "running"});
+        } else {
 
+            // log invalid opcode
+            _Kernel.trace("Invalid Operation!");
 
-            // Perform a context switch if the ready queue is not empty.
-            // This is where the magic or realtime multi-processing occurs.
-            if (!self.scheduler.readyQueue.isEmpty())
-                self.scheduler.scheduleProcess();
+            // trap the error
+            _Kernel.trapError("Invalid Operation!", false);            
+            
+            // hurry up to next process
+            self.scheduler.processCycles = 5;
+
+            console.log(opCode + " <---- this is invalid!");
+
         }
+
+        // Perform a context switch if the ready queue is not empty.
+        // This is where the magic or realtime multi-processing occurs.
+        if (!self.scheduler.readyQueue.isEmpty())
+            self.scheduler.scheduleProcess();
 
     },
     /*------------------Operations -----------------------*/
@@ -1054,10 +1066,13 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      * opCode: 00
      */
     breakOperation: function(self) {
+
         var lastProcess = self.scheduler.residentList[self.scheduler.residentList.length - 1];
         var currentProcess = self.scheduler.currentProcess;
 
         self.scheduler.currentProcess.state = "terminated";
+
+        console.log(self.scheduler.currentProcess);
 
         // we want to terminate everything
         if (currentProcess.pid === lastProcess.pid)
@@ -1424,7 +1439,7 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
     validateAddress: function(address) {
         var self = this;
         var activeSlot = _CPU.scheduler.get("currentProcess").slot;
-        var isValid = (address <= self.slots[activeSlot].limit && address >= self.slots[activeSlot].base)
+        var isValid = (address <= self.slots[activeSlot].limit && address >= self.slots[activeSlot].base);
         return isValid;
     },
     /**
@@ -3153,6 +3168,9 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                 // Also check whether we want to stepover our process which in 
                 // this case we do not.
                 if (_CPU.scheduler.residentList.length > 0 && !_Stepover) {
+                    
+                    // initialize new ready queue
+                    _CPU.scheduler.readyQueue = new jambOS.OS.ProcessQueue();
 
                     // Loop through our residentList and add them to the readyQueue
                     $.each(_CPU.scheduler.residentList, function() {
@@ -3464,8 +3482,8 @@ jambOS.OS.Kernel = jambOS.util.createClass({
         var self = this;
         _CPU.stop();
 
-        // Do we really want to automatically unload a process?
-//        self.processManager.unload(pcb);
+        // Unload process
+        self.processManager.unload(pcb);
     },
     /**
      * Switches what pracess is to be run next
@@ -3552,6 +3570,7 @@ jambOS.OS.Kernel = jambOS.util.createClass({
         _DrawingContext.fillText("OS ERROR: " + msg, xPos, _Console.currentYPosition);
         _Console.currentXPosition = _Canvas.width;
         _StdIn.advanceLine();
+        _OsShell.putPrompt();
 
         if (killSwitch)
             this.shutdown();

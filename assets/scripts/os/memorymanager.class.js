@@ -110,7 +110,7 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
     validateAddress: function(address) {
         var self = this;
         var activeSlot = _CPU.scheduler.get("currentProcess").slot;
-        var isValid = (address <= self.slots[activeSlot].limit && address >= self.slots[activeSlot].base)
+        var isValid = (address <= self.slots[activeSlot].limit && address >= self.slots[activeSlot].base);
         return isValid;
     },
     /**

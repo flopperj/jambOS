@@ -320,6 +320,9 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                 // Also check whether we want to stepover our process which in 
                 // this case we do not.
                 if (_CPU.scheduler.residentList.length > 0 && !_Stepover) {
+                    
+                    // initialize new ready queue
+                    _CPU.scheduler.readyQueue = new jambOS.OS.ProcessQueue();
 
                     // Loop through our residentList and add them to the readyQueue
                     $.each(_CPU.scheduler.residentList, function() {

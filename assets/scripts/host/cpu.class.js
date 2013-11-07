@@ -142,13 +142,25 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
             if (self.scheduler.get("currentProcess"))
                 self.scheduler.get("currentProcess").set({acc: self.acc, pc: self.pc, xReg: self.xReg, yReg: self.yReg, zFlag: self.zFlag, state: "running"});
+        } else {
 
+            // log invalid opcode
+            _Kernel.trace("Invalid Operation!");
 
-            // Perform a context switch if the ready queue is not empty.
-            // This is where the magic or realtime multi-processing occurs.
-            if (!self.scheduler.readyQueue.isEmpty())
-                self.scheduler.scheduleProcess();
+            // trap the error
+            _Kernel.trapError("Invalid Operation!", false);            
+            
+            // hurry up to next process
+            self.scheduler.processCycles = 5;
+
+            console.log(opCode + " <---- this is invalid!");
+
         }
+
+        // Perform a context switch if the ready queue is not empty.
+        // This is where the magic or realtime multi-processing occurs.
+        if (!self.scheduler.readyQueue.isEmpty())
+            self.scheduler.scheduleProcess();
 
     },
     /*------------------Operations -----------------------*/
@@ -354,10 +366,13 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      * opCode: 00
      */
     breakOperation: function(self) {
+
         var lastProcess = self.scheduler.residentList[self.scheduler.residentList.length - 1];
         var currentProcess = self.scheduler.currentProcess;
 
         self.scheduler.currentProcess.state = "terminated";
+
+        console.log(self.scheduler.currentProcess);
 
         // we want to terminate everything
         if (currentProcess.pid === lastProcess.pid)

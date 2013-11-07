@@ -201,8 +201,8 @@ jambOS.OS.Kernel = jambOS.util.createClass({
         var self = this;
         _CPU.stop();
 
-        // Do we really want to automatically unload a process?
-//        self.processManager.unload(pcb);
+        // Unload process
+        self.processManager.unload(pcb);
     },
     /**
      * Switches what pracess is to be run next
@@ -289,6 +289,7 @@ jambOS.OS.Kernel = jambOS.util.createClass({
         _DrawingContext.fillText("OS ERROR: " + msg, xPos, _Console.currentYPosition);
         _Console.currentXPosition = _Canvas.width;
         _StdIn.advanceLine();
+        _OsShell.putPrompt();
 
         if (killSwitch)
             this.shutdown();
