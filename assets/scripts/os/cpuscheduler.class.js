@@ -75,10 +75,7 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
 
         // Log our context switch
         _Kernel.trace("Switching Context");
-
-        console.log("Process: " + process.pid + ", state: " + process.state);
-        console.log(_CPU.pc);
-
+        
         // set our process with appropraite values
         process.set({
             pc: _CPU.pc,
