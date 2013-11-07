@@ -165,7 +165,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
                                     " + id + "\n\
                                 </td>\n\
                                 <td>\n\
-                                    " + pc + "\n\
+                                    " + (currentProcess.pid === process.pid ? _CPU.pc : pc ) + "\n\
                                 </td>\n\
                                 <td>\n\
                                     " + acc + "\n\

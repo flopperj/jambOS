@@ -1618,7 +1618,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
                                     " + id + "\n\
                                 </td>\n\
                                 <td>\n\
-                                    " + pc + "\n\
+                                    " + (currentProcess.pid === process.pid ? _CPU.pc : pc ) + "\n\
                                 </td>\n\
                                 <td>\n\
                                     " + acc + "\n\
@@ -3464,8 +3464,8 @@ jambOS.OS.Kernel = jambOS.util.createClass({
         var self = this;
         _CPU.stop();
 
-        // unload process
-        self.processManager.unload(pcb);
+        // Do we really want to automatically unload a process?
+//        self.processManager.unload(pcb);
     },
     /**
      * Switches what pracess is to be run next

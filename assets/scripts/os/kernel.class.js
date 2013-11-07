@@ -201,8 +201,8 @@ jambOS.OS.Kernel = jambOS.util.createClass({
         var self = this;
         _CPU.stop();
 
-        // unload process
-        self.processManager.unload(pcb);
+        // Do we really want to automatically unload a process?
+//        self.processManager.unload(pcb);
     },
     /**
      * Switches what pracess is to be run next
