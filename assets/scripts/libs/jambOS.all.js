@@ -866,7 +866,8 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             // change background color of active process
             // Found that trapping the error would be just too much on the
             // console!
-            $("#pcbStatus table tbody tr.active, #cpuStatus table tbody tr").addClass("error").removeClass("active");
+            $("#pcbStatus table tbody tr.active").addClass("error").removeClass("active");
+            
 
         }
 
