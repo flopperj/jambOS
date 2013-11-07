@@ -70,9 +70,10 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         _Kernel.memoryManager.memory.insert(base, program);
 
         var pid = this.currentProcessID++;
+        var pc = base;
         var pcb = new jambOS.OS.ProcessControlBlock({
             pid: pid,
-            pc: 0,
+            pc: pc,
             base: base,
             limit: limit,
             xReg: 0,

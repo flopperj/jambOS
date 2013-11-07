@@ -792,11 +792,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             this.set("state", "terminated");
             self.scheduler.readyQueue.dequeue();
         });
-        var currentProcess = _Kernel.processManager.currentProcess;
-        if (currentProcess) {
-            var nextProcess = self.scheduler.readyQueue.dequeue();
-            self.scheduler.readyQueue.enqueue(nextProcess);
-        }
 
         // disable stepover button
         $("#btnStepOver").prop("disabled", true);
@@ -1046,24 +1041,11 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      */
     breakOperation: function(self) {
         console.log("Terminated!");
-//        var firstProcess = _Kernel.processManager.residentList[0];
-//        var lastProcess = _Kernel.processManager.residentList[ALLOCATABLE_MEMORY_SLOTS - 1];
-//        var previousProcess = _Kernel.processManager.previousProcess;
-//        var currentProcess = _Kernel.processManager.currentProcess;
-//
-//        var processesWithZeroTime = $.grep(_Kernel.processManager.residentList, function(el) {
-//            return el.timeslice === 0;
-//        });
-//        
-//        var hasTerminated = (previousProcess.pid > firstProcess.pid &&
-//                previousProcess.pid < currentProcess.pid &&
-//                currentProcess.pid === lastProcess.pid &&
-//                previousProcess.timeslice === currentProcess.timeslice &&
-//                currentProcess.timeslice === 0);
-//        
-//        console.log(self.scheduler.readyQueue);
-
-        _Kernel.interruptHandler(PROCESS_TERMINATION_IRQ, _Kernel.processManager.get("currentProcess"));
+        var lastProcess = _Kernel.processManager.residentList[_Kernel.processManager.residentList.length - 1];
+        var currentProcess = _Kernel.processManager.currentProcess;
+        _Kernel.processManager.currentProcess.state = "terminated";
+        if (currentProcess.pid === lastProcess.pid)
+            _Kernel.interruptHandler(PROCESS_TERMINATION_IRQ, _Kernel.processManager.get("currentProcess"));
     },
     /**
      * Compare a byte in memory to the X reg sets the Z (zero) flag if equal 
@@ -1242,7 +1224,7 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
      */
     switchContext: function() {
         var self = this;
-        
+
         var process = _Kernel.processManager.currentProcess;
 
         // Log our context switch
@@ -1253,7 +1235,7 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
 
         // set our process with appropraite values
         process.set({
-            pc: _CPU.pc - process.base,
+            pc: _CPU.pc,
             acc: _CPU.acc,
             xReg: _CPU.xReg,
             yReg: _CPU.yReg,
@@ -1273,7 +1255,7 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
         if (nextProcess) {
 
             // Add the current process being passed to the ready queue
-            if (process.state !== "terminated")
+            if (process !== null && process.state !== "terminated")
                 _CPU.scheduler.readyQueue.enqueue(process);
 
             // change our next process state to running
@@ -1289,7 +1271,7 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
             // set the appropraite values of the CPU from our process to continue
             // executing
             _CPU.set({
-                pc: nextProcess.pc + nextProcess.base,
+                pc: nextProcess.pc,
                 acc: nextProcess.acc,
                 xReg: nextProcess.xReg,
                 yReg: nextProcess.yReg,
@@ -1529,9 +1511,10 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         _Kernel.memoryManager.memory.insert(base, program);
 
         var pid = this.currentProcessID++;
+        var pc = base;
         var pcb = new jambOS.OS.ProcessControlBlock({
             pid: pid,
-            pc: 0,
+            pc: pc,
             base: base,
             limit: limit,
             xReg: 0,
