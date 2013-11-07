@@ -57,17 +57,19 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     },
     /**
      * Sets cpu registers ready for process execution
+     * @public
+     * @method start
      * @param {jambOS.OS.ProcessControlBlock} pcb
      */
     start: function(pcb) {
         var self = this;
-        self.scheduler.set({
-            currentProcess: pcb,
-            activeSlot: pcb.slot
-        });
 
-        this.set({
-            pc: pcb.base,
+        // set current process in scheduler
+        self.scheduler.set("currentProcess", pcb);
+
+        // set cpu with process' pc and start execution
+        self.set({
+            pc: pcb.pc,
             isExecuting: true
         });
 
@@ -80,6 +82,8 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     },
     /**
      * Resets cpu registers to default values to help stop process execution
+     * @public
+     * @method stop
      */
     stop: function() {
         var self = this;
@@ -113,6 +117,8 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     },
     /**
      * Called every clock cycle
+     * @public
+     * @method cycle
      */
     cycle: function() {
         var self = this;
@@ -133,9 +139,11 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             _Kernel.trapError("Invalid Operation!", false);
         }
 
+        // get execution operation
         var opCode = _Kernel.memoryManager.memory.read(self.pc++).toString().toLowerCase();
         var operation = self.getOpCode(opCode);
 
+        // execute operation
         if (operation) {
 
             operation(self);
@@ -147,13 +155,13 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             // log invalid opcode
             _Kernel.trace("Invalid Operation!");
 
-            // trap the error
-            _Kernel.trapError("Invalid Operation!", false);            
-            
-            // hurry up to next process
-            self.scheduler.processCycles = 5;
+            // trap the error ?
+//            _Kernel.trapError("Invalid Operation!", false);
 
-            console.log(opCode + " <---- this is invalid!");
+            // change background color of active process
+            // Found that trapping the error would be just too much on the
+            // console!
+            $("#pcbStatus table tbody tr.active").addClass("error").removeClass("active");
 
         }
 
@@ -347,9 +355,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         {
             // Place contents of the memory location in the y register
             self.yReg = parseInt(value, HEX_BASE);
-        } else {
-            // TODO: Halt the OS
-            // TODO: Show error in log
         }
     },
     /**
@@ -364,18 +369,19 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     /**
      * Break (which is really a system call) 
      * opCode: 00
+     * @param {jambOS.host.Cpu} self 
      */
     breakOperation: function(self) {
 
         var lastProcess = self.scheduler.residentList[self.scheduler.residentList.length - 1];
         var currentProcess = self.scheduler.currentProcess;
 
+        // set the current process state to terminated
         self.scheduler.currentProcess.state = "terminated";
 
-        console.log(self.scheduler.currentProcess);
-
-        // we want to terminate everything
-        if (currentProcess.pid === lastProcess.pid)
+        // we want to terminate everything after all processes have been
+        // executed or when we are only executing one process
+        if (currentProcess.pid === lastProcess.pid || self.scheduler.readyQueue.isEmpty())
             _Kernel.interruptHandler(PROCESS_TERMINATION_IRQ, self.scheduler.get("currentProcess"));
     },
     /**
@@ -446,9 +452,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             var hexValue = _Kernel.memoryManager.decimalToHex(decimalValue);
 
             _Kernel.memoryManager.memory.write(address, hexValue);
-        } else {
-            // TODO: Halt the OS
-            // TODO: Show error in log
         }
     },
     /**

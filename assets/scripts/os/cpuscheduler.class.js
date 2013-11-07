@@ -67,7 +67,6 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
      * Switches what pracess is to be run next
      * @public
      * @method switchContext
-     * @param {jambOS.OS.ProcessControlBlock} process 
      */
     switchContext: function() {
         var self = this;

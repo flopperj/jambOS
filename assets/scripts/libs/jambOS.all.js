@@ -435,10 +435,10 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
         });
 
         // load first default program
-//        $("#taProgramInput").val("A9 03 8D 41 00 A9 01 8D 40 00 AC 40 00 A2 01 FF EE 40 00 AE 40 00 EC 41 00 D0 EF A9 44 8D 42 00 A9 4F 8D 43 00 A9 4E 8D 44 00 A9 45 8D 45 00 A9 00 8D 46 00 A2 02 A0 42 FF 00");
+        $("#taProgramInput").val("A9 03 8D 41 00 A9 01 8D 40 00 AC 40 00 A2 01 FF EE 40 00 AE 40 00 EC 41 00 D0 EF A9 44 8D 42 00 A9 4F 8D 43 00 A9 4E 8D 44 00 A9 45 8D 45 00 A9 00 8D 46 00 A2 02 A0 42 FF 00");
 
         // counting program
-        $("#taProgramInput").val("A9 00 8D 00 00 A9 00 8D 4B 00 A9 00 8D 4B 00 A2 09 EC 4B 00 D0 07 A2 01 EC 00 00 D0 05 A2 00 EC 00 00 D0 26 A0 4C A2 02 FF AC 4B 00 A2 01 FF A9 01 6D 4B 00 8D 4B 00 A2 02 EC 4B 00 D0 05 A0 55 A2 02 FF A2 01 EC 00 00 D0 C5 00 00 63 6F 75 6E 74 69 6E 67 00 68 65 6C 6C 6F 20 77 6F 72 6C 64 00");
+//        $("#taProgramInput").val("A9 00 8D 00 00 A9 00 8D 4B 00 A9 00 8D 4B 00 A2 09 EC 4B 00 D0 07 A2 01 EC 00 00 D0 05 A2 00 EC 00 00 D0 26 A0 4C A2 02 FF AC 4B 00 A2 01 FF A9 01 6D 4B 00 8D 4B 00 A2 02 EC 4B 00 D0 05 A0 55 A2 02 FF A2 01 EC 00 00 D0 C5 00 00 63 6F 75 6E 74 69 6E 67 00 68 65 6C 6C 6F 20 77 6F 72 6C 64 00");
 
         // Step over
         $("#btnStepOver").click(function() {
@@ -630,7 +630,7 @@ jambOS.host.Device = jambOS.util.createClass({
  *                             passed to the class
  *==============================================================================
  */
-jambOS.host.Memory = jambOS.util.createClass( /** @scopee jambOS.host.Memory.prototype */{
+jambOS.host.Memory = jambOS.util.createClass(/** @scopee jambOS.host.Memory.prototype */{
     /**
      * @property {int} size             - Size of Memory
      */
@@ -645,12 +645,13 @@ jambOS.host.Memory = jambOS.util.createClass( /** @scopee jambOS.host.Memory.pro
     type: "memory",
     /**
      * Constructor
+     * @public
      * @param {object} options
      * @returns {jambOS.host.Memory}
      */
     initialize: function(options) {
         var self = this;
-    
+
         options || (options = {});
         self.setOptions(options);
 
@@ -658,11 +659,13 @@ jambOS.host.Memory = jambOS.util.createClass( /** @scopee jambOS.host.Memory.pro
         for (var i = 0; i < self.size; i++) {
             self.write(i, 00);
         }
-        
+
         return this;
     },
     /**
      * Reads data from storage
+     * @public
+     * @method read
      * @param {string} address
      * @returns data
      */
@@ -673,6 +676,7 @@ jambOS.host.Memory = jambOS.util.createClass( /** @scopee jambOS.host.Memory.pro
      * Writes to storage
      * 
      * @public
+     * @method write
      * @param {string} address
      * @param {object} data
      */
@@ -683,6 +687,7 @@ jambOS.host.Memory = jambOS.util.createClass( /** @scopee jambOS.host.Memory.pro
      * Inserts data to storage starting from the specified storage address
      * 
      * @public
+     * @method insert
      * @param {int} start starting address point
      * @param {array} data data to add to storage
      */
@@ -693,7 +698,7 @@ jambOS.host.Memory = jambOS.util.createClass( /** @scopee jambOS.host.Memory.pro
         // write to memory
         for (var i = 0; i < data.length; i++) {
             self.write(i + start, data[i]);
-        }        
+        }
 
         _Kernel.memoryManager.updateMemoryDisplay();
     }
@@ -757,17 +762,19 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     },
     /**
      * Sets cpu registers ready for process execution
+     * @public
+     * @method start
      * @param {jambOS.OS.ProcessControlBlock} pcb
      */
     start: function(pcb) {
         var self = this;
-        self.scheduler.set({
-            currentProcess: pcb,
-            activeSlot: pcb.slot
-        });
 
-        this.set({
-            pc: pcb.base,
+        // set current process in scheduler
+        self.scheduler.set("currentProcess", pcb);
+
+        // set cpu with process' pc and start execution
+        self.set({
+            pc: pcb.pc,
             isExecuting: true
         });
 
@@ -780,6 +787,8 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     },
     /**
      * Resets cpu registers to default values to help stop process execution
+     * @public
+     * @method stop
      */
     stop: function() {
         var self = this;
@@ -813,6 +822,8 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     },
     /**
      * Called every clock cycle
+     * @public
+     * @method cycle
      */
     cycle: function() {
         var self = this;
@@ -833,9 +844,11 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             _Kernel.trapError("Invalid Operation!", false);
         }
 
+        // get execution operation
         var opCode = _Kernel.memoryManager.memory.read(self.pc++).toString().toLowerCase();
         var operation = self.getOpCode(opCode);
 
+        // execute operation
         if (operation) {
 
             operation(self);
@@ -847,13 +860,13 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             // log invalid opcode
             _Kernel.trace("Invalid Operation!");
 
-            // trap the error
-            _Kernel.trapError("Invalid Operation!", false);            
-            
-            // hurry up to next process
-            self.scheduler.processCycles = 5;
+            // trap the error ?
+//            _Kernel.trapError("Invalid Operation!", false);
 
-            console.log(opCode + " <---- this is invalid!");
+            // change background color of active process
+            // Found that trapping the error would be just too much on the
+            // console!
+            $("#pcbStatus table tbody tr.active").addClass("error").removeClass("active");
 
         }
 
@@ -1047,9 +1060,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         {
             // Place contents of the memory location in the y register
             self.yReg = parseInt(value, HEX_BASE);
-        } else {
-            // TODO: Halt the OS
-            // TODO: Show error in log
         }
     },
     /**
@@ -1064,18 +1074,19 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     /**
      * Break (which is really a system call) 
      * opCode: 00
+     * @param {jambOS.host.Cpu} self 
      */
     breakOperation: function(self) {
 
         var lastProcess = self.scheduler.residentList[self.scheduler.residentList.length - 1];
         var currentProcess = self.scheduler.currentProcess;
 
+        // set the current process state to terminated
         self.scheduler.currentProcess.state = "terminated";
 
-        console.log(self.scheduler.currentProcess);
-
-        // we want to terminate everything
-        if (currentProcess.pid === lastProcess.pid)
+        // we want to terminate everything after all processes have been
+        // executed or when we are only executing one process
+        if (currentProcess.pid === lastProcess.pid || self.scheduler.readyQueue.isEmpty())
             _Kernel.interruptHandler(PROCESS_TERMINATION_IRQ, self.scheduler.get("currentProcess"));
     },
     /**
@@ -1146,9 +1157,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             var hexValue = _Kernel.memoryManager.decimalToHex(decimalValue);
 
             _Kernel.memoryManager.memory.write(address, hexValue);
-        } else {
-            // TODO: Halt the OS
-            // TODO: Show error in log
         }
     },
     /**
@@ -1266,7 +1274,6 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
      * Switches what pracess is to be run next
      * @public
      * @method switchContext
-     * @param {jambOS.OS.ProcessControlBlock} process 
      */
     switchContext: function() {
         var self = this;
@@ -1444,6 +1451,7 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
     },
     /**
      * Updates content that is on memory for display on the OS 
+     * @public
      * @method updateDisplay
      */
     updateMemoryDisplay: function() {
@@ -1493,6 +1501,9 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
  *==============================================================================
  */
 jambOS.OS.ProcessManager = jambOS.util.createClass({
+    /**
+     * @property {string} type
+     */
     type: "processmanager",
     /**
      * Constructor
@@ -1532,9 +1543,11 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         else
             return _Kernel.trapError("Insufficient Memory!", false);
 
+        // get our base and limit addresses
         var base = slots[activeSlot].base;
         var limit = slots[activeSlot].limit;
 
+        // write program to memory slots
         _Kernel.memoryManager.memory.insert(base, program);
 
         var pid = _CPU.scheduler.currentProcessID++;
@@ -2228,10 +2241,6 @@ jambOS.OS.DeviceDriverKeyboard = jambOS.util.createClass(jambOS.OS.DeviceDriver,
         if (!valid) {
             // throw an error but do not kill the OS
             _Kernel.trapError("Oh bummer, I wish I could have had some use for that key! :(", false);
-
-            // move to new line
-            _Console.advanceLine();
-            _StdIn.putText(">");
         }
 
 

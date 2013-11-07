@@ -115,6 +115,7 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
     },
     /**
      * Updates content that is on memory for display on the OS 
+     * @public
      * @method updateDisplay
      */
     updateMemoryDisplay: function() {

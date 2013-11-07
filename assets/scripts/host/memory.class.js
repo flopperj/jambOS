@@ -8,7 +8,7 @@
  *                             passed to the class
  *==============================================================================
  */
-jambOS.host.Memory = jambOS.util.createClass( /** @scopee jambOS.host.Memory.prototype */{
+jambOS.host.Memory = jambOS.util.createClass(/** @scopee jambOS.host.Memory.prototype */{
     /**
      * @property {int} size             - Size of Memory
      */
@@ -23,12 +23,13 @@ jambOS.host.Memory = jambOS.util.createClass( /** @scopee jambOS.host.Memory.pro
     type: "memory",
     /**
      * Constructor
+     * @public
      * @param {object} options
      * @returns {jambOS.host.Memory}
      */
     initialize: function(options) {
         var self = this;
-    
+
         options || (options = {});
         self.setOptions(options);
 
@@ -36,11 +37,13 @@ jambOS.host.Memory = jambOS.util.createClass( /** @scopee jambOS.host.Memory.pro
         for (var i = 0; i < self.size; i++) {
             self.write(i, 00);
         }
-        
+
         return this;
     },
     /**
      * Reads data from storage
+     * @public
+     * @method read
      * @param {string} address
      * @returns data
      */
@@ -51,6 +54,7 @@ jambOS.host.Memory = jambOS.util.createClass( /** @scopee jambOS.host.Memory.pro
      * Writes to storage
      * 
      * @public
+     * @method write
      * @param {string} address
      * @param {object} data
      */
@@ -61,6 +65,7 @@ jambOS.host.Memory = jambOS.util.createClass( /** @scopee jambOS.host.Memory.pro
      * Inserts data to storage starting from the specified storage address
      * 
      * @public
+     * @method insert
      * @param {int} start starting address point
      * @param {array} data data to add to storage
      */
@@ -71,7 +76,7 @@ jambOS.host.Memory = jambOS.util.createClass( /** @scopee jambOS.host.Memory.pro
         // write to memory
         for (var i = 0; i < data.length; i++) {
             self.write(i + start, data[i]);
-        }        
+        }
 
         _Kernel.memoryManager.updateMemoryDisplay();
     }

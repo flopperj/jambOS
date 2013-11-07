@@ -9,6 +9,9 @@
  *==============================================================================
  */
 jambOS.OS.ProcessManager = jambOS.util.createClass({
+    /**
+     * @property {string} type
+     */
     type: "processmanager",
     /**
      * Constructor
@@ -48,9 +51,11 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         else
             return _Kernel.trapError("Insufficient Memory!", false);
 
+        // get our base and limit addresses
         var base = slots[activeSlot].base;
         var limit = slots[activeSlot].limit;
 
+        // write program to memory slots
         _Kernel.memoryManager.memory.insert(base, program);
 
         var pid = _CPU.scheduler.currentProcessID++;
