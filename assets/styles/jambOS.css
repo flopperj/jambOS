@@ -31,6 +31,7 @@ body {
     -webkit-box-shadow: 0 3px 0 rgba(0, 0, 0, 0.1);
     border: 13px solid #ffffff;
     position: relative;
+    height: 540px;
 }
 
 #divConsole .canvas{
@@ -110,7 +111,7 @@ h1, label{
 
 #cpuStatus .content, #pcbStatus .content{
     background-color: #fff;
-    min-height: 195px;
+    min-height: 253px;
 }
 
 #analysisTabs li a{
@@ -136,6 +137,8 @@ h1, label{
     font-weight: strong;
     border-top: 1px solid #ccc;
     padding: 10px 0;
+    position: relative;
+    bottom: 0;
 }
 #processResultsLegend .successful-op,
 #processResultsLegend .invalid-op,
