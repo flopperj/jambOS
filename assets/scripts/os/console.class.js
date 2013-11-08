@@ -66,8 +66,15 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
             date = new Date();
             var clearWidth = 165;
             var clearHeight = 20;
-            _TaskbarContext.clearRect(date_xpos, 0, clearWidth, clearHeight);
-            _TaskbarContext.fillText(date.toLocaleString(), date_xpos, date_ypos);
+
+            // only readraw when OS is running
+            if (_IsOSRunning) {
+                _TaskbarContext.clearRect(date_xpos, 0, clearWidth, clearHeight);
+                _TaskbarContext.fillText(date.toLocaleString(), date_xpos, date_ypos);
+            } else {
+                _TaskbarContext.clearRect(status_xpos, 0, 400, 20);
+                _TaskbarContext.fillText("Status: OS has halted", status_xpos, status_ypos);
+            }
         }, 1000);
     },
     /**
@@ -168,21 +175,22 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
             // clear blinker before drawing character
             this.clearBlinker();
 
-            var offset = _DrawingContext.measureText(this.currentFont, this.currentFontSize, text);
+            // Draw the text at the current X and Y coordinates.
+            _DrawingContext.drawText(this.currentFont, this.currentFontSize, this.currentXPosition, this.currentYPosition, text);
 
             // handle wrapping of text
-            if (this.currentXPosition > _Canvas.width - offset) {
+            if (this.currentXPosition > _Canvas.width) {
                 this.lastXPosition = this.currentXPosition;
                 this.lastYPosition = this.currentYPosition;
                 this.linesAdvanced += 1;
                 this.advanceLine();
+            } else {
+
+                var offset = _DrawingContext.measureText(this.currentFont, this.currentFontSize, text);
+
+                // Move the current X position.
+                this.currentXPosition += offset;
             }
-
-            // Draw the text at the current X and Y coordinates.
-            _DrawingContext.drawText(this.currentFont, this.currentFontSize, this.currentXPosition, this.currentYPosition, text);
-
-            // Move the current X position.
-            this.currentXPosition += offset;
         }
 
         // reset our isTyping variable so that we can show our cursor
@@ -197,7 +205,7 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
 
         // clear blinker before we get screenshot of canvas
         this.clearBlinker();
-        
+
         // get our prompt offset that way we can make sure we are within the editable bounds
         var promptOffset = _DrawingContext.measureText(this.currentFont, this.currentFontSize, ">");
         this.currentXPosition = 0;

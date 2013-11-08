@@ -135,6 +135,9 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
      */
     startOS: function(btn)
     {
+        // our os should be running now
+        _IsOSRunning = true;
+
         // Disable the start button...
         btn.prop("disabled", true);
 
@@ -166,6 +169,10 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
         _Kernel.shutdown();
         // Stop the JavaScript interval that's simulating our clock pulse.
         clearInterval(_hardwareClockID);
+
+        // Reset is running back to false
+        _IsOSRunning = false;
+
         // TODO: Is there anything else we need to do here?
     },
     /**

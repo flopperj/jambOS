@@ -46,6 +46,10 @@ var MEMORY_BLOCK_SIZE = 256;
 var ALLOCATABLE_MEMORY_SLOTS = 3;
 var HEX_BASE = 16;
 
+// modes
+KERNEL_MODE = 0;
+USER_MODE = 1;
+
 //
 // Global Variables
 //
@@ -53,7 +57,8 @@ var _CPU = null;
 
 var _OSclock = 0;       // Page 23.
 
-var _Mode = 0;   // 0 = Kernel Mode, 1 = User Mode.  See page 21.
+var _Mode = KERNEL_MODE;   // 0 = Kernel Mode, 1 = User Mode.  See page 21.
+var _IsOSRunning = false;
 
 var _Canvas = null;               // Initialized in hostInit().
 var _TaskbarCanvas = null;        // Initialized in hostInit().
@@ -486,6 +491,9 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
      */
     startOS: function(btn)
     {
+        // our os should be running now
+        _IsOSRunning = true;
+        
         // Disable the start button...
         btn.prop("disabled", true);
 
@@ -517,6 +525,10 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
         _Kernel.shutdown();
         // Stop the JavaScript interval that's simulating our clock pulse.
         clearInterval(_hardwareClockID);
+        
+        // Reset is running back to false
+        _IsOSRunning = false;
+        
         // TODO: Is there anything else we need to do here?
     },
     /**
@@ -1978,8 +1990,15 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
             date = new Date();
             var clearWidth = 165;
             var clearHeight = 20;
-            _TaskbarContext.clearRect(date_xpos, 0, clearWidth, clearHeight);
-            _TaskbarContext.fillText(date.toLocaleString(), date_xpos, date_ypos);
+
+            // only readraw when OS is running
+            if (_IsOSRunning) {
+                _TaskbarContext.clearRect(date_xpos, 0, clearWidth, clearHeight);
+                _TaskbarContext.fillText(date.toLocaleString(), date_xpos, date_ypos);
+            } else {
+                    _TaskbarContext.clearRect(status_xpos, 0, 400, 20);
+                _TaskbarContext.fillText("Status: OS has halted", status_xpos, status_ypos);
+            }
         }, 1000);
     },
     /**
@@ -2080,21 +2099,22 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
             // clear blinker before drawing character
             this.clearBlinker();
 
-            var offset = _DrawingContext.measureText(this.currentFont, this.currentFontSize, text);
+            // Draw the text at the current X and Y coordinates.
+            _DrawingContext.drawText(this.currentFont, this.currentFontSize, this.currentXPosition, this.currentYPosition, text);
 
             // handle wrapping of text
-            if (this.currentXPosition > _Canvas.width - offset) {
+            if (this.currentXPosition > _Canvas.width) {
                 this.lastXPosition = this.currentXPosition;
                 this.lastYPosition = this.currentYPosition;
                 this.linesAdvanced += 1;
                 this.advanceLine();
+            } else {
+
+                var offset = _DrawingContext.measureText(this.currentFont, this.currentFontSize, text);
+
+                // Move the current X position.
+                this.currentXPosition += offset;
             }
-
-            // Draw the text at the current X and Y coordinates.
-            _DrawingContext.drawText(this.currentFont, this.currentFontSize, this.currentXPosition, this.currentYPosition, text);
-
-            // Move the current X position.
-            this.currentXPosition += offset;
         }
 
         // reset our isTyping variable so that we can show our cursor
@@ -2109,7 +2129,7 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
 
         // clear blinker before we get screenshot of canvas
         this.clearBlinker();
-        
+
         // get our prompt offset that way we can make sure we are within the editable bounds
         var promptOffset = _DrawingContext.measureText(this.currentFont, this.currentFontSize, ">");
         this.currentXPosition = 0;
@@ -3382,7 +3402,7 @@ jambOS.OS.Kernel = jambOS.util.createClass({
         // TODO: Check for running processes.  Alert if there are some, alert and stop.  Else...    
         // ... Disable the Interrupts.
         this.trace("Disabling the interrupts.");
-        this.disableInterupts();
+        this.disableInterupts();        
         // 
         // Unload the Device Drivers?
         // More?

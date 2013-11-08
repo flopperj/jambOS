@@ -46,6 +46,10 @@ var MEMORY_BLOCK_SIZE = 256;
 var ALLOCATABLE_MEMORY_SLOTS = 3;
 var HEX_BASE = 16;
 
+// modes
+KERNEL_MODE = 0;
+USER_MODE = 1;
+
 //
 // Global Variables
 //
@@ -53,7 +57,8 @@ var _CPU = null;
 
 var _OSclock = 0;       // Page 23.
 
-var _Mode = 0;   // 0 = Kernel Mode, 1 = User Mode.  See page 21.
+var _Mode = KERNEL_MODE;   // 0 = Kernel Mode, 1 = User Mode.  See page 21.
+var _IsOSRunning = false;
 
 var _Canvas = null;               // Initialized in hostInit().
 var _TaskbarCanvas = null;        // Initialized in hostInit().
