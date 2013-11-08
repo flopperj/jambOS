@@ -880,15 +880,15 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             $(".operation").removeClass("currentOperation");
             $(".address_" + (self.pc - 1)).addClass("currentOperation").addClass("inValidOperation");
 
-            // trap the error ?
-//            _Kernel.trapError("Invalid Operation!", false);
-
             // change background color of active process
             // Found that trapping the error would be just too much on the
             // console!
             $("#pcbStatus table tbody tr.active").addClass("error").removeClass("active");
 
-
+            // Set process cycle 1 tick close to the quantum so that we can Whiz 
+            // through and get to the next process as quick as posible during
+            // the context switch
+            self.scheduler.processCycles = self.scheduler.quantum - 1;
         }
 
         // Perform a context switch if the ready queue is not empty.
