@@ -126,9 +126,9 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
             if (i % 8 === 0) {
                 table += "</tr><tr class='" + (self.memory.read(i) !== 0 ? "has-value" : "") + "'>";
                 table += "<td>0x" + self.decimalToHex(i, 4) + "</td>";
-                table += "<td>" + self.memory.read(i) + "</td>";
+                table += "<td class='operation operation_" + self.memory.read(i) + " address_" + i + "'>" + self.memory.read(i) + "</td>";
             } else
-                table += "<td>" + self.memory.read(i) + "</td>";
+                table += "<td class='operation operation_" + self.memory.read(i) + " address_" + i + "'>" + self.memory.read(i) + "</td>";
             i++;
         }
         table += "</table>";

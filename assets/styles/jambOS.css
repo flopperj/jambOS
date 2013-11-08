@@ -167,3 +167,13 @@ h1, label{
     border: 13px solid #ffffff;
 
 }
+.currentOperation{
+    background: aliceblue !important;
+}
+.validOperation{
+    background: rgba(89, 131, 27, 0.41);
+}
+
+.inValidOperation{
+    background: rgba(236, 19, 19, 0.41); 
+}

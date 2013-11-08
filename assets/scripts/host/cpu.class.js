@@ -146,6 +146,10 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         // execute operation
         if (operation) {
 
+            // highlight all the valid operations as we step through them
+            $(".operation").removeClass("currentOperation");
+            $(".address_" + (self.pc - 1)).addClass("currentOperation").addClass("validOperation");
+
             operation(self);
 
             if (self.scheduler.get("currentProcess"))
@@ -155,6 +159,10 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             // log invalid opcode
             _Kernel.trace("Invalid Operation!");
 
+            // highlight all invalid operations as we step through them
+            $(".operation").removeClass("currentOperation");
+            $(".address_" + (self.pc - 1)).addClass("currentOperation").addClass("inValidOperation");
+
             // trap the error ?
 //            _Kernel.trapError("Invalid Operation!", false);
 
@@ -162,7 +170,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             // Found that trapping the error would be just too much on the
             // console!
             $("#pcbStatus table tbody tr.active").addClass("error").removeClass("active");
-            
+
 
         }
 

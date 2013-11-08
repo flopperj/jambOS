@@ -493,7 +493,7 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
     {
         // our os should be running now
         _IsOSRunning = true;
-        
+
         // Disable the start button...
         btn.prop("disabled", true);
 
@@ -525,10 +525,10 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
         _Kernel.shutdown();
         // Stop the JavaScript interval that's simulating our clock pulse.
         clearInterval(_hardwareClockID);
-        
+
         // Reset is running back to false
         _IsOSRunning = false;
-        
+
         // TODO: Is there anything else we need to do here?
     },
     /**
@@ -863,6 +863,10 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         // execute operation
         if (operation) {
 
+            // highlight all the valid operations as we step through them
+            $(".operation").removeClass("currentOperation");
+            $(".address_" + (self.pc - 1)).addClass("currentOperation").addClass("validOperation");
+
             operation(self);
 
             if (self.scheduler.get("currentProcess"))
@@ -872,6 +876,10 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             // log invalid opcode
             _Kernel.trace("Invalid Operation!");
 
+            // highlight all invalid operations as we step through them
+            $(".operation").removeClass("currentOperation");
+            $(".address_" + (self.pc - 1)).addClass("currentOperation").addClass("inValidOperation");
+
             // trap the error ?
 //            _Kernel.trapError("Invalid Operation!", false);
 
@@ -879,7 +887,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             // Found that trapping the error would be just too much on the
             // console!
             $("#pcbStatus table tbody tr.active").addClass("error").removeClass("active");
-            
+
 
         }
 
@@ -1472,9 +1480,9 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
             if (i % 8 === 0) {
                 table += "</tr><tr class='" + (self.memory.read(i) !== 0 ? "has-value" : "") + "'>";
                 table += "<td>0x" + self.decimalToHex(i, 4) + "</td>";
-                table += "<td>" + self.memory.read(i) + "</td>";
+                table += "<td class='operation operation_" + self.memory.read(i) + " address_" + i + "'>" + self.memory.read(i) + "</td>";
             } else
-                table += "<td>" + self.memory.read(i) + "</td>";
+                table += "<td class='operation operation_" + self.memory.read(i) + " address_" + i + "'>" + self.memory.read(i) + "</td>";
             i++;
         }
         table += "</table>";
@@ -1996,7 +2004,7 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
                 _TaskbarContext.clearRect(date_xpos, 0, clearWidth, clearHeight);
                 _TaskbarContext.fillText(date.toLocaleString(), date_xpos, date_ypos);
             } else {
-                    _TaskbarContext.clearRect(status_xpos, 0, 400, 20);
+                _TaskbarContext.clearRect(status_xpos, 0, 400, 20);
                 _TaskbarContext.fillText("Status: OS has halted", status_xpos, status_ypos);
             }
         }, 1000);
@@ -3402,7 +3410,7 @@ jambOS.OS.Kernel = jambOS.util.createClass({
         // TODO: Check for running processes.  Alert if there are some, alert and stop.  Else...    
         // ... Disable the Interrupts.
         this.trace("Disabling the interrupts.");
-        this.disableInterupts();        
+        this.disableInterupts();
         // 
         // Unload the Device Drivers?
         // More?
