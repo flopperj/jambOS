@@ -102,7 +102,7 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
         });
 
         // OSX scroll bars
-        $('.card, #divConsole .canvas').lionbars({
+        $('.card, #divConsole .canvas, #taLog').lionbars({
             autohide: true
         });
     },
