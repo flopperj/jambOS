@@ -100,6 +100,11 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
             e.preventDefault();
             $(this).tab('show');
         });
+
+        // OSX scroll bars
+        $('.card, #divConsole .canvas').lionbars({
+            autohide: true
+        });
     },
     /**
      * Helps keep a the log textarea updated
