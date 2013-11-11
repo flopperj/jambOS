@@ -233,7 +233,7 @@ jambOS.OS.Console = jambOS.util.createClass(/** @scope jambOS.OS.Console.prototy
             _DrawingContext.putImageData(canvasData, 0, 0);
 
             // scroll to the bottom
-            var consoleDiv = $("#divConsole .canvas, #divConsole .lb-content");
+            var consoleDiv = $("#divConsole .canvas");
             consoleDiv.scrollTop(consoleDiv.find("canvas").height());
         }
     }
