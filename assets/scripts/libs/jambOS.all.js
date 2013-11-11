@@ -452,7 +452,7 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
         });
 
         // control register analysis tabs
-        $('#analysisTabs li a').click(function(e) {
+        $('#registerAnalysisTabs li a, #memoryAnalysisTabs li a').click(function(e) {
             e.preventDefault();
             $(this).tab('show');
         });

@@ -87,9 +87,25 @@
                         </div>
 
 
-                        <div id="memory">
-                            <label>Memory</label>
-                            <div class="card content"></div>
+                        <!-- Memory -->
+                        <div id="memoryAnalysis">
+                            <ul class="nav nav-tabs" id="memoryAnalysisTabs">
+                                <li class="active"><a href="#memory">Memory Partitions</a></li>
+                                <li><a href="#harddrive">Hard Drive</a></li>
+                            </ul>
+
+                            <div class="tab-content">
+                                <!-- Memory -->
+                                <div class="tab-pane active" id="memory">
+                                    <div class="card content"></div>
+                                </div>
+
+                                <!-- Hard Drive -->
+                                <div class="tab-pane" id="harddrive">
+                                    <div class="card content"></div>
+                                </div>
+
+                            </div>
 
                         </div>
 
@@ -98,7 +114,7 @@
                         <!-- Register Analysis -->
                         <div id="registerAnalysis">
 
-                            <ul class="nav nav-tabs" id="analysisTabs">
+                            <ul class="nav nav-tabs" id="registerAnalysisTabs">
                                 <li class="active"><a href="#pcbStatus">Process Results</a></li>
                                 <li><a href="#cpuStatus">CPU Analysis</a></li>
                             </ul>

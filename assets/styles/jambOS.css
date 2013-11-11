@@ -86,9 +86,6 @@ h1, label{
     margin-top: 20px;
 }
 
-#memory{
-    margin-top: 20px;
-}
 #memory .content{
     background-color: #DFDBC3;
     height: 200px;
@@ -105,16 +102,22 @@ h1, label{
     border: 1px solid #000;
 }
 
-#registerAnalysis{
+#registerAnalysis, #memoryAnalysis{
     margin-top: 20px;
 }
 
-#cpuStatus .content, #pcbStatus .content{
+#cpuStatus .content, 
+#pcbStatus .content,
+#harddrive .content,
+#memory .conent{
     background-color: #fff;
-    min-height: 253px;
+    min-height: 200px;
 }
-
-#analysisTabs li a{
+#cpuStatus .content, 
+#pcbStatus .content{
+    height: 237px;
+}
+#registerAnalysisTabs li a, #memoryAnalysisTabs li a{
     color: #000;
 }
 
