@@ -142,6 +142,8 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         // get execution operation
         var opCode = _Kernel.memoryManager.memory.read(self.pc++).toString().toLowerCase();
         var operation = self.getOpCode(opCode);
+        
+        console.log(opCode);
 
         // execute operation
         if (operation) {
@@ -236,9 +238,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         if (_Kernel.memoryManager.validateAddress(address))
         {
             self.acc = parseInt(value, HEX_BASE);
-        } else {
-            // TODO: Halt the OS
-            // TODO: Show error in log
         }
     },
     /**
@@ -264,9 +263,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
             // Place value of acc in hex byte form in memory
             _Kernel.memoryManager.memory.write(address, hexValue);
-        } else {
-            // TODO: Halt the OS
-            // TODO: Show error in log
         }
     },
     /**
@@ -292,9 +288,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         {
             // Add contents of the memory location and the contents of the acc
             self.acc += parseInt(value, HEX_BASE);
-        } else {
-            // TODO: Halt the OS
-            // TODO: Show error in log
         }
     },
     /**
@@ -328,9 +321,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         {
             // Place contents of the memory location (in decimal form) in the x register
             self.xReg = parseInt(value, HEX_BASE);
-        } else {
-            // TODO: Halt the OS
-            // TODO: Show error in log
         }
     },
     /**
@@ -342,6 +332,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     {
         // Place the next byte in memory in the Y register
         self.yReg = _Kernel.memoryManager.memory.read(self.pc++);
+            console.log(self.yReg + " <------y Register");
     },
     /**
      * Load the Y register from memory 
@@ -415,9 +406,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             // Compare contents of the memory location with the x reg
             // Set z flag if they are equal
             self.zFlag = (parseInt(value) === self.xReg) ? 1 : 0;
-        } else {
-            // TODO: Halt the OS
-            // TODO: Show error in log
         }
     },
     /**
@@ -436,7 +424,8 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             {
                 self.pc -= MEMORY_BLOCK_SIZE;
             }
-        }
+        }else
+            self.pc++;
     },
     /**
      * Increment the value of a byte 
@@ -493,18 +482,21 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             var currentByte = _Kernel.memoryManager.memory.read(address);
 
             var character = "";
+            var keyCode = 0;
 
             while (currentByte !== "00")
             {
                 currentByte = _Kernel.memoryManager.memory.read(address++);
-                character = String.fromCharCode(parseInt(currentByte, HEX_BASE));
+                keyCode = parseInt(currentByte, HEX_BASE);
+
+                
+                character = String.fromCharCode(keyCode);
                 _StdIn.putText(character);
             }
 
             _StdIn.advanceLine();
             _OsShell.putPrompt();
         }
-
     }
 });
 

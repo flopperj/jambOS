@@ -71,11 +71,11 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
     switchContext: function() {
         var self = this;
 
-        var process = self.currentProcess;
+        var process = self.get("currentProcess");
 
         // Log our context switch
         _Kernel.trace("Switching Context");
-        
+
         // set our process with appropraite values
         process.set({
             pc: _CPU.pc,
@@ -83,7 +83,7 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
             xReg: _CPU.xReg,
             yReg: _CPU.yReg,
             zFlag: _CPU.zFlag,
-            state: process.state !== "terminated" ? "waiting" : process.state
+            state: process.state !== "terminated" ? "ready" : process.state
         });
 
         // get the next process to execute from ready queue

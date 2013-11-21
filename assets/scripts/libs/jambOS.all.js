@@ -439,12 +439,15 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
             self.resetOS($(this));
         });
 
-        // load first default program
-        $("#taProgramInput").val("A9 03 8D 41 00 A9 01 8D 40 00 AC 40 00 A2 01 FF EE 40 00 AE 40 00 EC 41 00 D0 EF A9 44 8D 42 00 A9 4F 8D 43 00 A9 4E 8D 44 00 A9 45 8D 45 00 A9 00 8D 46 00 A2 02 A0 42 FF 00");
+        // program 1
+//        $("#taProgramInput").val("A9 03 8D 41 00 A9 01 8D 40 00 AC 40 00 A2 01 FF EE 40 00 AE 40 00 EC 41 00 D0 EF A9 44 8D 42 00 A9 4F 8D 43 00 A9 4E 8D 44 00 A9 45 8D 45 00 A9 00 8D 46 00 A2 02 A0 42 FF 00");
 
-        // counting program
+        // program 2
 //        $("#taProgramInput").val("A9 00 8D 00 00 A9 00 8D 4B 00 A9 00 8D 4B 00 A2 09 EC 4B 00 D0 07 A2 01 EC 00 00 D0 05 A2 00 EC 00 00 D0 26 A0 4C A2 02 FF AC 4B 00 A2 01 FF A9 01 6D 4B 00 8D 4B 00 A2 02 EC 4B 00 D0 05 A0 55 A2 02 FF A2 01 EC 00 00 D0 C5 00 00 63 6F 75 6E 74 69 6E 67 00 68 65 6C 6C 6F 20 77 6F 72 6C 64 00");
-
+    
+        // program 3
+        $("#taProgramInput").val("A9 00 8D 7B 00 A9 00 8D 7B 00 A9 00 8D 7C 00 A9 00 8D 7C 00 A9 01 8D 7A 00 A2 00 EC 7A 00 D0 39 A0 7D A2 02 FF AC 7B 00 A2 01 FF AD 7B 00 8D 7A 00 A9 01 6D 7A 00 8D 7B 00 A9 09 AE 7B 00 8D 7A 00 A9 00 EC 7A 00 D0 02 A9 01 8D 7A 00 A2 01 EC 7A 00 D0 05 A9 01 8D 7C 00 A9 00 AE 7C 00 8D 7A 00 A9 00 EC 7A 00 D0 02 A9 01 8D 7A 00 A2 00 EC 7A 00 D0 AC A0 7F A2 02 FF 00 00 00 00 63 00 63 64 6F 6E 65 00");
+        
         // Step over
         $("#btnStepOver").click(function() {
             if (_CPU)
@@ -859,6 +862,8 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         // get execution operation
         var opCode = _Kernel.memoryManager.memory.read(self.pc++).toString().toLowerCase();
         var operation = self.getOpCode(opCode);
+        
+        console.log(opCode);
 
         // execute operation
         if (operation) {
@@ -953,9 +958,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         if (_Kernel.memoryManager.validateAddress(address))
         {
             self.acc = parseInt(value, HEX_BASE);
-        } else {
-            // TODO: Halt the OS
-            // TODO: Show error in log
         }
     },
     /**
@@ -981,9 +983,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
             // Place value of acc in hex byte form in memory
             _Kernel.memoryManager.memory.write(address, hexValue);
-        } else {
-            // TODO: Halt the OS
-            // TODO: Show error in log
         }
     },
     /**
@@ -1009,9 +1008,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         {
             // Add contents of the memory location and the contents of the acc
             self.acc += parseInt(value, HEX_BASE);
-        } else {
-            // TODO: Halt the OS
-            // TODO: Show error in log
         }
     },
     /**
@@ -1045,9 +1041,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         {
             // Place contents of the memory location (in decimal form) in the x register
             self.xReg = parseInt(value, HEX_BASE);
-        } else {
-            // TODO: Halt the OS
-            // TODO: Show error in log
         }
     },
     /**
@@ -1059,6 +1052,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     {
         // Place the next byte in memory in the Y register
         self.yReg = _Kernel.memoryManager.memory.read(self.pc++);
+            console.log(self.yReg + " <------y Register");
     },
     /**
      * Load the Y register from memory 
@@ -1132,9 +1126,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             // Compare contents of the memory location with the x reg
             // Set z flag if they are equal
             self.zFlag = (parseInt(value) === self.xReg) ? 1 : 0;
-        } else {
-            // TODO: Halt the OS
-            // TODO: Show error in log
         }
     },
     /**
@@ -1153,7 +1144,8 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             {
                 self.pc -= MEMORY_BLOCK_SIZE;
             }
-        }
+        }else
+            self.pc++;
     },
     /**
      * Increment the value of a byte 
@@ -1210,18 +1202,21 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             var currentByte = _Kernel.memoryManager.memory.read(address);
 
             var character = "";
+            var keyCode = 0;
 
             while (currentByte !== "00")
             {
                 currentByte = _Kernel.memoryManager.memory.read(address++);
-                character = String.fromCharCode(parseInt(currentByte, HEX_BASE));
+                keyCode = parseInt(currentByte, HEX_BASE);
+
+                
+                character = String.fromCharCode(keyCode);
                 _StdIn.putText(character);
             }
 
             _StdIn.advanceLine();
             _OsShell.putPrompt();
         }
-
     }
 });
 
@@ -1299,11 +1294,11 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
     switchContext: function() {
         var self = this;
 
-        var process = self.currentProcess;
+        var process = self.get("currentProcess");
 
         // Log our context switch
         _Kernel.trace("Switching Context");
-        
+
         // set our process with appropraite values
         process.set({
             pc: _CPU.pc,
@@ -1311,7 +1306,7 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
             xReg: _CPU.xReg,
             yReg: _CPU.yReg,
             zFlag: _CPU.zFlag,
-            state: process.state !== "terminated" ? "waiting" : process.state
+            state: process.state !== "terminated" ? "ready" : process.state
         });
 
         // get the next process to execute from ready queue
@@ -1658,6 +1653,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
             var xReg = process.xReg;
             var yReg = parseInt(process.yReg, 16);
             var zFlag = process.zFlag;
+            var status = process.state;
 
             tableRows += "<tr class='" + (currentProcess.pid === process.pid ? "active" : "") + "'>\n\
                                 <td>\n\
@@ -1677,6 +1673,9 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
                                 </td>\n\
                                 <td>\n\
                                     " + zFlag + "\n\
+                                </td>\n\
+                                <td>\n\
+                                    " + status + "\n\
                                 </td>\n\
                               </tr>";
 

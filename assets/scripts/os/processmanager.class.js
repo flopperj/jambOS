@@ -148,6 +148,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
             var xReg = process.xReg;
             var yReg = parseInt(process.yReg, 16);
             var zFlag = process.zFlag;
+            var status = process.state;
 
             tableRows += "<tr class='" + (currentProcess.pid === process.pid ? "active" : "") + "'>\n\
                                 <td>\n\
@@ -167,6 +168,9 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
                                 </td>\n\
                                 <td>\n\
                                     " + zFlag + "\n\
+                                </td>\n\
+                                <td>\n\
+                                    " + status + "\n\
                                 </td>\n\
                               </tr>";
 
