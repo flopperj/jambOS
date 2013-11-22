@@ -97,14 +97,9 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             zFlag: 0,
             isExecuting: false
         });
-
-
-        // make sure all processes on the residentList are terminated and clear 
-        // up the ready queue
-        $.each(self.scheduler.residentList, function() {
-            this.set("state", "terminated");
-            self.scheduler.readyQueue.dequeue();
-        });
+        
+        // update PCB status display in real time
+        _Kernel.processManager.updatePCBStatusDisplay(true);
 
         // Log our switch to user mode
         _Kernel.trace("Switching to User Mode");
@@ -142,7 +137,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         // get execution operation
         var opCode = _Kernel.memoryManager.memory.read(self.pc++).toString().toLowerCase();
         var operation = self.getOpCode(opCode);
-        
+
         console.log(opCode);
 
         // execute operation
@@ -332,7 +327,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     {
         // Place the next byte in memory in the Y register
         self.yReg = _Kernel.memoryManager.memory.read(self.pc++);
-            console.log(self.yReg + " <------y Register");
+        console.log(self.yReg + " <------y Register");
     },
     /**
      * Load the Y register from memory 
@@ -377,7 +372,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var currentProcess = self.scheduler.currentProcess;
 
         // set the current process state to terminated
-        self.scheduler.currentProcess.state = "terminated";
+        self.scheduler.currentProcess.set("state", "terminated");
 
         // we want to terminate everything after all processes have been
         // executed or when we are only executing one process
@@ -424,7 +419,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             {
                 self.pc -= MEMORY_BLOCK_SIZE;
             }
-        }else
+        } else
             self.pc++;
     },
     /**
@@ -489,7 +484,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
                 currentByte = _Kernel.memoryManager.memory.read(address++);
                 keyCode = parseInt(currentByte, HEX_BASE);
 
-                
+
                 character = String.fromCharCode(keyCode);
                 _StdIn.putText(character);
             }

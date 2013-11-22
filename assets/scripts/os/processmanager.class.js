@@ -51,6 +51,8 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         else
             return _Kernel.trapError("Insufficient Memory!", false);
 
+
+
         // get our base and limit addresses
         var base = slots[activeSlot].base;
         var limit = slots[activeSlot].limit;
@@ -72,6 +74,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
             state: "new"
         });
 
+        _CPU.scheduler.set("currentProcess", pcb);
         _CPU.scheduler.residentList.push(pcb);
         _Kernel.memoryManager.allocate(pcb);
 
@@ -101,6 +104,15 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
             }
         }
 
+
+
+        // remove from ready queue
+        $.each(_CPU.scheduler.readyQueue.q, function(i, process) {
+
+            if (process.pid === pcb.pid)
+                _CPU.scheduler.readyQueue.splice(i, 1);
+        });
+
         // we don't want to forget to reset the current process
         if (self.get("currentProcess") && self.get("currentProcess").pid === pcb.pid)
             self.set("currentProcess", null);
@@ -127,8 +139,10 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
     },
     /**
      * Updates the process status table results
+     * @public
+     * @method updatePCBStatusDisplay
      */
-    updatePCBStatusDisplay: function() {
+    updatePCBStatusDisplay: function(isDone) {
         var self = this;
         var tableRows = "";
         var currentProcess = jambOS.util.clone(_CPU.scheduler.get("currentProcess"));
@@ -136,7 +150,15 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
             return [value];
         });
 
-        pcbs.push(currentProcess);
+        if (_CPU.isExecuting)
+            pcbs.push(currentProcess);
+        else if (isDone) {
+            pcbs = [];
+
+            // clear process status table and populate data
+            $("#pcbStatus table tbody").empty().append("<tr><td colspan='6'><strong>No processes available</strong></td></tr>");
+
+        }
 
         // loop through the ready queue and get all processes that are ready to
         // be executed

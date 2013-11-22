@@ -817,14 +817,9 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             zFlag: 0,
             isExecuting: false
         });
-
-
-        // make sure all processes on the residentList are terminated and clear 
-        // up the ready queue
-        $.each(self.scheduler.residentList, function() {
-            this.set("state", "terminated");
-            self.scheduler.readyQueue.dequeue();
-        });
+        
+        // update PCB status display in real time
+        _Kernel.processManager.updatePCBStatusDisplay(true);
 
         // Log our switch to user mode
         _Kernel.trace("Switching to User Mode");
@@ -862,7 +857,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         // get execution operation
         var opCode = _Kernel.memoryManager.memory.read(self.pc++).toString().toLowerCase();
         var operation = self.getOpCode(opCode);
-        
+
         console.log(opCode);
 
         // execute operation
@@ -1052,7 +1047,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     {
         // Place the next byte in memory in the Y register
         self.yReg = _Kernel.memoryManager.memory.read(self.pc++);
-            console.log(self.yReg + " <------y Register");
+        console.log(self.yReg + " <------y Register");
     },
     /**
      * Load the Y register from memory 
@@ -1097,7 +1092,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         var currentProcess = self.scheduler.currentProcess;
 
         // set the current process state to terminated
-        self.scheduler.currentProcess.state = "terminated";
+        self.scheduler.currentProcess.set("state", "terminated");
 
         // we want to terminate everything after all processes have been
         // executed or when we are only executing one process
@@ -1144,7 +1139,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             {
                 self.pc -= MEMORY_BLOCK_SIZE;
             }
-        }else
+        } else
             self.pc++;
     },
     /**
@@ -1209,7 +1204,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
                 currentByte = _Kernel.memoryManager.memory.read(address++);
                 keyCode = parseInt(currentByte, HEX_BASE);
 
-                
+
                 character = String.fromCharCode(keyCode);
                 _StdIn.putText(character);
             }
@@ -1556,6 +1551,8 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         else
             return _Kernel.trapError("Insufficient Memory!", false);
 
+
+
         // get our base and limit addresses
         var base = slots[activeSlot].base;
         var limit = slots[activeSlot].limit;
@@ -1577,6 +1574,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
             state: "new"
         });
 
+        _CPU.scheduler.set("currentProcess", pcb);
         _CPU.scheduler.residentList.push(pcb);
         _Kernel.memoryManager.allocate(pcb);
 
@@ -1606,6 +1604,15 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
             }
         }
 
+
+
+        // remove from ready queue
+        $.each(_CPU.scheduler.readyQueue.q, function(i, process) {
+
+            if (process.pid === pcb.pid)
+                _CPU.scheduler.readyQueue.splice(i, 1);
+        });
+
         // we don't want to forget to reset the current process
         if (self.get("currentProcess") && self.get("currentProcess").pid === pcb.pid)
             self.set("currentProcess", null);
@@ -1632,8 +1639,10 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
     },
     /**
      * Updates the process status table results
+     * @public
+     * @method updatePCBStatusDisplay
      */
-    updatePCBStatusDisplay: function() {
+    updatePCBStatusDisplay: function(isDone) {
         var self = this;
         var tableRows = "";
         var currentProcess = jambOS.util.clone(_CPU.scheduler.get("currentProcess"));
@@ -1641,7 +1650,15 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
             return [value];
         });
 
-        pcbs.push(currentProcess);
+        if (_CPU.isExecuting)
+            pcbs.push(currentProcess);
+        else if (isDone) {
+            pcbs = [];
+
+            // clear process status table and populate data
+            $("#pcbStatus table tbody").empty().append("<tr><td colspan='6'><strong>No processes available</strong></td></tr>");
+
+        }
 
         // loop through the ready queue and get all processes that are ready to
         // be executed
