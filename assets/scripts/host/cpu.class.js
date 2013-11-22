@@ -97,7 +97,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             zFlag: 0,
             isExecuting: false
         });
-        
+
         // update PCB status display in real time
         _Kernel.processManager.updatePCBStatusDisplay(true);
 
@@ -137,8 +137,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         // get execution operation
         var opCode = _Kernel.memoryManager.memory.read(self.pc++).toString().toLowerCase();
         var operation = self.getOpCode(opCode);
-
-        console.log(opCode);
 
         // execute operation
         if (operation) {
@@ -327,7 +325,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     {
         // Place the next byte in memory in the Y register
         self.yReg = _Kernel.memoryManager.memory.read(self.pc++);
-        console.log(self.yReg + " <------y Register");
     },
     /**
      * Load the Y register from memory 

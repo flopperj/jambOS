@@ -817,7 +817,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             zFlag: 0,
             isExecuting: false
         });
-        
+
         // update PCB status display in real time
         _Kernel.processManager.updatePCBStatusDisplay(true);
 
@@ -857,8 +857,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         // get execution operation
         var opCode = _Kernel.memoryManager.memory.read(self.pc++).toString().toLowerCase();
         var operation = self.getOpCode(opCode);
-
-        console.log(opCode);
 
         // execute operation
         if (operation) {
@@ -1047,7 +1045,6 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     {
         // Place the next byte in memory in the Y register
         self.yReg = _Kernel.memoryManager.memory.read(self.pc++);
-        console.log(self.yReg + " <------y Register");
     },
     /**
      * Load the Y register from memory 
@@ -1610,7 +1607,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         $.each(_CPU.scheduler.readyQueue.q, function(i, process) {
 
             if (process.pid === pcb.pid)
-                _CPU.scheduler.readyQueue.splice(i, 1);
+                _CPU.scheduler.readyQueue.q.splice(i, 1);
         });
 
         // we don't want to forget to reset the current process
@@ -1650,7 +1647,17 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
             return [value];
         });
 
-        if (_CPU.isExecuting)
+        // checks if current process is in the ready queue
+        var isInReadyQueue = (function(pcb) {
+            $.each(pcbs, function() {
+                if (this.pid === pcb.pid)
+                    return true;
+            });
+
+            return false;
+        })(currentProcess);
+
+        if (_CPU.isExecuting && !isInReadyQueue)
             pcbs.push(currentProcess);
         else if (isDone) {
             pcbs = [];

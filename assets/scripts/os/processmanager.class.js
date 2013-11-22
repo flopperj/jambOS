@@ -110,7 +110,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         $.each(_CPU.scheduler.readyQueue.q, function(i, process) {
 
             if (process.pid === pcb.pid)
-                _CPU.scheduler.readyQueue.splice(i, 1);
+                _CPU.scheduler.readyQueue.q.splice(i, 1);
         });
 
         // we don't want to forget to reset the current process
@@ -150,7 +150,17 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
             return [value];
         });
 
-        if (_CPU.isExecuting)
+        // checks if current process is in the ready queue
+        var isInReadyQueue = (function(pcb) {
+            $.each(pcbs, function() {
+                if (this.pid === pcb.pid)
+                    return true;
+            });
+
+            return false;
+        })(currentProcess);
+
+        if (_CPU.isExecuting && !isInReadyQueue)
             pcbs.push(currentProcess);
         else if (isDone) {
             pcbs = [];
