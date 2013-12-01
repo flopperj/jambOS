@@ -141,6 +141,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
      * Updates the process status table results
      * @public
      * @method updatePCBStatusDisplay
+     * @param {boolean} isDone - Has cpu completed executing processes? TODO: Find a way to utilize cpu.isExecuting
      */
     updatePCBStatusDisplay: function(isDone) {
         var self = this;

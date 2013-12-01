@@ -1093,7 +1093,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
         // we want to terminate everything after all processes have been
         // executed or when we are only executing one process
-        if (currentProcess.pid === lastProcess.pid || self.scheduler.readyQueue.isEmpty())
+//        if (currentProcess.pid === lastProcess.pid || self.scheduler.readyQueue.isEmpty())
             _Kernel.interruptHandler(PROCESS_TERMINATION_IRQ, self.scheduler.get("currentProcess"));
     },
     /**
@@ -1638,6 +1638,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
      * Updates the process status table results
      * @public
      * @method updatePCBStatusDisplay
+     * @param {boolean} isDone - Has cpu completed executing processes? TODO: Find a way to utilize cpu.isExecuting
      */
     updatePCBStatusDisplay: function(isDone) {
         var self = this;
