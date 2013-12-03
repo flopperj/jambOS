@@ -50,6 +50,11 @@ var HEX_BASE = 16;
 KERNEL_MODE = 0;
 USER_MODE = 1;
 
+// scheduling algorithms
+RR_SCHEDULER = 0;
+FCFS_SCHEDULER = 1;
+PRIORITY_SCHEDULER = 2;
+
 //
 // Global Variables
 //
@@ -1093,7 +1098,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 
         // we want to terminate everything after all processes have been
         // executed or when we are only executing one process
-//        if (currentProcess.pid === lastProcess.pid || self.scheduler.readyQueue.isEmpty())
+        if (currentProcess.pid === lastProcess.pid || self.scheduler.readyQueue.isEmpty())
             _Kernel.interruptHandler(PROCESS_TERMINATION_IRQ, self.scheduler.get("currentProcess"));
     },
     /**
@@ -1253,6 +1258,10 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
      */
     previousProcess: null,
     /**
+     * @property {int} currentSchedulingAlgorithm
+     */
+    currentSchedulingAlgorithm: RR_SCHEDULER,
+    /**
      * Constructor
      */
     initialize: function() {
@@ -1270,11 +1279,21 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
 
             self.processCycles++;
 
-            // perform a swithc when we the cycles hit our scheduling quantum to
-            // simulate the real time execution
-            if (!self.readyQueue.isEmpty() && self.processCycles === self.quantum) {
-                self.processCycles = 0;
-                _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
+            switch (self.get("currentSchedulingAlgorithm")) {
+                case RR_SCHEDULER: // Round Robin
+
+                    // perform a swithc when we the cycles hit our scheduling quantum to
+                    // simulate the real time execution
+                    if (!self.readyQueue.isEmpty() && self.processCycles === self.quantum) {
+                        self.processCycles = 0;
+                        _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
+                    }
+                    break;
+                case FCFS_SCHEDULER: // First Come First Served
+                    break;
+                case PRIORITY_SCHEDULER: // Priority Scheduler
+                    break;
+
             }
         }
     },
@@ -3227,7 +3246,7 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                 // Also check whether we want to stepover our process which in 
                 // this case we do not.
                 if (_CPU.scheduler.residentList.length > 0 && !_Stepover) {
-                    
+
                     // initialize new ready queue
                     _CPU.scheduler.readyQueue = new jambOS.OS.ProcessQueue();
 
@@ -3326,6 +3345,111 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                     _StdIn.putText(processIDs);
                 } else {
                     _StdIn.putText("No active processes available!");
+                }
+            }
+        });
+        this.commandList.push(sc);
+
+        // create <filename>
+        sc = new jambOS.OS.ShellCommand({
+            command: "create",
+            description: "<filename> - creates file in memory",
+            behavior: function() {
+            }
+        });
+        this.commandList.push(sc);
+
+        // read <filename>
+        sc = new jambOS.OS.ShellCommand({
+            command: "read",
+            description: "<filename> - reads file in memory",
+            behavior: function() {
+            }
+        });
+        this.commandList.push(sc);
+
+        // write <filename> "data"
+        sc = new jambOS.OS.ShellCommand({
+            command: "write",
+            description: "<filename>  'data' - writes data to file in memory",
+            behavior: function() {
+            }
+        });
+        this.commandList.push(sc);
+
+        // delete <filename>
+        sc = new jambOS.OS.ShellCommand({
+            command: "delete",
+            description: "<filename> - deletes file from memory",
+            behavior: function() {
+            }
+        });
+        this.commandList.push(sc);
+
+        // format
+        sc = new jambOS.OS.ShellCommand({
+            command: "format",
+            description: "- Initializes all blocks in all sectors",
+            behavior: function() {
+            }
+        });
+        this.commandList.push(sc);
+
+
+        // ls
+        sc = new jambOS.OS.ShellCommand({
+            command: "ls",
+            description: "- Lists all files currently stored on the disk",
+            behavior: function() {
+            }
+        });
+        this.commandList.push(sc);
+
+
+        // setschedule [rr, fcfs, priority]
+        sc = new jambOS.OS.ShellCommand({
+            command: "setschedule",
+            description: "[rr, fcfs, priority] - Sets scheduling algorithm",
+            behavior: function(args) {
+                var algorithm = args[0];
+                switch (algorithm) {
+                    case "rr":
+                        _CPU.scheduler.set("currentSchedulingAlgorithm", RR_SCHEDULER);
+                        _StdIn.putText("Scheduling Algorithm: Round Robin");
+
+                        break;
+                    case "fcfs":
+                        _CPU.scheduler.set("currentSchedulingAlgorithm", FCFS_SCHEDULER);
+                        _StdIn.putText("Scheduling Algorithm: First Come First Served");
+                        break;
+                    case "priority":
+                        _CPU.scheduler.set("currentSchedulingAlgorithm", PRIORITY_SCHEDULER);
+                        _StdIn.putText("Scheduling Algorithm: Priority");
+                        break;
+                    default:
+                        _StdIn.putText("Usage: setschedule [rr, fcfs, priority]");
+                        break;
+                }
+            }
+        });
+        this.commandList.push(sc);
+
+        // get scheduling algorithm        
+        sc = new jambOS.OS.ShellCommand({
+            command: "getschedule",
+            description: "- returns currently selected cpu scheduling algorithm",
+            behavior: function() {
+                var algorithm = _CPU.scheduler.get("currentSchedulingAlgorithm");
+                switch (algorithm) {
+                    case RR_SCHEDULER:
+                        _StdIn.putText("Scheduling Algorithm: Round Robin");
+                        break;
+                    case FCFS_SCHEDULER:
+                        _StdIn.putText("Scheduling Algorithm: First Come First Served");
+                        break;
+                    case PRIORITY_SCHEDULER:
+                        _StdIn.putText("Scheduling Algorithm: Priority");
+                        break;
                 }
             }
         });

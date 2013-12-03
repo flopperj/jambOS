@@ -38,6 +38,10 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
      */
     previousProcess: null,
     /**
+     * @property {int} currentSchedulingAlgorithm
+     */
+    currentSchedulingAlgorithm: RR_SCHEDULER,
+    /**
      * Constructor
      */
     initialize: function() {
@@ -55,11 +59,21 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
 
             self.processCycles++;
 
-            // perform a swithc when we the cycles hit our scheduling quantum to
-            // simulate the real time execution
-            if (!self.readyQueue.isEmpty() && self.processCycles === self.quantum) {
-                self.processCycles = 0;
-                _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
+            switch (self.get("currentSchedulingAlgorithm")) {
+                case RR_SCHEDULER: // Round Robin
+
+                    // perform a swithc when we the cycles hit our scheduling quantum to
+                    // simulate the real time execution
+                    if (!self.readyQueue.isEmpty() && self.processCycles === self.quantum) {
+                        self.processCycles = 0;
+                        _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
+                    }
+                    break;
+                case FCFS_SCHEDULER: // First Come First Served
+                    break;
+                case PRIORITY_SCHEDULER: // Priority Scheduler
+                    break;
+
             }
         }
     },

@@ -50,6 +50,11 @@ var HEX_BASE = 16;
 KERNEL_MODE = 0;
 USER_MODE = 1;
 
+// scheduling algorithms
+RR_SCHEDULER = 0;
+FCFS_SCHEDULER = 1;
+PRIORITY_SCHEDULER = 2;
+
 //
 // Global Variables
 //
