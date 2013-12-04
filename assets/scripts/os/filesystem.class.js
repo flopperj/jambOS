@@ -60,6 +60,8 @@ jambOS.OS.FileSystem = new jambOS.util.createClass({
     },
     /**
      * Reads contents from a file
+     * @public
+     * @method readFile
      * @param {string} filename 
      */
     readFile: function(filename) {
@@ -99,6 +101,90 @@ jambOS.OS.FileSystem = new jambOS.util.createClass({
             }
         } else
             _StdIn.putText("Sorry: File \"" + filename + "\" not found!");
+
+    },
+    /**
+     * Deletes file from file system
+     * @public
+     * @method deleteFile
+     * @param {string} filename
+     */
+    deleteFile: function(filename) {
+
+        // get filename and its address from our array list of used filenames
+        var file = $.grep(this.usedFilenames, function(el) {
+            return el.filename.toLowerCase() === filename.toLowerCase();
+        })[0];
+
+        if (file) {
+            // get metadata content that holds tsb address to where content is stored
+            var value = JSON.parse(this.read(file.address));
+            var track = parseInt(value[TRACK_BIT]);
+            var sector = parseInt(value[SECTOR_BIT]);
+            var block = parseInt(value[BLOCK_BIT]);
+            var occupiedBit = 0;
+            var fileAddress = file.address;
+
+            // file metadata
+            var value = "[" + occupiedBit + ",-1,-1,-1,\"" + this.sanitizeFileSystemValue("") + "\"]";
+            this.write(fileAddress, value);
+
+            // reset tsb
+            this.resetTSB(track, sector, block);
+
+            // use previous info to get content from where its stored in storage
+            var dataAddress = this._getAddress({track: track, sector: sector, block: block});
+            var data = JSON.parse(this.read(dataAddress));
+            track = parseInt(data[TRACK_BIT]);
+            sector = parseInt(data[SECTOR_BIT]);
+            block = parseInt(data[BLOCK_BIT]);
+
+            // file data
+            var value = "[" + occupiedBit + "," + track + "," + sector + "," + block + ",\"" + this.sanitizeFileSystemValue("") + "\"]";
+            this.write(dataAddress, value);
+
+            // output data to screen
+            _StdIn.putText("Deleted: \"" + file.filename + "\"");
+
+            // make sure we remove our file from our used files array
+            var tempList = [];
+            $.each(this.usedFilenames, function() {
+                if (this.filename.toLowerCase() !== filename.toLowerCase())
+                    tempList.push(this);
+            });
+            this.usedFilenames = tempList;
+
+            // handle text that wrapped around
+            while (track !== -1) {
+                dataAddress = this._getAddress({track: track, sector: sector, block: block});
+                data = JSON.parse(this.read(dataAddress));
+                track = parseInt(data[TRACK_BIT]);
+                sector = parseInt(data[SECTOR_BIT]);
+                block = parseInt(data[BLOCK_BIT]);
+
+                // file data
+                var value = "[" + occupiedBit + "," + track + "," + sector + "," + block + ",\"" + this.sanitizeFileSystemValue("") + "\"]";
+                this.write(dataAddress, value);
+            }
+        } else
+            _StdIn.putText("Sorry: File \"" + filename + "\" not found!");
+    },
+    /**
+     * Lists out all the files in the file system
+     * @public
+     * @method listFiles
+     */
+    listFiles: function() {
+
+        if (this.usedFilenames.length === 0)
+            _StdIn.putText("File System is currently empty!");
+
+        // Display all files in the file system
+        $.each(this.usedFilenames, function() {
+            _StdIn.putText(this.filename);
+            _StdIn.advanceLine();
+        });
+
 
     },
     /**

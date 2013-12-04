@@ -462,7 +462,12 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
         sc = new jambOS.OS.ShellCommand({
             command: "delete",
             description: "<filename> - deletes file from memory",
-            behavior: function() {
+            behavior: function(args) {
+                var filename = args[0];
+                if (filename)
+                    _HardDrive.deleteFile(filename);
+                else
+                    _StdIn.putText("Usage: delete <filename>");
             }
         });
         this.commandList.push(sc);
@@ -482,6 +487,7 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             command: "ls",
             description: "- Lists all files currently stored on the disk",
             behavior: function() {
+                _HardDrive.listFiles();
             }
         });
         this.commandList.push(sc);
