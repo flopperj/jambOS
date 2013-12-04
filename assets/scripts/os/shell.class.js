@@ -453,7 +453,23 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
         sc = new jambOS.OS.ShellCommand({
             command: "write",
             description: "<filename>  'data' - writes data to file in memory",
-            behavior: function() {
+            behavior: function(args) {
+                var filename = args.shift();
+                var data = args.join(" ");
+                var firstChar = data[0];
+                var lastChar = data[data.length - 1];
+
+                // make sure that our input is in the right format
+                if (data.length > 0 && filename && (firstChar === "\"" || firstChar === "'") && (lastChar === "\"" || lastChar === "'")) {
+                    // remove first quote char
+                    data = data.substr(1);
+
+                    // remove last quote char
+                    data = data.substr(0, data.length - 1);
+
+                    _HardDrive.writeFile(filename, data);
+                } else
+                    _StdIn.putText("Usage: write <filename> \"data\"");
             }
         });
         this.commandList.push(sc);
@@ -477,6 +493,8 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             command: "format",
             description: "- Initializes all blocks in all sectors",
             behavior: function() {
+                _HardDrive.formatDrive();
+                _StdIn.putText("HD format complete!");
             }
         });
         this.commandList.push(sc);

@@ -103,6 +103,55 @@ jambOS.OS.FileSystem = new jambOS.util.createClass({
             _StdIn.putText("Sorry: File \"" + filename + "\" not found!");
 
     },
+    writeFile: function(filename, fileData) {
+        var self = this;
+        // get filename and its address from our array list of used filenames
+        var file = $.grep(this.usedFilenames, function(el) {
+            return el.filename.toLowerCase() === filename.toLowerCase();
+        })[0];
+
+        if (file) {
+            // get metadata content that holds tsb address to where content is stored
+            var value = JSON.parse(this.read(file.address));
+            var track = parseInt(value[TRACK_BIT]);
+            var sector = parseInt(value[SECTOR_BIT]);
+            var block = parseInt(value[BLOCK_BIT]);
+
+            // use previous info to get content from where its stored in storage
+            var dataAddress = this._getAddress({track: track, sector: sector, block: block});
+            var data = JSON.parse(this.read(dataAddress));
+            track = parseInt(data[TRACK_BIT]);
+            sector = parseInt(data[SECTOR_BIT]);
+            block = parseInt(data[BLOCK_BIT]);
+
+            // split our data into chunks of 60bit content
+            var content = fileData.match(/.{1,60}/g);
+            var occupiedBit = 1;
+            $.each(content, function() {
+                if (block < ALLOCATABLE_BLOCKS)
+                    block += 1;
+                else {
+                    if (sector < ALLOCATABLE_SECTORS)
+                        sector += 1;
+                    else {
+                        if (track < ALLOCATABLE_TRACKS && track > 0) {
+                            track += 1;
+                        }
+                    }
+                }
+
+                // file data
+                var value = "[" + occupiedBit + "," + track + "," + sector + "," + block + ",\"" + self.sanitizeFileSystemValue(this) + "\"]";
+                self.write(dataAddress, value);
+
+            });
+
+            // output success data to screen
+            _StdIn.putText("Written data to: " + filename);
+
+        } else
+            _StdIn.putText("Sorry: File \"" + filename + "\" not found!");
+    },
     /**
      * Deletes file from file system
      * @public

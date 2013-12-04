@@ -31,7 +31,10 @@ jambOS.host.HardDrive = jambOS.util.createClass(jambOS.OS.FileSystem, {
     formatDrive: function() {
         // clear local storage
         this.storage.clear();
-        
+
+        // clear out our filenames
+        this.usedFilenames = [];
+
         // initialize of all the tracks
         for (var track = 0; track < ALLOCATABLE_TRACKS; track++) {
             for (var sector = 0; sector < ALLOCATABLE_SECTORS; sector++) {

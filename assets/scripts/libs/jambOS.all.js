@@ -478,6 +478,55 @@ jambOS.OS.FileSystem = new jambOS.util.createClass({
             _StdIn.putText("Sorry: File \"" + filename + "\" not found!");
 
     },
+    writeFile: function(filename, fileData) {
+        var self = this;
+        // get filename and its address from our array list of used filenames
+        var file = $.grep(this.usedFilenames, function(el) {
+            return el.filename.toLowerCase() === filename.toLowerCase();
+        })[0];
+
+        if (file) {
+            // get metadata content that holds tsb address to where content is stored
+            var value = JSON.parse(this.read(file.address));
+            var track = parseInt(value[TRACK_BIT]);
+            var sector = parseInt(value[SECTOR_BIT]);
+            var block = parseInt(value[BLOCK_BIT]);
+
+            // use previous info to get content from where its stored in storage
+            var dataAddress = this._getAddress({track: track, sector: sector, block: block});
+            var data = JSON.parse(this.read(dataAddress));
+            track = parseInt(data[TRACK_BIT]);
+            sector = parseInt(data[SECTOR_BIT]);
+            block = parseInt(data[BLOCK_BIT]);
+
+            // split our data into chunks of 60bit content
+            var content = fileData.match(/.{1,60}/g);
+            var occupiedBit = 1;
+            $.each(content, function() {
+                if (block < ALLOCATABLE_BLOCKS)
+                    block += 1;
+                else {
+                    if (sector < ALLOCATABLE_SECTORS)
+                        sector += 1;
+                    else {
+                        if (track < ALLOCATABLE_TRACKS && track > 0) {
+                            track += 1;
+                        }
+                    }
+                }
+
+                // file data
+                var value = "[" + occupiedBit + "," + track + "," + sector + "," + block + ",\"" + self.sanitizeFileSystemValue(this) + "\"]";
+                self.write(dataAddress, value);
+
+            });
+
+            // output success data to screen
+            _StdIn.putText("Written data to: " + filename);
+
+        } else
+            _StdIn.putText("Sorry: File \"" + filename + "\" not found!");
+    },
     /**
      * Deletes file from file system
      * @public
@@ -1623,7 +1672,10 @@ jambOS.host.HardDrive = jambOS.util.createClass(jambOS.OS.FileSystem, {
     formatDrive: function() {
         // clear local storage
         this.storage.clear();
-        
+
+        // clear out our filenames
+        this.usedFilenames = [];
+
         // initialize of all the tracks
         for (var track = 0; track < ALLOCATABLE_TRACKS; track++) {
             for (var sector = 0; sector < ALLOCATABLE_SECTORS; sector++) {
@@ -1705,6 +1757,7 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
                     }
                     break;
                 case FCFS_SCHEDULER: // First Come First Served
+                    self.quantum = MEMORY_BLOCK_SIZE - 1;
                     break;
                 case PRIORITY_SCHEDULER: // Priority Scheduler
                     break;
@@ -1744,7 +1797,7 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
             // Add the current process being passed to the ready queue
             if (process !== null && process.state !== "terminated")
                 _CPU.scheduler.readyQueue.enqueue(process);
-            
+
             // change our next process state to running
             nextProcess.set("state", "running");
 
@@ -3796,7 +3849,23 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
         sc = new jambOS.OS.ShellCommand({
             command: "write",
             description: "<filename>  'data' - writes data to file in memory",
-            behavior: function() {
+            behavior: function(args) {
+                var filename = args.shift();
+                var data = args.join(" ");
+                var firstChar = data[0];
+                var lastChar = data[data.length - 1];
+
+                // make sure that our input is in the right format
+                if (data.length > 0 && filename && (firstChar === "\"" || firstChar === "'") && (lastChar === "\"" || lastChar === "'")) {
+                    // remove first quote char
+                    data = data.substr(1);
+
+                    // remove last quote char
+                    data = data.substr(0, data.length - 1);
+
+                    _HardDrive.writeFile(filename, data);
+                } else
+                    _StdIn.putText("Usage: write <filename> \"data\"");
             }
         });
         this.commandList.push(sc);
@@ -3820,6 +3889,8 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             command: "format",
             description: "- Initializes all blocks in all sectors",
             behavior: function() {
+                _HardDrive.formatDrive();
+                _StdIn.putText("HD format complete!");
             }
         });
         this.commandList.push(sc);
