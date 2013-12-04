@@ -445,13 +445,13 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
         });
 
         // program 1
-//        $("#taProgramInput").val("A9 03 8D 41 00 A9 01 8D 40 00 AC 40 00 A2 01 FF EE 40 00 AE 40 00 EC 41 00 D0 EF A9 44 8D 42 00 A9 4F 8D 43 00 A9 4E 8D 44 00 A9 45 8D 45 00 A9 00 8D 46 00 A2 02 A0 42 FF 00");
+        $("#taProgramInput").val("A9 03 8D 41 00 A9 01 8D 40 00 AC 40 00 A2 01 FF EE 40 00 AE 40 00 EC 41 00 D0 EF A9 44 8D 42 00 A9 4F 8D 43 00 A9 4E 8D 44 00 A9 45 8D 45 00 A9 00 8D 46 00 A2 02 A0 42 FF 00");
 
         // program 2
 //        $("#taProgramInput").val("A9 00 8D 00 00 A9 00 8D 4B 00 A9 00 8D 4B 00 A2 09 EC 4B 00 D0 07 A2 01 EC 00 00 D0 05 A2 00 EC 00 00 D0 26 A0 4C A2 02 FF AC 4B 00 A2 01 FF A9 01 6D 4B 00 8D 4B 00 A2 02 EC 4B 00 D0 05 A0 55 A2 02 FF A2 01 EC 00 00 D0 C5 00 00 63 6F 75 6E 74 69 6E 67 00 68 65 6C 6C 6F 20 77 6F 72 6C 64 00");
     
         // program 3
-        $("#taProgramInput").val("A9 00 8D 7B 00 A9 00 8D 7B 00 A9 00 8D 7C 00 A9 00 8D 7C 00 A9 01 8D 7A 00 A2 00 EC 7A 00 D0 39 A0 7D A2 02 FF AC 7B 00 A2 01 FF AD 7B 00 8D 7A 00 A9 01 6D 7A 00 8D 7B 00 A9 09 AE 7B 00 8D 7A 00 A9 00 EC 7A 00 D0 02 A9 01 8D 7A 00 A2 01 EC 7A 00 D0 05 A9 01 8D 7C 00 A9 00 AE 7C 00 8D 7A 00 A9 00 EC 7A 00 D0 02 A9 01 8D 7A 00 A2 00 EC 7A 00 D0 AC A0 7F A2 02 FF 00 00 00 00 63 00 63 64 6F 6E 65 00");
+//        $("#taProgramInput").val("A9 00 8D 7B 00 A9 00 8D 7B 00 A9 00 8D 7C 00 A9 00 8D 7C 00 A9 01 8D 7A 00 A2 00 EC 7A 00 D0 39 A0 7D A2 02 FF AC 7B 00 A2 01 FF AD 7B 00 8D 7A 00 A9 01 6D 7A 00 8D 7B 00 A9 09 AE 7B 00 8D 7A 00 A9 00 EC 7A 00 D0 02 A9 01 8D 7A 00 A2 01 EC 7A 00 D0 05 A9 01 8D 7C 00 A9 00 AE 7C 00 8D 7A 00 A9 00 EC 7A 00 D0 02 A9 01 8D 7A 00 A2 00 EC 7A 00 D0 AC A0 7F A2 02 FF 00 00 00 00 63 00 63 64 6F 6E 65 00");
         
         // Step over
         $("#btnStepOver").click(function() {
@@ -1096,6 +1096,10 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         // set the current process state to terminated
         self.scheduler.currentProcess.set("state", "terminated");
 
+        // deallocate program from memory
+        _Kernel.processManager.unload(currentProcess);
+        
+
         // we want to terminate everything after all processes have been
         // executed or when we are only executing one process
         if (currentProcess.pid === lastProcess.pid || self.scheduler.readyQueue.isEmpty())
@@ -1329,7 +1333,7 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
             // Add the current process being passed to the ready queue
             if (process !== null && process.state !== "terminated")
                 _CPU.scheduler.readyQueue.enqueue(process);
-
+            
             // change our next process state to running
             nextProcess.set("state", "running");
 
@@ -1605,29 +1609,31 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
     unload: function(pcb) {
         var self = this;
 
-        var residentListLength = _CPU.scheduler.residentList.length;
+        var templist = [];
 
-        // remove processes starting from the back of the residentList
-        // also make sure all other terminated prcoesses are removed
-        for (var i = residentListLength - 1; i >= 0; i--) {
-            if (_CPU.scheduler.residentList[i] && (_CPU.scheduler.residentList[i].state === "terminated" || _CPU.scheduler.residentList[i] === pcb.pid)) {
+        // terminate programs in resident list
+        $.each(_CPU.scheduler.residentList, function() {
+            if (this.pid === pcb.pid) {
+                this.set("state", "terminated");
 
                 // deallocate memory of process
-                _Kernel.memoryManager.deallocate(_CPU.scheduler.residentList[i]);
+                _Kernel.memoryManager.deallocate(this);
+            } else
+                templist.push(this);
+        });
 
-                // remove from resident list
-                _CPU.scheduler.residentList.splice(i, 1);
-            }
-        }
+        _CPU.scheduler.residentList = templist;
 
-
-
-        // remove from ready queue
+        // remove process from ready queue to remove zombie process effect
         $.each(_CPU.scheduler.readyQueue.q, function(i, process) {
-
             if (process.pid === pcb.pid)
                 _CPU.scheduler.readyQueue.q.splice(i, 1);
         });
+
+        // clear up the ready queue if we have no process in the residentlist
+        if (!templist.length) {
+            _CPU.scheduler.readyQueue.dequeue();
+        }
 
         // we don't want to forget to reset the current process
         if (self.get("currentProcess") && self.get("currentProcess").pid === pcb.pid)

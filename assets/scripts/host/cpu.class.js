@@ -371,6 +371,10 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         // set the current process state to terminated
         self.scheduler.currentProcess.set("state", "terminated");
 
+        // deallocate program from memory
+        _Kernel.processManager.unload(currentProcess);
+        
+
         // we want to terminate everything after all processes have been
         // executed or when we are only executing one process
         if (currentProcess.pid === lastProcess.pid || self.scheduler.readyQueue.isEmpty())

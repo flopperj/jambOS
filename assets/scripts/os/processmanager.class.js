@@ -89,29 +89,31 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
     unload: function(pcb) {
         var self = this;
 
-        var residentListLength = _CPU.scheduler.residentList.length;
+        var templist = [];
 
-        // remove processes starting from the back of the residentList
-        // also make sure all other terminated prcoesses are removed
-        for (var i = residentListLength - 1; i >= 0; i--) {
-            if (_CPU.scheduler.residentList[i] && (_CPU.scheduler.residentList[i].state === "terminated" || _CPU.scheduler.residentList[i] === pcb.pid)) {
+        // terminate programs in resident list
+        $.each(_CPU.scheduler.residentList, function() {
+            if (this.pid === pcb.pid) {
+                this.set("state", "terminated");
 
                 // deallocate memory of process
-                _Kernel.memoryManager.deallocate(_CPU.scheduler.residentList[i]);
+                _Kernel.memoryManager.deallocate(this);
+            } else
+                templist.push(this);
+        });
 
-                // remove from resident list
-                _CPU.scheduler.residentList.splice(i, 1);
-            }
-        }
+        _CPU.scheduler.residentList = templist;
 
-
-
-        // remove from ready queue
+        // remove process from ready queue to remove zombie process effect
         $.each(_CPU.scheduler.readyQueue.q, function(i, process) {
-
             if (process.pid === pcb.pid)
                 _CPU.scheduler.readyQueue.q.splice(i, 1);
         });
+
+        // clear up the ready queue if we have no process in the residentlist
+        if (!templist.length) {
+            _CPU.scheduler.readyQueue.dequeue();
+        }
 
         // we don't want to forget to reset the current process
         if (self.get("currentProcess") && self.get("currentProcess").pid === pcb.pid)
