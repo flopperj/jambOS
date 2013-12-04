@@ -155,7 +155,9 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
         _CPU = new jambOS.host.Cpu();
         
         // initialize harddrive
-        _HardDrive = new jambOS.host.HardDrive();
+        _HardDrive = new jambOS.host.HardDrive({
+            fileSystem: new jambOS.OS.FileSystemDriver()
+        });
 
         // ... then set the host clock pulse ...
         _hardwareClockID = setInterval(_Device.hostClockPulse, CPU_CLOCK_INTERVAL);

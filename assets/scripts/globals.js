@@ -40,6 +40,7 @@ var KEYBOARD_IRQ = 1;
 var PROCESS_INITIATION_IRQ = 2;
 var PROCESS_TERMINATION_IRQ = 3;
 var CONTEXT_SWITCH_IRQ = 4;
+var FSDD_CALL_IRQ = 5;
 
 // memory
 var MEMORY_BLOCK_SIZE = 256;
@@ -66,6 +67,14 @@ var TRACK_BIT = 1;
 var SECTOR_BIT = 2;
 var BLOCK_BIT = 3;
 var CONTENT_BIT = 4;
+
+// fsDD Routines
+var FSDD_CREATE = 0;
+var FSDD_READ = 1;
+var FSDD_WRITE = 2;
+var FSDD_DELETE = 3;
+var FSDD_FORMAT = 4;
+var FSDD_LIST_FILES = 5;
 
 //
 // Global Variables

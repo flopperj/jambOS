@@ -428,7 +428,11 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             behavior: function(args) {
                 var filename = args[0];
                 if (filename) {
-                    _HardDrive.createFile(filename);
+                    var arguments = {
+                        filename: filename,
+                        fileData: null
+                    };
+                    _Kernel.interruptHandler(FSDD_CALL_IRQ, [FSDD_CREATE, arguments]);
                 } else
                     _StdIn.putText("Usage: create <filename>");
             }
@@ -442,7 +446,11 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             behavior: function(args) {
                 var filename = args[0];
                 if (filename) {
-                    _HardDrive.readFile(filename);
+                    var arguments = {
+                        filename: filename,
+                        fileData: null
+                    };
+                    _Kernel.interruptHandler(FSDD_CALL_IRQ, [FSDD_READ, arguments]);
                 } else
                     _StdIn.putText("Usag: read <filename>");
             }
@@ -466,8 +474,12 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
 
                     // remove last quote char
                     data = data.substr(0, data.length - 1);
+                    var arguments = {
+                        filename: filename,
+                        fileData: data
+                    };
 
-                    _HardDrive.writeFile(filename, data);
+                    _Kernel.interruptHandler(FSDD_CALL_IRQ, [FSDD_WRITE, arguments]);
                 } else
                     _StdIn.putText("Usage: write <filename> \"data\"");
             }
@@ -480,9 +492,13 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             description: "<filename> - deletes file from memory",
             behavior: function(args) {
                 var filename = args[0];
-                if (filename)
-                    _HardDrive.deleteFile(filename);
-                else
+                if (filename) {
+                    var arguments = {
+                        filename: filename,
+                        fileData: null
+                    };
+                    _Kernel.interruptHandler(FSDD_CALL_IRQ, [FSDD_DELETE, arguments]);
+                } else
                     _StdIn.putText("Usage: delete <filename>");
             }
         });
@@ -493,7 +509,11 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             command: "format",
             description: "- Initializes all blocks in all sectors",
             behavior: function() {
-                _HardDrive.formatDrive();
+                var arguments = {
+                    filename: null,
+                    fileData: null
+                };
+                _Kernel.interruptHandler(FSDD_CALL_IRQ, [FSDD_FORMAT, arguments]);
                 _StdIn.putText("HD format complete!");
             }
         });
@@ -505,7 +525,11 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             command: "ls",
             description: "- Lists all files currently stored on the disk",
             behavior: function() {
-                _HardDrive.listFiles();
+                var arguments = {
+                    filename: null,
+                    fileData: null
+                };
+                _Kernel.interruptHandler(FSDD_CALL_IRQ, [FSDD_LIST_FILES, arguments]);
             }
         });
         this.commandList.push(sc);

@@ -178,6 +178,11 @@ jambOS.OS.Kernel = jambOS.util.createClass({
             case CONTEXT_SWITCH_IRQ:
                 self.contextSwitchISR(_CPU.scheduler.get("currentProcess"));
                 break;
+            case FSDD_CALL_IRQ:
+                var routine = params[0];
+                var args = params[1];
+                self.fileSystemCall(routine, args);
+                break;
             default:
                 self.trapError("Invalid Interrupt Request. irq=" + irq + " params=[" + params + "]");
         }
@@ -213,6 +218,16 @@ jambOS.OS.Kernel = jambOS.util.createClass({
     contextSwitchISR: function(process) {
         var self = this;
         _CPU.scheduler.switchContext(process);
+    },
+    /**
+     * Handles file system calls
+     * @public
+     * @method fileSystemCall
+     * @param {int} routine
+     * @param {array} params
+     */
+    fileSystemCall: function(routine, params) {
+        _HardDrive.fileSystem.isr(routine, params);
     },
     /**
      * The built-in TIMER (not clock) Interrupt Service Routine (as opposed to an ISR coming from a device driver).

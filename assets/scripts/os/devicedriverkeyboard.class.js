@@ -30,6 +30,12 @@ jambOS.OS.DeviceDriverKeyboard = jambOS.util.createClass(jambOS.OS.DeviceDriver,
         this.status = "loaded";
         // More?
     },
+    /**
+     * Interupt Service Routine
+     * @public
+     * @method isr
+     * @param {object} params
+     */
     isr: function(params)
     {
         // Parse the params.

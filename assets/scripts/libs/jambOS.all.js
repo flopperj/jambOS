@@ -40,6 +40,7 @@ var KEYBOARD_IRQ = 1;
 var PROCESS_INITIATION_IRQ = 2;
 var PROCESS_TERMINATION_IRQ = 3;
 var CONTEXT_SWITCH_IRQ = 4;
+var FSDD_CALL_IRQ = 5;
 
 // memory
 var MEMORY_BLOCK_SIZE = 256;
@@ -66,6 +67,14 @@ var TRACK_BIT = 1;
 var SECTOR_BIT = 2;
 var BLOCK_BIT = 3;
 var CONTENT_BIT = 4;
+
+// fsDD Routines
+var FSDD_CREATE = 0;
+var FSDD_READ = 1;
+var FSDD_WRITE = 2;
+var FSDD_DELETE = 3;
+var FSDD_FORMAT = 4;
+var FSDD_LIST_FILES = 5;
 
 //
 // Global Variables
@@ -374,402 +383,6 @@ $(document).ready(function() {
 });
 
 /**
- *==============================================================================
- * filesystem.class.js
- * 
- * Currently the harddrive subclasses the filesystem class
- *    
- * @class FileSystem
- * @memberOf jambOS.OS
- * @param {object} - Array Object containing the default values to be 
- *                             passed to the class
- *==============================================================================
- */
-jambOS.OS.FileSystem = new jambOS.util.createClass({
-    /**
-     * @property {string} type
-     */
-    type: "filesystem",
-    usedFilenames: [],
-    /**
-     * @property {localStorage} storage - This is our storage unit
-     */
-    storage: null,
-    /**
-     * Reads data from harddrive
-     * @public
-     * @method
-     * @param {string} address - Adress location to read from
-     * @returns {string} data
-     */
-    read: function(address) {
-        return this.storage.getItem(address);
-    },
-    /**
-     * Writes to the harddrive
-     * @public
-     * @method write
-     * @param {string} address - Address location to write to
-     * @param {string} data - Data to write to specified data address
-     */
-    write: function(address, data) {
-        this.storage.setItem(address, data);
-    },
-    /**
-     * Creates file in our harddrive
-     * @public
-     * @method createFile
-     * @param {strign} filename 
-     */
-    createFile: function(filename) {
-        var availableTSB = this.findNextAvailableTSB();
-        var isDuplicate = this._isDuplicate(filename);
-
-        // TODO: check for special characters, we might not want to create files with speical characters
-
-        if (availableTSB && !isDuplicate) {
-            this.initializeTSB(availableTSB, filename);
-            _StdIn.putText("File created: " + filename);
-        } else
-            _StdIn.putText("Sorry: Cannot create duplicate files!");
-    },
-    /**
-     * Reads contents from a file
-     * @public
-     * @method readFile
-     * @param {string} filename 
-     */
-    readFile: function(filename) {
-
-        // get filename and its address from our array list of used filenames
-        var file = $.grep(this.usedFilenames, function(el) {
-            return el.filename.toLowerCase() === filename.toLowerCase();
-        })[0];
-
-        if (file) {
-            // get metadata content that holds tsb address to where content is stored
-            var value = JSON.parse(this.read(file.address));
-            var track = parseInt(value[TRACK_BIT]);
-            var sector = parseInt(value[SECTOR_BIT]);
-            var block = parseInt(value[BLOCK_BIT]);
-
-            // use previous info to get content from where its stored in storage
-            var dataAddress = this._getAddress({track: track, sector: sector, block: block});
-            var data = JSON.parse(this.read(dataAddress));
-            track = parseInt(data[TRACK_BIT]);
-            sector = parseInt(data[SECTOR_BIT]);
-            block = parseInt(data[BLOCK_BIT]);
-            var content = data[CONTENT_BIT];
-
-            // output data to screen
-            _StdIn.putText(content);
-
-            // handle text that wrapped around
-            while (track !== -1) {
-                dataAddress = this._getAddress({track: track, sector: sector, block: block});
-                data = JSON.parse(this.read(dataAddress));
-                track = parseInt(data[TRACK_BIT]);
-                sector = parseInt(data[SECTOR_BIT]);
-                block = parseInt(data[BLOCK_BIT]);
-                content = data[CONTENT_BIT];
-                _StdIn.putText(content);
-            }
-        } else
-            _StdIn.putText("Sorry: File \"" + filename + "\" not found!");
-
-    },
-    writeFile: function(filename, fileData) {
-        var self = this;
-        // get filename and its address from our array list of used filenames
-        var file = $.grep(this.usedFilenames, function(el) {
-            return el.filename.toLowerCase() === filename.toLowerCase();
-        })[0];
-
-        if (file) {
-            // get metadata content that holds tsb address to where content is stored
-            var value = JSON.parse(this.read(file.address));
-            var track = parseInt(value[TRACK_BIT]);
-            var sector = parseInt(value[SECTOR_BIT]);
-            var block = parseInt(value[BLOCK_BIT]);
-
-            // use previous info to get content from where its stored in storage
-            var dataAddress = this._getAddress({track: track, sector: sector, block: block});
-            var data = JSON.parse(this.read(dataAddress));
-            track = parseInt(data[TRACK_BIT]);
-            sector = parseInt(data[SECTOR_BIT]);
-            block = parseInt(data[BLOCK_BIT]);
-
-            // split our data into chunks of 60bit content
-            var content = fileData.match(/.{1,60}/g);
-            var occupiedBit = 1;
-            $.each(content, function() {
-                if (block < ALLOCATABLE_BLOCKS)
-                    block += 1;
-                else {
-                    if (sector < ALLOCATABLE_SECTORS)
-                        sector += 1;
-                    else {
-                        if (track < ALLOCATABLE_TRACKS && track > 0) {
-                            track += 1;
-                        }
-                    }
-                }
-
-                // file data
-                var value = "[" + occupiedBit + "," + track + "," + sector + "," + block + ",\"" + self.sanitizeFileSystemValue(this) + "\"]";
-                self.write(dataAddress, value);
-
-            });
-
-            // output success data to screen
-            _StdIn.putText("Written data to: " + filename);
-
-        } else
-            _StdIn.putText("Sorry: File \"" + filename + "\" not found!");
-    },
-    /**
-     * Deletes file from file system
-     * @public
-     * @method deleteFile
-     * @param {string} filename
-     */
-    deleteFile: function(filename) {
-
-        // get filename and its address from our array list of used filenames
-        var file = $.grep(this.usedFilenames, function(el) {
-            return el.filename.toLowerCase() === filename.toLowerCase();
-        })[0];
-
-        if (file) {
-            // get metadata content that holds tsb address to where content is stored
-            var value = JSON.parse(this.read(file.address));
-            var track = parseInt(value[TRACK_BIT]);
-            var sector = parseInt(value[SECTOR_BIT]);
-            var block = parseInt(value[BLOCK_BIT]);
-            var occupiedBit = 0;
-            var fileAddress = file.address;
-
-            // file metadata
-            var value = "[" + occupiedBit + ",-1,-1,-1,\"" + this.sanitizeFileSystemValue("") + "\"]";
-            this.write(fileAddress, value);
-
-            // reset tsb
-            this.resetTSB(track, sector, block);
-
-            // use previous info to get content from where its stored in storage
-            var dataAddress = this._getAddress({track: track, sector: sector, block: block});
-            var data = JSON.parse(this.read(dataAddress));
-            track = parseInt(data[TRACK_BIT]);
-            sector = parseInt(data[SECTOR_BIT]);
-            block = parseInt(data[BLOCK_BIT]);
-
-            // file data
-            var value = "[" + occupiedBit + "," + track + "," + sector + "," + block + ",\"" + this.sanitizeFileSystemValue("") + "\"]";
-            this.write(dataAddress, value);
-
-            // output data to screen
-            _StdIn.putText("Deleted: \"" + file.filename + "\"");
-
-            // make sure we remove our file from our used files array
-            var tempList = [];
-            $.each(this.usedFilenames, function() {
-                if (this.filename.toLowerCase() !== filename.toLowerCase())
-                    tempList.push(this);
-            });
-            this.usedFilenames = tempList;
-
-            // handle text that wrapped around
-            while (track !== -1) {
-                dataAddress = this._getAddress({track: track, sector: sector, block: block});
-                data = JSON.parse(this.read(dataAddress));
-                track = parseInt(data[TRACK_BIT]);
-                sector = parseInt(data[SECTOR_BIT]);
-                block = parseInt(data[BLOCK_BIT]);
-
-                // file data
-                var value = "[" + occupiedBit + "," + track + "," + sector + "," + block + ",\"" + this.sanitizeFileSystemValue("") + "\"]";
-                this.write(dataAddress, value);
-            }
-        } else
-            _StdIn.putText("Sorry: File \"" + filename + "\" not found!");
-    },
-    /**
-     * Lists out all the files in the file system
-     * @public
-     * @method listFiles
-     */
-    listFiles: function() {
-
-        if (this.usedFilenames.length === 0)
-            _StdIn.putText("File System is currently empty!");
-
-        // Display all files in the file system
-        $.each(this.usedFilenames, function() {
-            _StdIn.putText(this.filename);
-            _StdIn.advanceLine();
-        });
-
-
-    },
-    /**
-     * Resets TSB
-     * @public
-     * @method resetTSB
-     * @param {int} track 
-     * @param {int} sector 
-     * @param {int} block
-     */
-    resetTSB: function(track, sector, block) {
-
-        var tsbValue = "[0,-1,-1,-1,\"" + this.sanitizeFileSystemValue("") + "\"]";
-
-        // MBR at TSB(0,0,0)
-        if (track === 0 && sector === 0 && block === 0)
-            tsbValue = "[1,-1,-1,-1,\"" + this.sanitizeFileSystemValue("MBR") + "\"]";
-
-        this.write("[" + track + "," + sector + "," + block + "]", tsbValue);
-    },
-    /**
-     * Initializes tsb
-     * @public 
-     * @method initializeTSB
-     * @param {object} tsb
-     * @param {string} filename
-     */
-    initializeTSB: function(tsb, filename) {
-
-        var fileNameTSB = jambOS.util.clone(tsb);
-        var fileDataTSB = jambOS.util.clone(tsb);
-        fileDataTSB.track += 1;
-        fileDataTSB.block -= 1;
-
-        var fileDataAdress = this._getAddress(fileDataTSB);
-        var fileNameAddress = this._getAddress(fileNameTSB);
-        var value = JSON.parse(this.read(fileDataAdress));
-        var occupiedBit = value[OCCUPIED_BIT];
-        var track = value[TRACK_BIT];
-        var sector = value[SECTOR_BIT];
-        var block = value[BLOCK_BIT];
-
-        if (occupiedBit === 0)
-            occupiedBit = 1;
-
-        // add filename to usedFilenames array
-        this.usedFilenames.push({filename: filename, address: fileNameAddress});
-
-        // file metadata
-        var value = "[" + occupiedBit + "," + fileDataTSB.track + "," + fileDataTSB.sector + "," + fileDataTSB.block + ",\"" + this.sanitizeFileSystemValue(filename) + "\"]";
-        this.write(fileNameAddress, value);
-
-        // file data
-        var value = "[" + occupiedBit + "," + track + "," + sector + "," + block + ",\"" + this.sanitizeFileSystemValue("") + "\"]";
-        this.write(fileDataAdress, value);
-    },
-    /**
-     * Sanitizes file system value
-     * @public
-     * @method sanitizeFileSystemValue
-     * @param {string} value 
-     * @returns {string} value
-     */
-    sanitizeFileSystemValue: function(value) {
-
-        var sizeOfData = value.length;
-
-        // Sanitize our value by adding dashes at empty spaces
-        for (var i = sizeOfData; i < MAX_FILESIZE; i++)
-            value += "-";
-
-        return value;
-    },
-    /**
-     * Finds the next available tsb
-     * @public
-     * @method findNextAvailable
-     * @returns {object} tsb
-     */
-    findNextAvailableTSB: function() {
-        var decimalAddress = 0;
-        var value = [];
-        var occupiedBit = -1;
-
-        // loop through address in storage
-        for (var address in this.storage)
-        {
-            var tsb = this._parseAddress(address);
-            decimalAddress = tsb.track + tsb.sector + tsb.block;
-
-            // We don't want to loop through the filenames
-            if (decimalAddress >= 0 && decimalAddress <= MBR_END_ADRESS)
-            {
-                value = JSON.parse(this.storage[address]);
-                occupiedBit = value[0];
-
-                // return tsb if not occupied
-                if (occupiedBit === 0)
-                {
-                    return tsb;
-                }
-            }
-        }
-
-        return null;
-    },
-    /**
-     * Checks if filename is a duplicate
-     * @private
-     * @method _isDuplicate
-     * @param {string} filename 
-     * @returns {boolean}
-     */
-    _isDuplicate: function(filename) {
-        var duplicates = $.grep(this.usedFilenames, function(el) {
-            return el.filename.toLowerCase() === filename.toLowerCase();
-        });
-        return duplicates.length > 0;
-    },
-    /**
-     * Parses storage address
-     * @private
-     * @method _parseAddress
-     * @param {string} address
-     * @returns {object} tsb
-     */
-    _parseAddress: function(address) {
-        var sanitizedAddress = address.replace(/\[|,|\]/g, "");
-        var track = sanitizedAddress.charAt(0);
-        var sector = sanitizedAddress.charAt(1);
-        var block = sanitizedAddress.charAt(2);
-
-        var tsb = {track: parseInt(track), sector: parseInt(sector), block: parseInt(block)};
-
-        return tsb;
-    },
-    /**
-     * Get's address in storaget given a tsb
-     * @private
-     * @method _getAddress
-     * @param {object} tsb
-     * @returns {string} address
-     */
-    _getAddress: function(tsb) {
-        return "[" + tsb.track + "," + tsb.sector + "," + tsb.block + "]";
-    },
-    /**
-     * Checks for html5 storage support
-     * @private
-     * @method _canSupportLocalStorage
-     * @returns {boolean} true|false
-     */
-    _canSupportLocalStorage: function() {
-        try {
-            return "localStorage" in window && window["localStorage"] !== null;
-        } catch (e) {
-            return false;
-        }
-    }
-});
-/**
  * =============================================================================
  * control.class.js
  * 
@@ -926,7 +539,9 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
         _CPU = new jambOS.host.Cpu();
         
         // initialize harddrive
-        _HardDrive = new jambOS.host.HardDrive();
+        _HardDrive = new jambOS.host.HardDrive({
+            fileSystem: new jambOS.OS.FileSystemDriver()
+        });
 
         // ... then set the host clock pulse ...
         _hardwareClockID = setInterval(_Device.hostClockPulse, CPU_CLOCK_INTERVAL);
@@ -1655,22 +1270,25 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
  *    
  * @class HardDrive
  * @memberOf jambOS.host 
- * @inheritsFrom jambOS.OS.FileSystem
  * @param {object} - Array Object containing the default values to be 
  *                             passed to the class
  *==============================================================================
  */
-jambOS.host.HardDrive = jambOS.util.createClass(jambOS.OS.FileSystem, {
+jambOS.host.HardDrive = jambOS.util.createClass({
     /**
      * @property {string} type
      */
     type: "harddrive",
+    fileSystem: null,
     /**
      * Constructor
      */
-    initialize: function() {
-        if (this._canSupportLocalStorage()) {
-            this.storage = localStorage;
+    initialize: function(options) {
+        options || (options = {});
+        this.setOptions(options);
+
+        if (this._canSupportLocalStorage() && this.fileSystem) {
+            this.fileSystem.storage = localStorage;
             this.formatDrive();
         }
     },
@@ -1681,10 +1299,10 @@ jambOS.host.HardDrive = jambOS.util.createClass(jambOS.OS.FileSystem, {
      */
     formatDrive: function() {
         // clear local storage
-        this.storage.clear();
+        this.fileSystem.storage.clear();
 
         // clear out our filenames
-        this.usedFilenames = [];
+        this.fileSystem.usedFilenames = [];
 
         // initialize of all the tracks
         for (var track = 0; track < ALLOCATABLE_TRACKS; track++) {
@@ -1692,6 +1310,106 @@ jambOS.host.HardDrive = jambOS.util.createClass(jambOS.OS.FileSystem, {
                 for (var block = 0; block < ALLOCATABLE_BLOCKS; block++)
                     this.resetTSB(track, sector, block);
             }
+        }
+    },
+    /**
+     * Resets TSB
+     * @public
+     * @method resetTSB
+     * @param {int} track 
+     * @param {int} sector 
+     * @param {int} block
+     */
+    resetTSB: function(track, sector, block) {
+
+        var tsbValue = "[0,-1,-1,-1,\"" + this.fileSystem.sanitizeFileSystemValue("") + "\"]";
+
+        // MBR at TSB(0,0,0)
+        if (track === 0 && sector === 0 && block === 0)
+            tsbValue = "[1,-1,-1,-1,\"" + this.fileSystem.sanitizeFileSystemValue("MBR") + "\"]";
+
+        this.fileSystem.write("[" + track + "," + sector + "," + block + "]", tsbValue);
+    },
+    /**
+     * Initializes tsb
+     * @public 
+     * @method initializeTSB
+     * @param {object} tsb
+     * @param {string} filename
+     */
+    initializeTSB: function(tsb, filename) {
+
+        var fileNameTSB = jambOS.util.clone(tsb);
+        var fileDataTSB = jambOS.util.clone(tsb);
+        fileDataTSB.track += 1;
+        fileDataTSB.block -= 1;
+
+        var fileDataAdress = this.fileSystem._getAddress(fileDataTSB);
+        var fileNameAddress = this.fileSystem._getAddress(fileNameTSB);
+        var value = JSON.parse(this.fileSystem.read(fileDataAdress));
+        var occupiedBit = value[OCCUPIED_BIT];
+        var track = value[TRACK_BIT];
+        var sector = value[SECTOR_BIT];
+        var block = value[BLOCK_BIT];
+
+        if (occupiedBit === 0)
+            occupiedBit = 1;
+
+        // add filename to usedFilenames array
+        this.fileSystem.usedFilenames.push({filename: filename, address: fileNameAddress});
+
+        // file metadata
+        var value = "[" + occupiedBit + "," + fileDataTSB.track + "," + fileDataTSB.sector + "," + fileDataTSB.block + ",\"" + this.fileSystem.sanitizeFileSystemValue(filename) + "\"]";
+        this.fileSystem.write(fileNameAddress, value);
+
+        // file data
+        var value = "[" + occupiedBit + "," + track + "," + sector + "," + block + ",\"" + this.fileSystem.sanitizeFileSystemValue("") + "\"]";
+        this.fileSystem.write(fileDataAdress, value);
+    },
+    /**
+     * Finds the next available tsb
+     * @public
+     * @method findNextAvailable
+     * @returns {object} tsb
+     */
+    findNextAvailableTSB: function() {
+        var decimalAddress = 0;
+        var value = [];
+        var occupiedBit = -1;
+
+        // loop through address in storage
+        for (var address in this.fileSystem.storage)
+        {
+            var tsb = this.fileSystem._parseAddress(address);
+            decimalAddress = tsb.track + tsb.sector + tsb.block;
+
+            // We don't want to loop through the filenames
+            if (decimalAddress >= 0 && decimalAddress <= MBR_END_ADRESS)
+            {
+                value = JSON.parse(this.fileSystem.storage[address]);
+                occupiedBit = value[0];
+
+                // return tsb if not occupied
+                if (occupiedBit === 0)
+                {
+                    return tsb;
+                }
+            }
+        }
+
+        return null;
+    },
+    /**
+     * Checks for html5 storage support
+     * @private
+     * @method _canSupportLocalStorage
+     * @returns {boolean} true|false
+     */
+    _canSupportLocalStorage: function() {
+        try {
+            return "localStorage" in window && window["localStorage"] !== null;
+        } catch (e) {
+            return false;
         }
     }
 });
@@ -2772,6 +2490,12 @@ jambOS.OS.DeviceDriverKeyboard = jambOS.util.createClass(jambOS.OS.DeviceDriver,
         this.status = "loaded";
         // More?
     },
+    /**
+     * Interupt Service Routine
+     * @public
+     * @method isr
+     * @param {object} params
+     */
     isr: function(params)
     {
         // Parse the params.
@@ -3072,6 +2796,349 @@ jambOS.OS.DeviceDriverKeyboard = jambOS.util.createClass(jambOS.OS.DeviceDriver,
             } else if (keyCode !== 38 && keyCode !== 40)
                 _KernelInputQueue.enqueue(chr);
         }
+    }
+});
+/**
+ *==============================================================================
+ * filesystem.class.js
+ * 
+ * Currently the harddrive subclasses the filesystem class
+ *    
+ * @class FileSystem
+ * @memberOf jambOS.OS
+ * @inheritsFrom jambOS.OS.DeviceDriver
+ * @param {object} - Array Object containing the default values to be 
+ *                             passed to the class
+ *==============================================================================
+ */
+jambOS.OS.FileSystemDriver = new jambOS.util.createClass(jambOS.OS.DeviceDriver, {
+    /**
+     * @property {string} type
+     */
+    type: "filesystem",
+    /**
+     * @propert {array} usedFilenames - contains a list of created files
+     */
+    usedFilenames: [],
+    /**
+     * @property {localStorage} storage - This is our storage unit
+     */
+    storage: null,
+    /**
+     * Interrupt service routine
+     * @public
+     * @method isr
+     * @param {int} routine
+     * @param {object} data
+     */
+    isr: function(routine, data) {
+        var filename = data["filename"];
+        var fileData = data["fileData"];
+
+        switch (routine) {
+            case FSDD_CREATE:
+                this.createFile(filename);
+                break;
+            case FSDD_READ:
+                this.readFile(filename);
+                break;
+            case FSDD_WRITE:
+                this.writeFile(filename, fileData);
+                break;
+            case FSDD_DELETE:
+                this.deleteFile(filename);
+                break;
+            case FSDD_FORMAT:
+                _HardDrive.formatDrive();
+                break;
+            case FSDD_LIST_FILES:
+                this.listFiles();
+                break;
+        }
+
+    },
+    /**
+     * Reads data from harddrive
+     * @public
+     * @method
+     * @param {string} address - Adress location to read from
+     * @returns {string} data
+     */
+    read: function(address) {
+        return this.storage.getItem(address);
+    },
+    /**
+     * Writes to the harddrive
+     * @public
+     * @method write
+     * @param {string} address - Address location to write to
+     * @param {string} data - Data to write to specified data address
+     */
+    write: function(address, data) {
+        this.storage.setItem(address, data);
+    },
+    /**
+     * Creates file in our harddrive
+     * @public
+     * @method createFile
+     * @param {strign} filename 
+     */
+    createFile: function(filename) {
+        var availableTSB = _HardDrive.findNextAvailableTSB();
+        var isDuplicate = this._isDuplicate(filename);
+
+        // TODO: check for special characters, we might not want to create files with speical characters
+        
+        console.log(isDuplicate);
+        console.log(availableTSB);
+
+        if (availableTSB && !isDuplicate) {
+            _HardDrive.initializeTSB(availableTSB, filename);
+            _StdIn.putText("File created: " + filename);
+        } else
+            _StdIn.putText("Sorry: Cannot create duplicate files!");
+    },
+    /**
+     * Reads contents from a file
+     * @public
+     * @method readFile
+     * @param {string} filename 
+     */
+    readFile: function(filename) {
+
+        // get filename and its address from our array list of used filenames
+        var file = $.grep(this.usedFilenames, function(el) {
+            return el.filename.toLowerCase() === filename.toLowerCase();
+        })[0];
+
+        if (file) {
+            // get metadata content that holds tsb address to where content is stored
+            var value = JSON.parse(this.read(file.address));
+            var track = parseInt(value[TRACK_BIT]);
+            var sector = parseInt(value[SECTOR_BIT]);
+            var block = parseInt(value[BLOCK_BIT]);
+
+            // use previous info to get content from where its stored in storage
+            var dataAddress = this._getAddress({track: track, sector: sector, block: block});
+            var data = JSON.parse(this.read(dataAddress));
+            track = parseInt(data[TRACK_BIT]);
+            sector = parseInt(data[SECTOR_BIT]);
+            block = parseInt(data[BLOCK_BIT]);
+            var content = data[CONTENT_BIT];
+
+            // output data to screen
+            _StdIn.putText(content);
+
+            // handle text that wrapped around
+            while (track !== -1) {
+                dataAddress = this._getAddress({track: track, sector: sector, block: block});
+                data = JSON.parse(this.read(dataAddress));
+                track = parseInt(data[TRACK_BIT]);
+                sector = parseInt(data[SECTOR_BIT]);
+                block = parseInt(data[BLOCK_BIT]);
+                content = data[CONTENT_BIT];
+                _StdIn.putText(content);
+            }
+        } else
+            _StdIn.putText("Sorry: File \"" + filename + "\" not found!");
+
+    },
+    /**
+     * Writes data to file
+     * @public
+     * @method writeFile
+     * @param {string} filename
+     * @param {string} fileData
+     */
+    writeFile: function(filename, fileData) {
+        var self = this;
+        // get filename and its address from our array list of used filenames
+        var file = $.grep(this.usedFilenames, function(el) {
+            return el.filename.toLowerCase() === filename.toLowerCase();
+        })[0];
+
+        if (file) {
+            // get metadata content that holds tsb address to where content is stored
+            var value = JSON.parse(this.read(file.address));
+            var track = parseInt(value[TRACK_BIT]);
+            var sector = parseInt(value[SECTOR_BIT]);
+            var block = parseInt(value[BLOCK_BIT]);
+
+            // use previous info to get content from where its stored in storage
+            var dataAddress = this._getAddress({track: track, sector: sector, block: block});
+            var data = JSON.parse(this.read(dataAddress));
+            track = parseInt(data[TRACK_BIT]);
+            sector = parseInt(data[SECTOR_BIT]);
+            block = parseInt(data[BLOCK_BIT]);
+
+            // split our data into chunks of 60bit content
+            var content = fileData.match(/.{1,60}/g);
+            var occupiedBit = 1;
+            $.each(content, function() {
+                if (block < ALLOCATABLE_BLOCKS)
+                    block += 1;
+                else {
+                    if (sector < ALLOCATABLE_SECTORS)
+                        sector += 1;
+                    else {
+                        if (track < ALLOCATABLE_TRACKS && track > 0) {
+                            track += 1;
+                        }
+                    }
+                }
+
+                // file data
+                var value = "[" + occupiedBit + "," + track + "," + sector + "," + block + ",\"" + self.sanitizeFileSystemValue(this) + "\"]";
+                self.write(dataAddress, value);
+
+            });
+
+            // output success data to screen
+            _StdIn.putText("Written data to: " + filename);
+
+        } else
+            _StdIn.putText("Sorry: File \"" + filename + "\" not found!");
+    },
+    /**
+     * Deletes file from file system
+     * @public
+     * @method deleteFile
+     * @param {string} filename
+     */
+    deleteFile: function(filename) {
+
+        // get filename and its address from our array list of used filenames
+        var file = $.grep(this.usedFilenames, function(el) {
+            return el.filename.toLowerCase() === filename.toLowerCase();
+        })[0];
+
+        if (file) {
+            // get metadata content that holds tsb address to where content is stored
+            var value = JSON.parse(this.read(file.address));
+            var track = parseInt(value[TRACK_BIT]);
+            var sector = parseInt(value[SECTOR_BIT]);
+            var block = parseInt(value[BLOCK_BIT]);
+            var occupiedBit = 0;
+            var fileAddress = file.address;
+
+            // file metadata
+            var value = "[" + occupiedBit + ",-1,-1,-1,\"" + this.sanitizeFileSystemValue("") + "\"]";
+            this.write(fileAddress, value);
+
+            // reset tsb
+            _HardDrive.resetTSB(track, sector, block);
+
+            // use previous info to get content from where its stored in storage
+            var dataAddress = this._getAddress({track: track, sector: sector, block: block});
+            var data = JSON.parse(this.read(dataAddress));
+            track = parseInt(data[TRACK_BIT]);
+            sector = parseInt(data[SECTOR_BIT]);
+            block = parseInt(data[BLOCK_BIT]);
+
+            // file data
+            var value = "[" + occupiedBit + "," + track + "," + sector + "," + block + ",\"" + this.sanitizeFileSystemValue("") + "\"]";
+            this.write(dataAddress, value);
+
+            // output data to screen
+            _StdIn.putText("Deleted: \"" + file.filename + "\"");
+
+            // make sure we remove our file from our used files array
+            var tempList = [];
+            $.each(this.usedFilenames, function() {
+                if (this.filename.toLowerCase() !== filename.toLowerCase())
+                    tempList.push(this);
+            });
+            this.usedFilenames = tempList;
+
+            // handle text that wrapped around
+            while (track !== -1) {
+                dataAddress = this._getAddress({track: track, sector: sector, block: block});
+                data = JSON.parse(this.read(dataAddress));
+                track = parseInt(data[TRACK_BIT]);
+                sector = parseInt(data[SECTOR_BIT]);
+                block = parseInt(data[BLOCK_BIT]);
+
+                // file data
+                var value = "[" + occupiedBit + "," + track + "," + sector + "," + block + ",\"" + this.sanitizeFileSystemValue("") + "\"]";
+                this.write(dataAddress, value);
+            }
+        } else
+            _StdIn.putText("Sorry: File \"" + filename + "\" not found!");
+    },
+    /**
+     * Lists out all the files in the file system
+     * @public
+     * @method listFiles
+     */
+    listFiles: function() {
+
+        if (this.usedFilenames.length === 0)
+            _StdIn.putText("File System is currently empty!");
+
+        // Display all files in the file system
+        $.each(this.usedFilenames, function() {
+            _StdIn.putText(this.filename);
+            _StdIn.advanceLine();
+        });
+
+
+    },
+    /**
+     * Sanitizes file system value
+     * @public
+     * @method sanitizeFileSystemValue
+     * @param {string} value 
+     * @returns {string} value
+     */
+    sanitizeFileSystemValue: function(value) {
+
+        var sizeOfData = value.length;
+
+        // Sanitize our value by adding dashes at empty spaces
+        for (var i = sizeOfData; i < MAX_FILESIZE; i++)
+            value += "-";
+
+        return value;
+    },
+    /**
+     * Checks if filename is a duplicate
+     * @private
+     * @method _isDuplicate
+     * @param {string} filename 
+     * @returns {boolean}
+     */
+    _isDuplicate: function(filename) {
+        var duplicates = $.grep(this.usedFilenames, function(el) {
+            return el.filename.toLowerCase() === filename.toLowerCase();
+        });
+        return duplicates.length > 0;
+    },
+    /**
+     * Parses storage address
+     * @private
+     * @method _parseAddress
+     * @param {string} address
+     * @returns {object} tsb
+     */
+    _parseAddress: function(address) {
+        var sanitizedAddress = address.replace(/\[|,|\]/g, "");
+        var track = sanitizedAddress.charAt(0);
+        var sector = sanitizedAddress.charAt(1);
+        var block = sanitizedAddress.charAt(2);
+
+        var tsb = {track: parseInt(track), sector: parseInt(sector), block: parseInt(block)};
+
+        return tsb;
+    },
+    /**
+     * Get's address in storaget given a tsb
+     * @private
+     * @method _getAddress
+     * @param {object} tsb
+     * @returns {string} address
+     */
+    _getAddress: function(tsb) {
+        return "[" + tsb.track + "," + tsb.sector + "," + tsb.block + "]";
     }
 });
 /**
@@ -3840,7 +3907,11 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             behavior: function(args) {
                 var filename = args[0];
                 if (filename) {
-                    _HardDrive.createFile(filename);
+                    var arguments = {
+                        filename: filename,
+                        fileData: null
+                    };
+                    _Kernel.interruptHandler(FSDD_CALL_IRQ, [FSDD_CREATE, arguments]);
                 } else
                     _StdIn.putText("Usage: create <filename>");
             }
@@ -3854,7 +3925,11 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             behavior: function(args) {
                 var filename = args[0];
                 if (filename) {
-                    _HardDrive.readFile(filename);
+                    var arguments = {
+                        filename: filename,
+                        fileData: null
+                    };
+                    _Kernel.interruptHandler(FSDD_CALL_IRQ, [FSDD_READ, arguments]);
                 } else
                     _StdIn.putText("Usag: read <filename>");
             }
@@ -3878,8 +3953,12 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
 
                     // remove last quote char
                     data = data.substr(0, data.length - 1);
+                    var arguments = {
+                        filename: filename,
+                        fileData: data
+                    };
 
-                    _HardDrive.writeFile(filename, data);
+                    _Kernel.interruptHandler(FSDD_CALL_IRQ, [FSDD_WRITE, arguments]);
                 } else
                     _StdIn.putText("Usage: write <filename> \"data\"");
             }
@@ -3892,9 +3971,13 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             description: "<filename> - deletes file from memory",
             behavior: function(args) {
                 var filename = args[0];
-                if (filename)
-                    _HardDrive.deleteFile(filename);
-                else
+                if (filename) {
+                    var arguments = {
+                        filename: filename,
+                        fileData: null
+                    };
+                    _Kernel.interruptHandler(FSDD_CALL_IRQ, [FSDD_DELETE, arguments]);
+                } else
                     _StdIn.putText("Usage: delete <filename>");
             }
         });
@@ -3905,7 +3988,11 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             command: "format",
             description: "- Initializes all blocks in all sectors",
             behavior: function() {
-                _HardDrive.formatDrive();
+                var arguments = {
+                    filename: null,
+                    fileData: null
+                };
+                _Kernel.interruptHandler(FSDD_CALL_IRQ, [FSDD_FORMAT, arguments]);
                 _StdIn.putText("HD format complete!");
             }
         });
@@ -3917,7 +4004,11 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             command: "ls",
             description: "- Lists all files currently stored on the disk",
             behavior: function() {
-                _HardDrive.listFiles();
+                var arguments = {
+                    filename: null,
+                    fileData: null
+                };
+                _Kernel.interruptHandler(FSDD_CALL_IRQ, [FSDD_LIST_FILES, arguments]);
             }
         });
         this.commandList.push(sc);
@@ -4159,6 +4250,11 @@ jambOS.OS.Kernel = jambOS.util.createClass({
             case CONTEXT_SWITCH_IRQ:
                 self.contextSwitchISR(_CPU.scheduler.get("currentProcess"));
                 break;
+            case FSDD_CALL_IRQ:
+                var routine = params[0];
+                var args = params[1];
+                self.fileSystemCall(routine, args);
+                break;
             default:
                 self.trapError("Invalid Interrupt Request. irq=" + irq + " params=[" + params + "]");
         }
@@ -4194,6 +4290,16 @@ jambOS.OS.Kernel = jambOS.util.createClass({
     contextSwitchISR: function(process) {
         var self = this;
         _CPU.scheduler.switchContext(process);
+    },
+    /**
+     * Handles file system calls
+     * @public
+     * @method fileSystemCall
+     * @param {int} routine
+     * @param {array} params
+     */
+    fileSystemCall: function(routine, params) {
+        _HardDrive.fileSystem.isr(routine, params);
     },
     /**
      * The built-in TIMER (not clock) Interrupt Service Routine (as opposed to an ISR coming from a device driver).
