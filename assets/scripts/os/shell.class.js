@@ -1,9 +1,6 @@
 /**
  *==============================================================================
- * Class Shell
- * 
- * still in the works for re-working will implement this when time allows
- * Trying to have a cleaner shell class
+ * shell.class.js
  *    
  * @class Shell
  * @memberOf jambOS.OS
@@ -430,10 +427,8 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             description: "<filename> - creates file in memory",
             behavior: function(args) {
                 var filename = args[0];
-                if (filename)
-                {
+                if (filename) {
                     _HardDrive.createFile(filename);
-                    _StdIn.putText("File created: " + filename);
                 } else
                     _StdIn.putText("Usage: create <filename>");
             }
@@ -444,7 +439,12 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
         sc = new jambOS.OS.ShellCommand({
             command: "read",
             description: "<filename> - reads file in memory",
-            behavior: function() {
+            behavior: function(args) {
+                var filename = args[0];
+                if (filename) {
+                    _HardDrive.readFile(filename);
+                } else
+                    _StdIn.putText("Usag: read <filename>");
             }
         });
         this.commandList.push(sc);

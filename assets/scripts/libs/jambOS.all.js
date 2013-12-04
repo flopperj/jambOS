@@ -61,6 +61,11 @@ var MBR_END_ADRESS = 77;
 var ALLOCATABLE_TRACKS = 4;
 var ALLOCATABLE_SECTORS = 8;
 var ALLOCATABLE_BLOCKS = 8;
+var OCCUPIED_BIT = 0;
+var TRACK_BIT = 1;
+var SECTOR_BIT = 2;
+var BLOCK_BIT = 3;
+var CONTENT_BIT = 4;
 
 //
 // Global Variables
@@ -368,15 +373,28 @@ $(document).ready(function() {
     _Control = new jambOS.host.Control();
 });
 
-jambOS.OS.FileSystem = new jambOS.util.createClass({   
+/**
+ *==============================================================================
+ * filesystem.class.js
+ * 
+ * Currently the harddrive subclasses the filesystem class
+ *    
+ * @class FileSystem
+ * @memberOf jambOS.OS
+ * @param {object} - Array Object containing the default values to be 
+ *                             passed to the class
+ *==============================================================================
+ */
+jambOS.OS.FileSystem = new jambOS.util.createClass({
     /**
      * @property {string} type
      */
     type: "filesystem",
+    usedFilenames: [],
     /**
      * @property {localStorage} storage - This is our storage unit
      */
-    storage: null, 
+    storage: null,
     /**
      * Reads data from harddrive
      * @public
@@ -405,9 +423,58 @@ jambOS.OS.FileSystem = new jambOS.util.createClass({
      */
     createFile: function(filename) {
         var availableTSB = this.findNextAvailableTSB();
-        if (availableTSB) {
+        var isDuplicate = this._isDuplicate(filename);
+
+        // TODO: check for special characters, we might not want to create files with speical characters
+
+        if (availableTSB && !isDuplicate) {
             this.initializeTSB(availableTSB, filename);
-        }
+            _StdIn.putText("File created: " + filename);
+        } else
+            _StdIn.putText("Sorry: Cannot create duplicate files!");
+    },
+    /**
+     * Reads contents from a file
+     * @param {string} filename 
+     */
+    readFile: function(filename) {
+
+        // get filename and its address from our array list of used filenames
+        var file = $.grep(this.usedFilenames, function(el) {
+            return el.filename.toLowerCase() === filename.toLowerCase();
+        })[0];
+
+        if (file) {
+            // get metadata content that holds tsb address to where content is stored
+            var value = JSON.parse(this.read(file.address));
+            var track = parseInt(value[TRACK_BIT]);
+            var sector = parseInt(value[SECTOR_BIT]);
+            var block = parseInt(value[BLOCK_BIT]);
+
+            // use previous info to get content from where its stored in storage
+            var dataAddress = this._getAddress({track: track, sector: sector, block: block});
+            var data = JSON.parse(this.read(dataAddress));
+            track = parseInt(data[TRACK_BIT]);
+            sector = parseInt(data[SECTOR_BIT]);
+            block = parseInt(data[BLOCK_BIT]);
+            var content = data[CONTENT_BIT];
+
+            // output data to screen
+            _StdIn.putText(content);
+
+            // handle text that wrapped around
+            while (track !== -1) {
+                dataAddress = this._getAddress({track: track, sector: sector, block: block});
+                data = JSON.parse(this.read(dataAddress));
+                track = parseInt(data[TRACK_BIT]);
+                sector = parseInt(data[SECTOR_BIT]);
+                block = parseInt(data[BLOCK_BIT]);
+                content = data[CONTENT_BIT];
+                _StdIn.putText(content);
+            }
+        } else
+            _StdIn.putText("Sorry: File \"" + filename + "\" not found!");
+
     },
     /**
      * Resets TSB
@@ -418,13 +485,13 @@ jambOS.OS.FileSystem = new jambOS.util.createClass({
      * @param {int} block
      */
     resetTSB: function(track, sector, block) {
-        
+
         var tsbValue = "[0,-1,-1,-1,\"" + this.sanitizeFileSystemValue("") + "\"]";
-        
+
         // MBR at TSB(0,0,0)
         if (track === 0 && sector === 0 && block === 0)
             tsbValue = "[1,-1,-1,-1,\"" + this.sanitizeFileSystemValue("MBR") + "\"]";
-        
+
         this.write("[" + track + "," + sector + "," + block + "]", tsbValue);
     },
     /**
@@ -435,25 +502,30 @@ jambOS.OS.FileSystem = new jambOS.util.createClass({
      * @param {string} filename
      */
     initializeTSB: function(tsb, filename) {
+
         var fileNameTSB = jambOS.util.clone(tsb);
         var fileDataTSB = jambOS.util.clone(tsb);
         fileDataTSB.track += 1;
-        
+        fileDataTSB.block -= 1;
+
         var fileDataAdress = this._getAddress(fileDataTSB);
         var fileNameAddress = this._getAddress(fileNameTSB);
         var value = JSON.parse(this.read(fileDataAdress));
-        var occupiedBit = value[0];
-        var track = value[1];
-        var sector = value[2];
-        var block = value[3];
-        
+        var occupiedBit = value[OCCUPIED_BIT];
+        var track = value[TRACK_BIT];
+        var sector = value[SECTOR_BIT];
+        var block = value[BLOCK_BIT];
+
         if (occupiedBit === 0)
             occupiedBit = 1;
-        
+
+        // add filename to usedFilenames array
+        this.usedFilenames.push({filename: filename, address: fileNameAddress});
+
         // file metadata
-        var value = "[" + occupiedBit + "," + track + "," + sector + "," + block + ",\"" + this.sanitizeFileSystemValue(filename) + "\"]";
+        var value = "[" + occupiedBit + "," + fileDataTSB.track + "," + fileDataTSB.sector + "," + fileDataTSB.block + ",\"" + this.sanitizeFileSystemValue(filename) + "\"]";
         this.write(fileNameAddress, value);
-        
+
         // file data
         var value = "[" + occupiedBit + "," + track + "," + sector + "," + block + ",\"" + this.sanitizeFileSystemValue("") + "\"]";
         this.write(fileDataAdress, value);
@@ -466,13 +538,13 @@ jambOS.OS.FileSystem = new jambOS.util.createClass({
      * @returns {string} value
      */
     sanitizeFileSystemValue: function(value) {
-        
+
         var sizeOfData = value.length;
-        
+
         // Sanitize our value by adding dashes at empty spaces
         for (var i = sizeOfData; i < MAX_FILESIZE; i++)
             value += "-";
-        
+
         return value;
     },
     /**
@@ -485,19 +557,19 @@ jambOS.OS.FileSystem = new jambOS.util.createClass({
         var decimalAddress = 0;
         var value = [];
         var occupiedBit = -1;
-        
+
         // loop through address in storage
         for (var address in this.storage)
         {
             var tsb = this._parseAddress(address);
             decimalAddress = tsb.track + tsb.sector + tsb.block;
-            
+
             // We don't want to loop through the filenames
             if (decimalAddress >= 0 && decimalAddress <= MBR_END_ADRESS)
             {
                 value = JSON.parse(this.storage[address]);
                 occupiedBit = value[0];
-                
+
                 // return tsb if not occupied
                 if (occupiedBit === 0)
                 {
@@ -505,8 +577,21 @@ jambOS.OS.FileSystem = new jambOS.util.createClass({
                 }
             }
         }
-        
+
         return null;
+    },
+    /**
+     * Checks if filename is a duplicate
+     * @private
+     * @method _isDuplicate
+     * @param {string} filename 
+     * @returns {boolean}
+     */
+    _isDuplicate: function(filename) {
+        var duplicates = $.grep(this.usedFilenames, function(el) {
+            return el.filename.toLowerCase() === filename.toLowerCase();
+        });
+        return duplicates.length > 0;
     },
     /**
      * Parses storage address
@@ -520,9 +605,9 @@ jambOS.OS.FileSystem = new jambOS.util.createClass({
         var track = sanitizedAddress.charAt(0);
         var sector = sanitizedAddress.charAt(1);
         var block = sanitizedAddress.charAt(2);
-        
+
         var tsb = {track: parseInt(track), sector: parseInt(sector), block: parseInt(block)};
-        
+
         return tsb;
     },
     /**
@@ -3172,10 +3257,7 @@ jambOS.OS.UserCommand = jambOS.util.createClass(
 });
 /**
  *==============================================================================
- * Class Shell
- * 
- * still in the works for re-working will implement this when time allows
- * Trying to have a cleaner shell class
+ * shell.class.js
  *    
  * @class Shell
  * @memberOf jambOS.OS
@@ -3602,10 +3684,8 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
             description: "<filename> - creates file in memory",
             behavior: function(args) {
                 var filename = args[0];
-                if (filename)
-                {
+                if (filename) {
                     _HardDrive.createFile(filename);
-                    _StdIn.putText("File created: " + filename);
                 } else
                     _StdIn.putText("Usage: create <filename>");
             }
@@ -3616,7 +3696,12 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
         sc = new jambOS.OS.ShellCommand({
             command: "read",
             description: "<filename> - reads file in memory",
-            behavior: function() {
+            behavior: function(args) {
+                var filename = args[0];
+                if (filename) {
+                    _HardDrive.readFile(filename);
+                } else
+                    _StdIn.putText("Usag: read <filename>");
             }
         });
         this.commandList.push(sc);

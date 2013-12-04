@@ -61,6 +61,11 @@ var MBR_END_ADRESS = 77;
 var ALLOCATABLE_TRACKS = 4;
 var ALLOCATABLE_SECTORS = 8;
 var ALLOCATABLE_BLOCKS = 8;
+var OCCUPIED_BIT = 0;
+var TRACK_BIT = 1;
+var SECTOR_BIT = 2;
+var BLOCK_BIT = 3;
+var CONTENT_BIT = 4;
 
 //
 // Global Variables
