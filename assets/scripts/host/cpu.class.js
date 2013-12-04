@@ -167,6 +167,10 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             // through and get to the next process as quick as posible during
             // the context switch
             self.scheduler.processCycles = self.scheduler.quantum - 1;
+            
+            // kill process
+            var terminationOperation = self.getOpCode("00");
+            terminationOperation(self);
         }
 
         // Perform a context switch if the ready queue is not empty.

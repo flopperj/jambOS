@@ -47,18 +47,27 @@ var ALLOCATABLE_MEMORY_SLOTS = 3;
 var HEX_BASE = 16;
 
 // modes
-KERNEL_MODE = 0;
-USER_MODE = 1;
+var KERNEL_MODE = 0;
+var USER_MODE = 1;
 
 // scheduling algorithms
-RR_SCHEDULER = 0;
-FCFS_SCHEDULER = 1;
-PRIORITY_SCHEDULER = 2;
+var RR_SCHEDULER = 0;
+var FCFS_SCHEDULER = 1;
+var PRIORITY_SCHEDULER = 2;
+
+// file system
+var MAX_FILESIZE = 60;
+var MBR_END_ADRESS = 77;
+var ALLOCATABLE_TRACKS = 4;
+var ALLOCATABLE_SECTORS = 8;
+var ALLOCATABLE_BLOCKS = 8;
 
 //
 // Global Variables
 //
 var _CPU = null;
+
+var _HardDrive = null;
 
 var _OSclock = 0;       // Page 23.
 

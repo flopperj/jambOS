@@ -428,7 +428,14 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
         sc = new jambOS.OS.ShellCommand({
             command: "create",
             description: "<filename> - creates file in memory",
-            behavior: function() {
+            behavior: function(args) {
+                var filename = args[0];
+                if (filename)
+                {
+                    _HardDrive.createFile(filename);
+                    _StdIn.putText("File created: " + filename);
+                } else
+                    _StdIn.putText("Usage: create <filename>");
             }
         });
         this.commandList.push(sc);

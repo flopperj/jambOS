@@ -4,57 +4,40 @@
  *    
  * @class HardDrive
  * @memberOf jambOS.host 
+ * @inheritsFrom jambOS.OS.FileSystem
  * @param {object} - Array Object containing the default values to be 
  *                             passed to the class
  *==============================================================================
  */
-jambOS.host.HardDrive = jambOS.util.createClass(/** @scope jambOS.host.HardDrive.prototype */{
+jambOS.host.HardDrive = jambOS.util.createClass(jambOS.OS.FileSystem, {
     /**
      * @property {string} type
      */
     type: "harddrive",
     /**
-     * @property {localStorage} storage - This is our storage unit
-     */
-    storage: null,
-    /**
      * Constructor
      */
     initialize: function() {
-        if (this._canSupportLocalStorage())
+        if (this._canSupportLocalStorage()) {
             this.storage = localStorage;
+            this.formatDrive();
+        }
     },
     /**
-     * Reads data from harddrive
+     * Formarts drive
      * @public
-     * @method
-     * @param {string} address - Adress location to read from
-     * @returns {string} data
+     * @method formatDrive
      */
-    read: function(address) {
-        return this.storage.getItem(address);
-    },
-    /**
-     * Writes to the harddrive
-     * @public
-     * @method write
-     * @param {string} address - Address location to write to
-     * @param {string} data - Data to write to specified data address
-     */
-    write: function(address, data) {
-        this.storage.setItem(address, data);
-    },
-    /**
-     * Checks for html5 storage support
-     * @private
-     * @method _canSupportLocalStorage
-     * @returns {boolean} true|false
-     */
-    _canSupportLocalStorage: function() {
-        try {
-            return "localStorage" in window && window["localStorage"] !== null;
-        } catch (e) {
-            return false;
+    formatDrive: function() {
+        // clear local storage
+        this.storage.clear();
+        
+        // initialize of all the tracks
+        for (var track = 0; track < ALLOCATABLE_TRACKS; track++) {
+            for (var sector = 0; sector < ALLOCATABLE_SECTORS; sector++) {
+                for (var block = 0; block < ALLOCATABLE_BLOCKS; block++)
+                    this.resetTSB(track, sector, block);
+            }
         }
     }
 });

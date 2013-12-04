@@ -47,18 +47,27 @@ var ALLOCATABLE_MEMORY_SLOTS = 3;
 var HEX_BASE = 16;
 
 // modes
-KERNEL_MODE = 0;
-USER_MODE = 1;
+var KERNEL_MODE = 0;
+var USER_MODE = 1;
 
 // scheduling algorithms
-RR_SCHEDULER = 0;
-FCFS_SCHEDULER = 1;
-PRIORITY_SCHEDULER = 2;
+var RR_SCHEDULER = 0;
+var FCFS_SCHEDULER = 1;
+var PRIORITY_SCHEDULER = 2;
+
+// file system
+var MAX_FILESIZE = 60;
+var MBR_END_ADRESS = 77;
+var ALLOCATABLE_TRACKS = 4;
+var ALLOCATABLE_SECTORS = 8;
+var ALLOCATABLE_BLOCKS = 8;
 
 //
 // Global Variables
 //
 var _CPU = null;
+
+var _HardDrive = null;
 
 var _OSclock = 0;       // Page 23.
 
@@ -359,6 +368,187 @@ $(document).ready(function() {
     _Control = new jambOS.host.Control();
 });
 
+jambOS.OS.FileSystem = new jambOS.util.createClass({   
+    /**
+     * @property {string} type
+     */
+    type: "filesystem",
+    /**
+     * @property {localStorage} storage - This is our storage unit
+     */
+    storage: null, 
+    /**
+     * Reads data from harddrive
+     * @public
+     * @method
+     * @param {string} address - Adress location to read from
+     * @returns {string} data
+     */
+    read: function(address) {
+        return this.storage.getItem(address);
+    },
+    /**
+     * Writes to the harddrive
+     * @public
+     * @method write
+     * @param {string} address - Address location to write to
+     * @param {string} data - Data to write to specified data address
+     */
+    write: function(address, data) {
+        this.storage.setItem(address, data);
+    },
+    /**
+     * Creates file in our harddrive
+     * @public
+     * @method createFile
+     * @param {strign} filename 
+     */
+    createFile: function(filename) {
+        var availableTSB = this.findNextAvailableTSB();
+        if (availableTSB) {
+            this.initializeTSB(availableTSB, filename);
+        }
+    },
+    /**
+     * Resets TSB
+     * @public
+     * @method resetTSB
+     * @param {int} track 
+     * @param {int} sector 
+     * @param {int} block
+     */
+    resetTSB: function(track, sector, block) {
+        
+        var tsbValue = "[0,-1,-1,-1,\"" + this.sanitizeFileSystemValue("") + "\"]";
+        
+        // MBR at TSB(0,0,0)
+        if (track === 0 && sector === 0 && block === 0)
+            tsbValue = "[1,-1,-1,-1,\"" + this.sanitizeFileSystemValue("MBR") + "\"]";
+        
+        this.write("[" + track + "," + sector + "," + block + "]", tsbValue);
+    },
+    /**
+     * Initializes tsb
+     * @public 
+     * @method initializeTSB
+     * @param {object} tsb
+     * @param {string} filename
+     */
+    initializeTSB: function(tsb, filename) {
+        var fileNameTSB = jambOS.util.clone(tsb);
+        var fileDataTSB = jambOS.util.clone(tsb);
+        fileDataTSB.track += 1;
+        
+        var fileDataAdress = this._getAddress(fileDataTSB);
+        var fileNameAddress = this._getAddress(fileNameTSB);
+        var value = JSON.parse(this.read(fileDataAdress));
+        var occupiedBit = value[0];
+        var track = value[1];
+        var sector = value[2];
+        var block = value[3];
+        
+        if (occupiedBit === 0)
+            occupiedBit = 1;
+        
+        // file metadata
+        var value = "[" + occupiedBit + "," + track + "," + sector + "," + block + ",\"" + this.sanitizeFileSystemValue(filename) + "\"]";
+        this.write(fileNameAddress, value);
+        
+        // file data
+        var value = "[" + occupiedBit + "," + track + "," + sector + "," + block + ",\"" + this.sanitizeFileSystemValue("") + "\"]";
+        this.write(fileDataAdress, value);
+    },
+    /**
+     * Sanitizes file system value
+     * @public
+     * @method sanitizeFileSystemValue
+     * @param {string} value 
+     * @returns {string} value
+     */
+    sanitizeFileSystemValue: function(value) {
+        
+        var sizeOfData = value.length;
+        
+        // Sanitize our value by adding dashes at empty spaces
+        for (var i = sizeOfData; i < MAX_FILESIZE; i++)
+            value += "-";
+        
+        return value;
+    },
+    /**
+     * Finds the next available tsb
+     * @public
+     * @method findNextAvailable
+     * @returns {object} tsb
+     */
+    findNextAvailableTSB: function() {
+        var decimalAddress = 0;
+        var value = [];
+        var occupiedBit = -1;
+        
+        // loop through address in storage
+        for (var address in this.storage)
+        {
+            var tsb = this._parseAddress(address);
+            decimalAddress = tsb.track + tsb.sector + tsb.block;
+            
+            // We don't want to loop through the filenames
+            if (decimalAddress >= 0 && decimalAddress <= MBR_END_ADRESS)
+            {
+                value = JSON.parse(this.storage[address]);
+                occupiedBit = value[0];
+                
+                // return tsb if not occupied
+                if (occupiedBit === 0)
+                {
+                    return tsb;
+                }
+            }
+        }
+        
+        return null;
+    },
+    /**
+     * Parses storage address
+     * @private
+     * @method _parseAddress
+     * @param {string} address
+     * @returns {object} tsb
+     */
+    _parseAddress: function(address) {
+        var sanitizedAddress = address.replace(/\[|,|\]/g, "");
+        var track = sanitizedAddress.charAt(0);
+        var sector = sanitizedAddress.charAt(1);
+        var block = sanitizedAddress.charAt(2);
+        
+        var tsb = {track: parseInt(track), sector: parseInt(sector), block: parseInt(block)};
+        
+        return tsb;
+    },
+    /**
+     * Get's address in storaget given a tsb
+     * @private
+     * @method _getAddress
+     * @param {object} tsb
+     * @returns {string} address
+     */
+    _getAddress: function(tsb) {
+        return "[" + tsb.track + "," + tsb.sector + "," + tsb.block + "]";
+    },
+    /**
+     * Checks for html5 storage support
+     * @private
+     * @method _canSupportLocalStorage
+     * @returns {boolean} true|false
+     */
+    _canSupportLocalStorage: function() {
+        try {
+            return "localStorage" in window && window["localStorage"] !== null;
+        } catch (e) {
+            return false;
+        }
+    }
+});
 /**
  * =============================================================================
  * control.class.js
@@ -514,6 +704,9 @@ jambOS.host.Control = jambOS.util.createClass(/** @scope jambOS.host.Control.pro
 
         // ... Create and initialize the CPU ...
         _CPU = new jambOS.host.Cpu();
+        
+        // initialize harddrive
+        _HardDrive = new jambOS.host.HardDrive();
 
         // ... then set the host clock pulse ...
         _hardwareClockID = setInterval(_Device.hostClockPulse, CPU_CLOCK_INTERVAL);
@@ -892,6 +1085,10 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             // through and get to the next process as quick as posible during
             // the context switch
             self.scheduler.processCycles = self.scheduler.quantum - 1;
+            
+            // kill process
+            var terminationOperation = self.getOpCode("00");
+            terminationOperation(self);
         }
 
         // Perform a context switch if the ready queue is not empty.
@@ -1222,6 +1419,49 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
 });
 
 
+/**
+ *==============================================================================
+ * harddrive.class.js
+ *    
+ * @class HardDrive
+ * @memberOf jambOS.host 
+ * @inheritsFrom jambOS.OS.FileSystem
+ * @param {object} - Array Object containing the default values to be 
+ *                             passed to the class
+ *==============================================================================
+ */
+jambOS.host.HardDrive = jambOS.util.createClass(jambOS.OS.FileSystem, {
+    /**
+     * @property {string} type
+     */
+    type: "harddrive",
+    /**
+     * Constructor
+     */
+    initialize: function() {
+        if (this._canSupportLocalStorage()) {
+            this.storage = localStorage;
+            this.formatDrive();
+        }
+    },
+    /**
+     * Formarts drive
+     * @public
+     * @method formatDrive
+     */
+    formatDrive: function() {
+        // clear local storage
+        this.storage.clear();
+        
+        // initialize of all the tracks
+        for (var track = 0; track < ALLOCATABLE_TRACKS; track++) {
+            for (var sector = 0; sector < ALLOCATABLE_SECTORS; sector++) {
+                for (var block = 0; block < ALLOCATABLE_BLOCKS; block++)
+                    this.resetTSB(track, sector, block);
+            }
+        }
+    }
+});
 /**
  *==============================================================================
  * cpuscheduler.class.js
@@ -3360,7 +3600,14 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
         sc = new jambOS.OS.ShellCommand({
             command: "create",
             description: "<filename> - creates file in memory",
-            behavior: function() {
+            behavior: function(args) {
+                var filename = args[0];
+                if (filename)
+                {
+                    _HardDrive.createFile(filename);
+                    _StdIn.putText("File created: " + filename);
+                } else
+                    _StdIn.putText("Usage: create <filename>");
             }
         });
         this.commandList.push(sc);
