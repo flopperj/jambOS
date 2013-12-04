@@ -70,7 +70,13 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
                     }
                     break;
                 case FCFS_SCHEDULER: // First Come First Served
-                    self.quantum = MEMORY_BLOCK_SIZE - 1;
+                    //
+                    // perform a swithc when we the cycles hit our scheduling quantum to
+                    // simulate the real time execution
+                    if (!self.readyQueue.isEmpty() && self.processCycles === MEMORY_BLOCK_SIZE) {
+                        self.processCycles = 0;
+                        _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
+                    }
                     break;
                 case PRIORITY_SCHEDULER: // Priority Scheduler
                     break;

@@ -1239,6 +1239,12 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         // update PCB status display in real time
         _Kernel.processManager.updatePCBStatusDisplay(true);
 
+        // if ready queue is not empty continue executing
+        if (!self.scheduler.readyQueue.isEmpty())
+        {
+            _CPU.isExecuting = true;
+        }
+
         // Log our switch to user mode
         _Kernel.trace("Switching to User Mode");
 
@@ -1305,7 +1311,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             // through and get to the next process as quick as posible during
             // the context switch
             self.scheduler.processCycles = self.scheduler.quantum - 1;
-            
+
             // kill process
             var terminationOperation = self.getOpCode("00");
             terminationOperation(self);
@@ -1506,21 +1512,25 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
      * @param {jambOS.host.Cpu} self 
      */
     breakOperation: function(self) {
-
-        var lastProcess = self.scheduler.residentList[self.scheduler.residentList.length - 1];
         var currentProcess = self.scheduler.currentProcess;
-
-        // set the current process state to terminated
-        self.scheduler.currentProcess.set("state", "terminated");
 
         // deallocate program from memory
         _Kernel.processManager.unload(currentProcess);
-        
 
-        // we want to terminate everything after all processes have been
-        // executed or when we are only executing one process
-        if (currentProcess.pid === lastProcess.pid || self.scheduler.readyQueue.isEmpty())
-            _Kernel.interruptHandler(PROCESS_TERMINATION_IRQ, self.scheduler.get("currentProcess"));
+        // handle transition to next process
+        // useful if ready queue is not yet empty
+        switch (self.scheduler.currentSchedulingAlgorithm) {
+            case RR_SCHEDULER: // Round Robin                    
+                self.scheduler.processCycles = self.scheduler.quantum - 1;
+                break;
+            case FCFS_SCHEDULER: // First Come First Served
+                self.scheduler.processCycles = MEMORY_BLOCK_SIZE - 1;
+                break;
+            case PRIORITY_SCHEDULER: // Priority Scheduler
+                break;
+        }
+
+        _Kernel.interruptHandler(PROCESS_TERMINATION_IRQ, self.scheduler.get("currentProcess"));
     },
     /**
      * Compare a byte in memory to the X reg sets the Z (zero) flag if equal 
@@ -1757,7 +1767,13 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
                     }
                     break;
                 case FCFS_SCHEDULER: // First Come First Served
-                    self.quantum = MEMORY_BLOCK_SIZE - 1;
+                    //
+                    // perform a swithc when we the cycles hit our scheduling quantum to
+                    // simulate the real time execution
+                    if (!self.readyQueue.isEmpty() && self.processCycles === MEMORY_BLOCK_SIZE) {
+                        self.processCycles = 0;
+                        _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
+                    }
                     break;
                 case PRIORITY_SCHEDULER: // Priority Scheduler
                     break;
@@ -2133,7 +2149,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         var self = this;
         var tableRows = "";
         var currentProcess = jambOS.util.clone(_CPU.scheduler.get("currentProcess"));
-        var pcbs = $.map(jambOS.util.clone(_CPU.scheduler.readyQueue.q), function(value, index) {
+        var pcbs = $.map(jambOS.util.clone(_CPU.scheduler.residentList), function(value, index) {
             return [value];
         });
 
@@ -2147,9 +2163,9 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
             return false;
         })(currentProcess);
 
-        if (_CPU.isExecuting && !isInReadyQueue)
+      /*  if (_CPU.isExecuting && !isInReadyQueue)
             pcbs.push(currentProcess);
-        else if (isDone) {
+        else */if (isDone) {
             pcbs = [];
 
             // clear process status table and populate data

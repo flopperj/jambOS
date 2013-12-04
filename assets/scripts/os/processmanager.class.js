@@ -149,7 +149,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         var self = this;
         var tableRows = "";
         var currentProcess = jambOS.util.clone(_CPU.scheduler.get("currentProcess"));
-        var pcbs = $.map(jambOS.util.clone(_CPU.scheduler.readyQueue.q), function(value, index) {
+        var pcbs = $.map(jambOS.util.clone(_CPU.scheduler.residentList), function(value, index) {
             return [value];
         });
 
@@ -163,9 +163,9 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
             return false;
         })(currentProcess);
 
-        if (_CPU.isExecuting && !isInReadyQueue)
+      /*  if (_CPU.isExecuting && !isInReadyQueue)
             pcbs.push(currentProcess);
-        else if (isDone) {
+        else */if (isDone) {
             pcbs = [];
 
             // clear process status table and populate data
