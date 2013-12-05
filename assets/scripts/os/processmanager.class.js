@@ -79,9 +79,6 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
             var pc = base;
             pcb = new jambOS.OS.ProcessControlBlock({
                 pid: pid,
-//                pc: _Kernel.memoryManager.slots[2].base,
-//                base: _Kernel.memoryManager.slots[2].base,
-//                limit: _Kernel.memoryManager.slots[2].limit,
                 xReg: 0,
                 yReg: 0,
                 zFlag: 0,

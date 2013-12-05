@@ -893,22 +893,22 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             _Kernel.trapError("Invalid Operation!", false);
         }
 
-        if (self.scheduler.currentProcess.state === "in disk") {
-            if (!_Kernel.memoryManager.findOpenSlot()) {
-                if (!self.scheduler.readyQueue.isEmpty()) {
-                    var processToRollOut = _Kernel.memoryManager.getProcessToRollOut();
-                    _Kernel.memoryManager.rollOutProcess(processToRollOut);
-                } else {
-                    var rollIndex;
-                    for (var i in self.scheduler.residentList) {
-                        if (self.scheduler.residentList[i].slot !== -1)
-                            rollIndex = i;
-                    }
-                    _Kernel.memoryManager.rollOutProcess(self.scheduler.residentList[rollIndex]);
-                }
-            }
-            _Kernel.memoryManager.rollInProcess(self.scheduler.currentProcess);
-        }
+//        if (self.scheduler.currentProcess.state === "in disk") {
+//            if (!_Kernel.memoryManager.findOpenSlot()) {
+//                if (!self.scheduler.readyQueue.isEmpty()) {
+//                    var processToRollOut = _Kernel.memoryManager.getProcessToRollOut();
+//                    _Kernel.memoryManager.rollOutProcess(processToRollOut);
+//                } else {
+//                    var rollIndex;
+//                    for (var i in self.scheduler.residentList) {
+//                        if (self.scheduler.residentList[i].slot !== -1)
+//                            rollIndex = i;
+//                    }
+//                    _Kernel.memoryManager.rollOutProcess(self.scheduler.residentList[rollIndex]);
+//                }
+//            }
+//            _Kernel.memoryManager.rollInProcess(self.scheduler.currentProcess);
+//        }
 
         // get execution operation
         var opCode = _Kernel.memoryManager.memory.read(self.pc++).toString().toLowerCase();
@@ -1975,9 +1975,6 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
             var pc = base;
             pcb = new jambOS.OS.ProcessControlBlock({
                 pid: pid,
-//                pc: _Kernel.memoryManager.slots[2].base,
-//                base: _Kernel.memoryManager.slots[2].base,
-//                limit: _Kernel.memoryManager.slots[2].limit,
                 xReg: 0,
                 yReg: 0,
                 zFlag: 0,
