@@ -38,16 +38,25 @@ jambOS.OS.FileSystemDriver = new jambOS.util.createClass(jambOS.OS.DeviceDriver,
 
         switch (routine) {
             case FSDD_CREATE:
-                this.createFile(filename);
+                if (this.createFile(filename))
+                    _StdIn.putText("File created: " + filename);
+                else
+                    _StdIn.putText("Sorry: Cannot create duplicate files!");
                 break;
             case FSDD_READ:
                 this.readFile(filename);
                 break;
             case FSDD_WRITE:
-                this.writeFile(filename, fileData);
+                if (this.writeFile(filename, fileData))
+                    _StdIn.putText("Written data to: " + filename);
+                else
+                    _StdIn.putText("Sorry: File \"" + filename + "\" not found!");
                 break;
             case FSDD_DELETE:
-                this.deleteFile(filename);
+                if (this.deleteFile(filename))
+                    _StdIn.putText("Deleted: \"" + file.filename + "\"");
+                else
+                    _StdIn.putText("Sorry: File \"" + filename + "\" not found!");
                 break;
             case FSDD_FORMAT:
                 _HardDrive.formatDrive();
@@ -89,20 +98,26 @@ jambOS.OS.FileSystemDriver = new jambOS.util.createClass(jambOS.OS.DeviceDriver,
         var isDuplicate = this._isDuplicate(filename);
 
         // TODO: check for special characters, we might not want to create files with speical characters
-        
+
         if (availableTSB && !isDuplicate) {
             _HardDrive.initializeTSB(availableTSB, filename);
-            _StdIn.putText("File created: " + filename);
-        } else
-            _StdIn.putText("Sorry: Cannot create duplicate files!");
+            return true;
+        }
+
+        return false;
     },
     /**
      * Reads contents from a file
      * @public
      * @method readFile
      * @param {string} filename 
+     * @param {boolean} canPrint
      */
-    readFile: function(filename) {
+    readFile: function(filename, canPrint) {
+
+        canPrint = typeof canPrint === "boolean" ? canPrint : true;
+
+        var output = "";
 
         // get filename and its address from our array list of used filenames
         var file = $.grep(this.usedFilenames, function(el) {
@@ -124,8 +139,11 @@ jambOS.OS.FileSystemDriver = new jambOS.util.createClass(jambOS.OS.DeviceDriver,
             block = parseInt(data[BLOCK_BIT]);
             var content = data[CONTENT_BIT];
 
+            output = content.replace("-", "");
+
             // output data to screen
-            _StdIn.putText(content);
+            if (canPrint)
+                _StdIn.putText(content);
 
             // handle text that wrapped around
             while (track !== -1) {
@@ -135,10 +153,16 @@ jambOS.OS.FileSystemDriver = new jambOS.util.createClass(jambOS.OS.DeviceDriver,
                 sector = parseInt(data[SECTOR_BIT]);
                 block = parseInt(data[BLOCK_BIT]);
                 content = data[CONTENT_BIT];
-                _StdIn.putText(content);
+
+                output += content.replace(/-/gi, "");
+
+                if (canPrint)
+                    _StdIn.putText(content);
             }
-        } else
+        } else if (canPrint)
             _StdIn.putText("Sorry: File \"" + filename + "\" not found!");
+
+        return output;
 
     },
     /**
@@ -162,46 +186,66 @@ jambOS.OS.FileSystemDriver = new jambOS.util.createClass(jambOS.OS.DeviceDriver,
             var sector = parseInt(value[SECTOR_BIT]);
             var block = parseInt(value[BLOCK_BIT]);
 
+            var metaDataTSB = this._parseAddress(file.address);
+            var metaDataAddress = {track: metaDataTSB.track, sector: metaDataTSB.sector, block: metaDataTSB.block};
+
             // use previous info to get content from where its stored in storage
-            var dataAddress = this._getAddress({track: track, sector: sector, block: block});
+            var dataAddress = this._getAddress(metaDataAddress);
             var data = JSON.parse(this.read(dataAddress));
             track = parseInt(data[TRACK_BIT]);
             sector = parseInt(data[SECTOR_BIT]);
             block = parseInt(data[BLOCK_BIT]);
 
+            block -= 1;
+
             // split our data into chunks of 60bit content
             var content = fileData.match(/.{1,60}/g);
             var occupiedBit = 1;
+            var i = 0;
             $.each(content, function() {
+                i++;
                 if (block < ALLOCATABLE_BLOCKS)
                     block += 1;
                 else {
+                    block = 0;
                     if (sector < ALLOCATABLE_SECTORS)
                         sector += 1;
                     else {
+                        sector = 0;
                         if (track < ALLOCATABLE_TRACKS && track > 0) {
                             track += 1;
                         }
                     }
                 }
+                dataAddress = self._getAddress({track: track, sector: sector, block: block});
+
+                // handle last tsb occupied by program
+                if (i === content.length)
+                {
+
+                    track = -1;
+                    sector = -1;
+                    block = -2;
+                }
 
                 // file data
-                var value = "[" + occupiedBit + "," + track + "," + sector + "," + block + ",\"" + self.sanitizeFileSystemValue(this) + "\"]";
+                var value = "[" + occupiedBit + "," + track + "," + sector + "," + (block + 1) + ",\"" + self.sanitizeFileSystemValue(this) + "\"]";
                 self.write(dataAddress, value);
 
             });
 
-            // output success data to screen
-            _StdIn.putText("Written data to: " + filename);
+            return true;
 
-        } else
-            _StdIn.putText("Sorry: File \"" + filename + "\" not found!");
+        }
+
+        return false;
     },
     /**
      * Deletes file from file system
      * @public
      * @method deleteFile
      * @param {string} filename
+     * @returns {boolean}
      */
     deleteFile: function(filename) {
 
@@ -237,9 +281,6 @@ jambOS.OS.FileSystemDriver = new jambOS.util.createClass(jambOS.OS.DeviceDriver,
             var value = "[" + occupiedBit + "," + track + "," + sector + "," + block + ",\"" + this.sanitizeFileSystemValue("") + "\"]";
             this.write(dataAddress, value);
 
-            // output data to screen
-            _StdIn.putText("Deleted: \"" + file.filename + "\"");
-
             // make sure we remove our file from our used files array
             var tempList = [];
             $.each(this.usedFilenames, function() {
@@ -260,8 +301,11 @@ jambOS.OS.FileSystemDriver = new jambOS.util.createClass(jambOS.OS.DeviceDriver,
                 var value = "[" + occupiedBit + "," + track + "," + sector + "," + block + ",\"" + this.sanitizeFileSystemValue("") + "\"]";
                 this.write(dataAddress, value);
             }
-        } else
-            _StdIn.putText("Sorry: File \"" + filename + "\" not found!");
+
+            return true;
+        }
+
+        return false;
     },
     /**
      * Lists out all the files in the file system

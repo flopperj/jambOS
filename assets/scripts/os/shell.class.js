@@ -91,11 +91,9 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
                 var textInput = $("#taProgramInput").val();
                 var isValid = /^[0-9a-f]{2}( [0-9a-f]{2})*$/i.test(textInput);
                 var process = isValid ? _Kernel.processManager.load(textInput.split(/\s/)) : null;
-                if (isValid && textInput.trim() && process !== undefined) {
-                    _StdIn.putText("Process " + process.pid + " has been added to memory");
-                } else if (!textInput.trim())
+                if (!textInput.trim())
                     _StdIn.putText("Please enter an input value then call the load command");
-                else
+                else if (!isValid)
                     _StdIn.putText("Invalid program");
             }});
         this.commandList.push(sc);

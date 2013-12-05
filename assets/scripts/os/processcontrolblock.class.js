@@ -58,6 +58,10 @@ jambOS.OS.ProcessControlBlock = jambOS.util.createClass(/** @scope jambOS.OS.Pro
      */
     limit: 0,
     /**
+     * @property {int} programSize          - Size of program
+     */
+    programSize: 0,
+    /**
      * Constructor
      * @param {object} options
      */

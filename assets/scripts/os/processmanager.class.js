@@ -46,33 +46,57 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         var activeSlot = _Kernel.memoryManager.get("activeSlot");
 
         // move up memory slot when program has been loaded
-        if (activeSlot < ALLOCATABLE_MEMORY_SLOTS)
+        if (activeSlot < ALLOCATABLE_MEMORY_SLOTS) {
             _Kernel.memoryManager.activeSlot++;
-        else
-            return _Kernel.trapError("Insufficient Memory!", false);
 
+            // get our base and limit addresses
+            var base = slots[activeSlot].base;
+            var limit = slots[activeSlot].limit;
 
+            var pcb = null;
 
-        // get our base and limit addresses
-        var base = slots[activeSlot].base;
-        var limit = slots[activeSlot].limit;
+            // write program to memory slots
+            _Kernel.memoryManager.memory.insert(base, program);
 
-        // write program to memory slots
-        _Kernel.memoryManager.memory.insert(base, program);
+            var pid = _CPU.scheduler.currentProcessID++;
+            var pc = base;
+            pcb = new jambOS.OS.ProcessControlBlock({
+                pid: pid,
+                pc: pc,
+                base: base,
+                limit: limit,
+                xReg: 0,
+                yReg: 0,
+                zFlag: 0,
+                slot: activeSlot,
+                state: "new",
+                programSize: program.length
+            });
+            _StdIn.putText("Process " + pid + " has been added to memory");
 
-        var pid = _CPU.scheduler.currentProcessID++;
-        var pc = base;
-        var pcb = new jambOS.OS.ProcessControlBlock({
-            pid: pid,
-            pc: pc,
-            base: base,
-            limit: limit,
-            xReg: 0,
-            yReg: 0,
-            zFlag: 0,
-            slot: activeSlot,
-            state: "new"
-        });
+        } else {
+            var pid = _CPU.scheduler.currentProcessID++;
+            var pc = base;
+            pcb = new jambOS.OS.ProcessControlBlock({
+                pid: pid,
+                pc: 0,
+                base: 0,
+                limit: 0,
+                xReg: 0,
+                yReg: 0,
+                zFlag: 0,
+                slot: null,
+                state: "in disk",
+                programSize: program.length
+            });
+
+            var filename = "process_" + pid;
+            var data = program.join(" ");
+
+            _HardDrive.fileSystem.createFile(filename);
+            if (_HardDrive.fileSystem.writeFile(filename, data))
+                _StdIn.putText("Process " + pid + " loaded to disk");
+        }
 
         _CPU.scheduler.set("currentProcess", pcb);
         _CPU.scheduler.residentList.push(pcb);
@@ -163,9 +187,9 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
             return false;
         })(currentProcess);
 
-      /*  if (_CPU.isExecuting && !isInReadyQueue)
-            pcbs.push(currentProcess);
-        else */if (isDone) {
+        /*  if (_CPU.isExecuting && !isInReadyQueue)
+         pcbs.push(currentProcess);
+         else */if (isDone) {
             pcbs = [];
 
             // clear process status table and populate data

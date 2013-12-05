@@ -104,7 +104,7 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
             xReg: _CPU.xReg,
             yReg: _CPU.yReg,
             zFlag: _CPU.zFlag,
-            state: process.state !== "terminated" ? "ready" : process.state
+            state: process.state !== "terminated" || process.state !== "in disk" ? "ready" : process.state
         });
 
         // get the next process to execute from ready queue
@@ -116,6 +116,10 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
             // Add the current process being passed to the ready queue
             if (process !== null && process.state !== "terminated")
                 _CPU.scheduler.readyQueue.enqueue(process);
+
+            // handle process from disk
+            if (nextProcess.state === "in disk")
+                _Kernel.memoryManager.rollInProcess(nextProcess);
 
             // change our next process state to running
             nextProcess.set("state", "running");

@@ -66,9 +66,11 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
     allocate: function(pcb) {
         var self = this;
         var activeSlot = pcb.slot;
-        self.slots[activeSlot].open = false;
-        pcb.set({base: self.slots[activeSlot].base, limit: self.slots[activeSlot].limit});
-        _CPU.scheduler.set("currentProcess", pcb);
+        if (activeSlot) {
+            self.slots[activeSlot].open = false;
+            pcb.set({base: self.slots[activeSlot].base, limit: self.slots[activeSlot].limit});
+            _CPU.scheduler.set("currentProcess", pcb);
+        }
     },
     /**
      * Deallocates memory slots of a process
@@ -99,6 +101,79 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
 
         // update memory table
         self.updateMemoryDisplay();
+    },
+    rollInProcess: function(process) {
+        var self = this;
+        var currentProcess = _CPU.scheduler.get("currentProcess");
+        process.set({
+            base: currentProcess.base,
+            limit: currentProcess.limit,
+            slot: currentProcess.slot
+        });
+
+        if (process)
+        {
+            var programFile = "process_" + process.pid;
+
+            // get program from memory
+            var programFromDisk = _HardDrive.fileSystem.readFile(programFile, false);
+
+            // delete file
+            _HardDrive.fileSystem.deleteFile(programFile);
+
+            // roll out current process
+            self.rollOutProcess(currentProcess);
+
+            // load new process to opened up slot
+            _Kernel.memoryManager.memory.insert(process.base, programFromDisk);
+
+            // allocate new process we are rolling in
+            self.allocate(process);
+        }
+
+        // TODO: read program from disk
+        // TODO: use roll out to get current process program from memory
+        // TODO: insert program in place of process we rolled out.
+    },
+    rollOutProcess: function(process) {
+
+        var self = this;
+
+        process.set("state", "in disk");
+
+        // update residentlist
+        $.each(_CPU.scheduler.resideltList, function() {
+            if (this.pid === process.pid)
+                this.state = process.state;
+        });
+
+        // get current program
+        var currentProgram = self.getProgramFromMemory(process);
+
+        // process to disk
+        _HardDrive.fileSystem.createFile("process_" + process.pid);
+        _HardDrive.fileSystem.writeFile("process_" + process.pid, currentProgram);
+
+        // deallocate current process
+        self.deallocate(process);
+    },
+    /**
+     * Gets program from memory
+     * @public
+     * @method getProgramFromMemory
+     * @param {jambOS.OS.ProcessControlBlock} process
+     * @returns {string} program
+     */
+    getProgramFromMemory: function(process) {
+        var self = this;
+        var start = process.base;
+        var end = start + process.programSize;
+        var program = "";
+
+        for (var i = start; i < end; i++)
+            program += self.memory.read(i);
+
+        return program;
     },
     /**
      * Validates if memory address is within available allocated slot

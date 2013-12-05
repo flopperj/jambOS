@@ -74,9 +74,7 @@ jambOS.host.HardDrive = jambOS.util.createClass({
     initializeTSB: function(tsb, filename) {
 
         var fileNameTSB = jambOS.util.clone(tsb);
-        var fileDataTSB = jambOS.util.clone(tsb);
-        fileDataTSB.track += 1;
-        fileDataTSB.block -= 1;
+        var fileDataTSB = this.findNextAvailableDataTSB();
 
         var fileDataAdress = this.fileSystem._getAddress(fileDataTSB);
         var fileNameAddress = this.fileSystem._getAddress(fileNameTSB);
@@ -115,10 +113,43 @@ jambOS.host.HardDrive = jambOS.util.createClass({
         for (var address in this.fileSystem.storage)
         {
             var tsb = this.fileSystem._parseAddress(address);
-            decimalAddress = tsb.track + tsb.sector + tsb.block;
+            decimalAddress = parseInt(tsb.track.toString() + tsb.sector.toString() + tsb.block.toString());
 
             // We don't want to loop through the filenames
             if (decimalAddress >= 0 && decimalAddress <= MBR_END_ADRESS)
+            {
+                value = JSON.parse(this.fileSystem.storage[address]);
+                occupiedBit = value[0];
+
+                // return tsb if not occupied
+                if (occupiedBit === 0)
+                {
+                    return tsb;
+                }
+            }
+        }
+
+        return null;
+    },
+    /**
+     * Finds the next available tsb
+     * @public
+     * @method findNextAvailable
+     * @returns {object} tsb
+     */
+    findNextAvailableDataTSB: function() {
+        var decimalAddress = 0;
+        var value = [];
+        var occupiedBit = -1;
+
+        // loop through address in storage
+        for (var address in this.fileSystem.storage)
+        {
+            var tsb = this.fileSystem._parseAddress(address);
+            decimalAddress = parseInt(tsb.track.toString() + tsb.sector.toString() + tsb.block.toString());
+
+            // We don't want to loop through the filenames
+            if (decimalAddress > MBR_END_ADRESS)
             {
                 value = JSON.parse(this.fileSystem.storage[address]);
                 occupiedBit = value[0];
