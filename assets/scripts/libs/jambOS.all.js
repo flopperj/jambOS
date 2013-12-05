@@ -1554,7 +1554,9 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
         });
 
         // get the next process to execute from ready queue
-        var nextProcess = _CPU.scheduler.readyQueue.dequeue();
+        var nextProcess = self.readyQueue.dequeue();
+        
+        console.log(nextProcess.pid + " => " + nextProcess.state);
 
         // if there is a process available then we'll set it to run
         if (nextProcess) {
@@ -1564,7 +1566,7 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
                 _CPU.scheduler.readyQueue.enqueue(process);
 
             // handle process from disk
-            if (nextProcess.state === "in disk")
+            if (nextProcess.state === "in disk" || process.slot === 2)
                 _Kernel.memoryManager.rollInProcess(nextProcess);
 
             // change our next process state to running
@@ -1707,13 +1709,14 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
             limit: currentProcess.limit,
             slot: currentProcess.slot
         });
+//        console.log(process.pid);
 
-        if (process)
+        if (process.state !== "in disk")
         {
             var programFile = "process_" + process.pid;
 
             // get program from memory
-            var programFromDisk = _HardDrive.fileSystem.readFile(programFile, false);
+            var programFromDisk = _HardDrive.fileSystem.readFile(programFile, false).replace(" ", "").match(/.{1,2}/g);
 
             // delete file
             _HardDrive.fileSystem.deleteFile(programFile);
@@ -1738,14 +1741,33 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
 
         process.set("state", "in disk");
 
+        var tempList = [];
+
         // update residentlist
-        $.each(_CPU.scheduler.resideltList, function() {
+        $.each(_CPU.scheduler.residentList, function() {
             if (this.pid === process.pid)
-                this.state = process.state;
+                this.state = "in disk";
+
+            tempList.push(this);
         });
+
+        _CPU.scheduler.residentList = tempList;
+
+        var tempQueue = [];
+
+        // update ready queue
+        $.each(_CPU.scheduler.readyQueue.q, function() {
+            if (this.pid === process.pid)
+                this.state = "in disk";
+
+            tempQueue.push(this);
+        });
+        _CPU.scheduler.readyQueue.q = tempQueue;
 
         // get current program
         var currentProgram = self.getProgramFromMemory(process);
+
+        console.log(currentProgram);
 
         // process to disk
         _HardDrive.fileSystem.createFile("process_" + process.pid);

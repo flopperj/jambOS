@@ -108,7 +108,9 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
         });
 
         // get the next process to execute from ready queue
-        var nextProcess = _CPU.scheduler.readyQueue.dequeue();
+        var nextProcess = self.readyQueue.dequeue();
+        
+        console.log(nextProcess.pid + " => " + nextProcess.state);
 
         // if there is a process available then we'll set it to run
         if (nextProcess) {
