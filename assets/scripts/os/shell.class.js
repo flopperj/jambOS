@@ -87,10 +87,11 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
         sc = new jambOS.OS.ShellCommand({
             command: "load",
             description: "- loads commands from the user input text area",
-            behavior: function() {
+            behavior: function(args) {
+                var priority = parseInt(args[0]);
                 var textInput = $("#taProgramInput").val();
                 var isValid = /^[0-9a-f]{2}( [0-9a-f]{2})*$/i.test(textInput);
-                var process = isValid ? _Kernel.processManager.load(textInput.split(/\s/)) : null;
+                var process = isValid ? _Kernel.processManager.load(textInput.split(/\s/), priority) : null;
                 if (!textInput.trim())
                     _StdIn.putText("Please enter an input value then call the load command");
                 else if (!isValid)

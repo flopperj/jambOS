@@ -37,7 +37,10 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
      * @param {string} program
      * @returns {jambOS.OS.ProcessControlBlock} pcb
      */
-    load: function(program) {
+    load: function(program, priority) {
+
+        if (isNaN(priority))
+            priority = 0;
 
         // enable stepover button
         $("#btnStepOver").prop("disabled", false);
@@ -69,6 +72,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
                 yReg: 0,
                 zFlag: 0,
                 slot: activeSlot,
+                priority: priority,
                 state: "new",
                 programSize: program.length
             });
@@ -84,6 +88,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
                 zFlag: 0,
                 slot: -1,
                 state: "in disk",
+                priority: priority,
                 programSize: program.length
             });
 
@@ -99,6 +104,18 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         _CPU.scheduler.residentList.push(pcb);
         _Kernel.memoryManager.allocate(pcb);
 
+        // sort resident list
+        // processes with less priority values will be executed first
+        if (_CPU.scheduler.currentSchedulingAlgorithm === PRIORITY_SCHEDULER) {
+            function compare(a, b) {
+                if (a.priority < b.priority)
+                    return -1;
+                if (a.priority > b.priority)
+                    return 1;
+                return 0;
+            }
+            _CPU.scheduler.residentList.sort(compare);
+        }
         return pcb;
     },
     /**

@@ -893,27 +893,27 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             _Kernel.trapError("Invalid Operation!", false);
         }
 
-//        if (self.scheduler.currentProcess.state === "in disk") {
-//            if (!_Kernel.memoryManager.findOpenSlot()) {
-//                if (!self.scheduler.readyQueue.isEmpty()) {
-//                    var processToRollOut = _Kernel.memoryManager.getProcessToRollOut();
-//                    _Kernel.memoryManager.rollOutProcess(processToRollOut);
-//                } else {
-//                    var rollIndex;
-//                    for (var i in self.scheduler.residentList) {
-//                        if (self.scheduler.residentList[i].slot !== -1)
-//                            rollIndex = i;
-//                    }
-//                    _Kernel.memoryManager.rollOutProcess(self.scheduler.residentList[rollIndex]);
-//                }
-//            }
-//            _Kernel.memoryManager.rollInProcess(self.scheduler.currentProcess);
-//        }
+        if (self.scheduler.currentProcess.slot === -1) {
+            if (_Kernel.memoryManager.findOpenSlot() === null) {
+                if (!self.scheduler.readyQueue.isEmpty()) {
+                    var processToRollOut = _Kernel.memoryManager.getProcessToRollOut();
+                    _Kernel.memoryManager.rollOutProcess(processToRollOut);
+                } else {
+                    var rollIndex;
+                    for (i in self.scheduler.residentList) {
+                        if (self.scheduler.residentList[i].slot !== -1)
+                            rollIndex = i;
+                    }
+                    _Kernel.memoryManager.rollOutProcess(self.scheduler.residentList[rollIndex]);
+                }
+            }
+            _Kernel.memoryManager.rollInProcess(self.scheduler.currentProcess);
+        }
 
         // get execution operation
         var opCode = _Kernel.memoryManager.memory.read(self.pc++).toString().toLowerCase();
         var operation = self.getOpCode(opCode);
-
+        
         // execute operation
         if (operation) {
 
@@ -1489,7 +1489,6 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
      * @property {jambOS.OS.ProcessQueue} readyQueue
      */
     readyQueue: null,
-    jobQueue: null,
     /**
      * @property {[jambOS.OS.ProcessControlBlock]} residentList
      */
@@ -1516,7 +1515,6 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
     initialize: function() {
         // initalize our ready queue
         this.readyQueue = new jambOS.OS.ProcessQueue();
-        this.jobQueue = new jambOS.OS.ProcessQueue();
     },
     /**
      * Shechules a process
@@ -1540,7 +1538,6 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
                     }
                     break;
                 case FCFS_SCHEDULER: // First Come First Served
-                    //
                     // perform a swithc when we the cycles hit our scheduling quantum to
                     // simulate the real time execution
                     if (!self.readyQueue.isEmpty() && self.processCycles === MEMORY_BLOCK_SIZE) {
@@ -1549,6 +1546,12 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
                     }
                     break;
                 case PRIORITY_SCHEDULER: // Priority Scheduler
+                    // perform a swithc when we the cycles hit our scheduling quantum to
+                    // simulate the real time execution
+                    if (!self.readyQueue.isEmpty() && self.processCycles === MEMORY_BLOCK_SIZE) {
+                        self.processCycles = 0;
+                        _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
+                    }
                     break;
 
             }
@@ -1568,31 +1571,30 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
         _Kernel.trace("Switching Context");
 
         // set our process with appropraite values
-        process.set({
-            pc: _CPU.pc,
-            acc: _CPU.acc,
-            xReg: _CPU.xReg,
-            yReg: _CPU.yReg,
-            zFlag: _CPU.zFlag,
-            state: process.state !== "terminated" || process.state !== "in disk" ? "ready" : process.state
-        });
+        if (process.state !== "terminated") {
+            process.set({
+                pc: _CPU.pc,
+                acc: _CPU.acc,
+                xReg: _CPU.xReg,
+                yReg: _CPU.yReg,
+                zFlag: _CPU.zFlag,
+                state: process.state !== "terminated" || process.state !== "in disk" ? "ready" : process.state
+            });
+        }
 
         // get the next process to execute from ready queue
         var nextProcess = self.readyQueue.dequeue();
 
-        console.log(nextProcess.pid + " => " + nextProcess.state);
-
         // if there is a process available then we'll set it to run
         if (nextProcess) {
-
 
             // Add the current process being passed to the ready queue
             if (process !== null && process.state !== "terminated")
                 _CPU.scheduler.readyQueue.enqueue(process);
 
             // handle next process if from disk
-            if (nextProcess.state === "in disk") {
-                if (!_Kernel.memoryManager.findOpenSlot()) {
+            if (nextProcess.slot === -1) {
+                if (!self.readyQueue.isEmpty() && _Kernel.memoryManager.findOpenSlot() === null) {
                     var processToRollOut = _Kernel.memoryManager.getProcessToRollOut();
                     _Kernel.memoryManager.rollOutProcess(processToRollOut);
                 }
@@ -1717,7 +1719,7 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
         // clear out process from memory
         for (var i = pcb.base; i <= pcb.limit; i++)
         {
-            self.memory.write(i, 00);
+            self.memory.write(i, "00");
         }
 
         // open our slot
@@ -1747,7 +1749,6 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
         for (var key in self.slots) {
             if (self.slots[key].open) {
                 return key;
-                break;
             }
         }
         return null;
@@ -1782,7 +1783,7 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
         self.slots[slot].open = false;
 
         var programFile = "process_" + process.pid;
-        
+
         // get program from memory
         var programFromDisk = _HardDrive.fileSystem.readFile(programFile, false).split(/\s/);
 
@@ -1807,7 +1808,9 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
 
         // get current program
         var currentProgram = self.getProgramFromMemory(process);
-
+        
+        console.log(currentProgram);
+        
         // process to disk
         _HardDrive.fileSystem.createFile("process_" + process.pid);
         _HardDrive.fileSystem.writeFile("process_" + process.pid, currentProgram);
@@ -1847,9 +1850,7 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
     validateAddress: function(address) {
         var self = this;
         var activeSlot = _CPU.scheduler.get("currentProcess").slot;
-        
-        console.log(activeSlot + " <------ activeSlot");
-        
+
         var isValid = (address <= self.slots[activeSlot].limit && address >= self.slots[activeSlot].base);
         return isValid;
     },
@@ -1933,7 +1934,10 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
      * @param {string} program
      * @returns {jambOS.OS.ProcessControlBlock} pcb
      */
-    load: function(program) {
+    load: function(program, priority) {
+        
+        if(isNaN(priority))
+            priority = 0;
 
         // enable stepover button
         $("#btnStepOver").prop("disabled", false);
@@ -1965,6 +1969,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
                 yReg: 0,
                 zFlag: 0,
                 slot: activeSlot,
+                priority: priority,
                 state: "new",
                 programSize: program.length
             });
@@ -1980,6 +1985,7 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
                 zFlag: 0,
                 slot: -1,
                 state: "in disk",
+                priority: priority,
                 programSize: program.length
             });
 
@@ -1995,6 +2001,18 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
         _CPU.scheduler.residentList.push(pcb);
         _Kernel.memoryManager.allocate(pcb);
 
+        // sort resident list
+        if (_CPU.scheduler.currentSchedulingAlgorithm === PRIORITY_SCHEDULER) {
+            function compare(a, b) {
+                if (a.priority < b.priority)
+                    return -1;
+                if (a.priority > b.priority)
+                    return 1;
+                return 0;
+            }
+            _CPU.scheduler.residentList.sort(compare);
+            _CPU.scheduler.residentList.reverse();
+        }
         return pcb;
     },
     /**
@@ -3827,10 +3845,11 @@ jambOS.OS.Shell = jambOS.util.createClass(jambOS.OS.SystemServices, /** @scope j
         sc = new jambOS.OS.ShellCommand({
             command: "load",
             description: "- loads commands from the user input text area",
-            behavior: function() {
+            behavior: function(args) {
+                var priority = parseInt(args[0]);
                 var textInput = $("#taProgramInput").val();
                 var isValid = /^[0-9a-f]{2}( [0-9a-f]{2})*$/i.test(textInput);
-                var process = isValid ? _Kernel.processManager.load(textInput.split(/\s/)) : null;
+                var process = isValid ? _Kernel.processManager.load(textInput.split(/\s/), priority) : null;
                 if (!textInput.trim())
                     _StdIn.putText("Please enter an input value then call the load command");
                 else if (!isValid)

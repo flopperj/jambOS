@@ -86,7 +86,7 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
         // clear out process from memory
         for (var i = pcb.base; i <= pcb.limit; i++)
         {
-            self.memory.write(i, 00);
+            self.memory.write(i, "00");
         }
 
         // open our slot
@@ -116,7 +116,6 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
         for (var key in self.slots) {
             if (self.slots[key].open) {
                 return key;
-                break;
             }
         }
         return null;
@@ -151,7 +150,7 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
         self.slots[slot].open = false;
 
         var programFile = "process_" + process.pid;
-        
+
         // get program from memory
         var programFromDisk = _HardDrive.fileSystem.readFile(programFile, false).split(/\s/);
 
@@ -176,7 +175,9 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
 
         // get current program
         var currentProgram = self.getProgramFromMemory(process);
-
+        
+        console.log(currentProgram);
+        
         // process to disk
         _HardDrive.fileSystem.createFile("process_" + process.pid);
         _HardDrive.fileSystem.writeFile("process_" + process.pid, currentProgram);
@@ -216,9 +217,7 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
     validateAddress: function(address) {
         var self = this;
         var activeSlot = _CPU.scheduler.get("currentProcess").slot;
-        
-        console.log(activeSlot + " <------ activeSlot");
-        
+
         var isValid = (address <= self.slots[activeSlot].limit && address >= self.slots[activeSlot].base);
         return isValid;
     },

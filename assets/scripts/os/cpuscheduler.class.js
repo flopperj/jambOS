@@ -21,7 +21,6 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
      * @property {jambOS.OS.ProcessQueue} readyQueue
      */
     readyQueue: null,
-    jobQueue: null,
     /**
      * @property {[jambOS.OS.ProcessControlBlock]} residentList
      */
@@ -48,7 +47,6 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
     initialize: function() {
         // initalize our ready queue
         this.readyQueue = new jambOS.OS.ProcessQueue();
-        this.jobQueue = new jambOS.OS.ProcessQueue();
     },
     /**
      * Shechules a process
@@ -72,7 +70,6 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
                     }
                     break;
                 case FCFS_SCHEDULER: // First Come First Served
-                    //
                     // perform a swithc when we the cycles hit our scheduling quantum to
                     // simulate the real time execution
                     if (!self.readyQueue.isEmpty() && self.processCycles === MEMORY_BLOCK_SIZE) {
@@ -81,6 +78,12 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
                     }
                     break;
                 case PRIORITY_SCHEDULER: // Priority Scheduler
+                    // perform a swithc when we the cycles hit our scheduling quantum to
+                    // simulate the real time execution
+                    if (!self.readyQueue.isEmpty() && self.processCycles === MEMORY_BLOCK_SIZE) {
+                        self.processCycles = 0;
+                        _Kernel.interruptHandler(CONTEXT_SWITCH_IRQ);
+                    }
                     break;
 
             }
@@ -100,31 +103,30 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
         _Kernel.trace("Switching Context");
 
         // set our process with appropraite values
-        process.set({
-            pc: _CPU.pc,
-            acc: _CPU.acc,
-            xReg: _CPU.xReg,
-            yReg: _CPU.yReg,
-            zFlag: _CPU.zFlag,
-            state: process.state !== "terminated" || process.state !== "in disk" ? "ready" : process.state
-        });
+        if (process.state !== "terminated") {
+            process.set({
+                pc: _CPU.pc,
+                acc: _CPU.acc,
+                xReg: _CPU.xReg,
+                yReg: _CPU.yReg,
+                zFlag: _CPU.zFlag,
+                state: process.state !== "terminated" || process.state !== "in disk" ? "ready" : process.state
+            });
+        }
 
         // get the next process to execute from ready queue
         var nextProcess = self.readyQueue.dequeue();
 
-        console.log(nextProcess.pid + " => " + nextProcess.state);
-
         // if there is a process available then we'll set it to run
         if (nextProcess) {
-
 
             // Add the current process being passed to the ready queue
             if (process !== null && process.state !== "terminated")
                 _CPU.scheduler.readyQueue.enqueue(process);
 
             // handle next process if from disk
-            if (nextProcess.state === "in disk") {
-                if (!_Kernel.memoryManager.findOpenSlot()) {
+            if (nextProcess.slot === -1) {
+                if (!self.readyQueue.isEmpty() && _Kernel.memoryManager.findOpenSlot() === null) {
                     var processToRollOut = _Kernel.memoryManager.getProcessToRollOut();
                     _Kernel.memoryManager.rollOutProcess(processToRollOut);
                 }

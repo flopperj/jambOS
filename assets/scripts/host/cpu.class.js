@@ -140,14 +140,14 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             _Kernel.trapError("Invalid Operation!", false);
         }
 
-        if (self.scheduler.currentProcess.state === "in disk") {
-            if (!_Kernel.memoryManager.findOpenSlot()) {
+        if (self.scheduler.currentProcess.slot === -1) {
+            if (_Kernel.memoryManager.findOpenSlot() === null) {
                 if (!self.scheduler.readyQueue.isEmpty()) {
                     var processToRollOut = _Kernel.memoryManager.getProcessToRollOut();
                     _Kernel.memoryManager.rollOutProcess(processToRollOut);
                 } else {
                     var rollIndex;
-                    for (var i in self.scheduler.residentList) {
+                    for (i in self.scheduler.residentList) {
                         if (self.scheduler.residentList[i].slot !== -1)
                             rollIndex = i;
                     }
@@ -160,7 +160,7 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
         // get execution operation
         var opCode = _Kernel.memoryManager.memory.read(self.pc++).toString().toLowerCase();
         var operation = self.getOpCode(opCode);
-
+        
         // execute operation
         if (operation) {
 
