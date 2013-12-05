@@ -29,6 +29,9 @@ jambOS.OS.ProcessQueue = jambOS.util.createClass(jambOS.OS.Queue, /** @scope jam
         options || (options = {});
         this.setOptions(options);
     },
+    getLastProcess: function() {
+        return this.q[this.q.length - 1];
+    },
     /**
      * Will have to work on this in the future but in the meantime we'll just return
      * a string containing the process queue's pids

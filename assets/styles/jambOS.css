@@ -86,7 +86,7 @@ h1, label{
     margin-top: 20px;
 }
 
-#memory .content{
+#memory .content, #harddrive .content{
     background-color: #DFDBC3;
     height: 200px;
     overflow-y: auto;
@@ -115,7 +115,7 @@ h1, label{
 }
 #cpuStatus .content, 
 #pcbStatus .content{
-    height: 237px;
+    min-height: 237px;
 }
 #registerAnalysisTabs li a, #memoryAnalysisTabs li a{
     color: #000;

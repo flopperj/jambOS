@@ -893,6 +893,23 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
             _Kernel.trapError("Invalid Operation!", false);
         }
 
+        if (self.scheduler.currentProcess.state === "in disk") {
+            if (!_Kernel.memoryManager.findOpenSlot()) {
+                if (!self.scheduler.readyQueue.isEmpty()) {
+                    var processToRollOut = _Kernel.memoryManager.getProcessToRollOut();
+                    _Kernel.memoryManager.rollOutProcess(processToRollOut);
+                } else {
+                    var rollIndex;
+                    for (var i in self.scheduler.residentList) {
+                        if (self.scheduler.residentList[i].slot !== -1)
+                            rollIndex = i;
+                    }
+                    _Kernel.memoryManager.rollOutProcess(self.scheduler.residentList[rollIndex]);
+                }
+            }
+            _Kernel.memoryManager.rollInProcess(self.scheduler.currentProcess);
+        }
+
         // get execution operation
         var opCode = _Kernel.memoryManager.memory.read(self.pc++).toString().toLowerCase();
         var operation = self.getOpCode(opCode);
@@ -1129,6 +1146,8 @@ jambOS.host.Cpu = jambOS.util.createClass(/** @scope jambOS.host.Cpu.prototype *
     breakOperation: function(self) {
         var currentProcess = self.scheduler.currentProcess;
 
+        console.log("terimnated" + currentProcess.pid);
+
         // deallocate program from memory
         _Kernel.processManager.unload(currentProcess);
 
@@ -1311,6 +1330,9 @@ jambOS.host.HardDrive = jambOS.util.createClass({
                     this.resetTSB(track, sector, block);
             }
         }
+
+        // update display
+        this.fileSystem.updateHardDriveDisplay();
     },
     /**
      * Resets TSB
@@ -1467,6 +1489,7 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
      * @property {jambOS.OS.ProcessQueue} readyQueue
      */
     readyQueue: null,
+    jobQueue: null,
     /**
      * @property {[jambOS.OS.ProcessControlBlock]} residentList
      */
@@ -1493,6 +1516,7 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
     initialize: function() {
         // initalize our ready queue
         this.readyQueue = new jambOS.OS.ProcessQueue();
+        this.jobQueue = new jambOS.OS.ProcessQueue();
     },
     /**
      * Shechules a process
@@ -1555,19 +1579,27 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
 
         // get the next process to execute from ready queue
         var nextProcess = self.readyQueue.dequeue();
-        
+
         console.log(nextProcess.pid + " => " + nextProcess.state);
 
         // if there is a process available then we'll set it to run
         if (nextProcess) {
 
+
             // Add the current process being passed to the ready queue
             if (process !== null && process.state !== "terminated")
                 _CPU.scheduler.readyQueue.enqueue(process);
 
-            // handle process from disk
-            if (nextProcess.state === "in disk" || process.slot === 2)
+            // handle next process if from disk
+            if (nextProcess.state === "in disk") {
+                if (!_Kernel.memoryManager.findOpenSlot()) {
+                    var processToRollOut = _Kernel.memoryManager.getProcessToRollOut();
+                    _Kernel.memoryManager.rollOutProcess(processToRollOut);
+                }
                 _Kernel.memoryManager.rollInProcess(nextProcess);
+            }
+
+
 
             // change our next process state to running
             nextProcess.set("state", "running");
@@ -1665,7 +1697,8 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
     allocate: function(pcb) {
         var self = this;
         var activeSlot = pcb.slot;
-        if (activeSlot) {
+
+        if (activeSlot > 0) {
             self.slots[activeSlot].open = false;
             pcb.set({base: self.slots[activeSlot].base, limit: self.slots[activeSlot].limit});
             _CPU.scheduler.set("currentProcess", pcb);
@@ -1701,80 +1734,90 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
         // update memory table
         self.updateMemoryDisplay();
     },
-    rollInProcess: function(process) {
+    /**
+     * Finds available slots in memory
+     * @public
+     * @method findOpenSlot
+     * @returns {int} slot
+     */
+    findOpenSlot: function() {
         var self = this;
-        var currentProcess = _CPU.scheduler.get("currentProcess");
-        process.set({
-            base: currentProcess.base,
-            limit: currentProcess.limit,
-            slot: currentProcess.slot
-        });
-//        console.log(process.pid);
 
-        if (process.state !== "in disk")
-        {
-            var programFile = "process_" + process.pid;
-
-            // get program from memory
-            var programFromDisk = _HardDrive.fileSystem.readFile(programFile, false).replace(" ", "").match(/.{1,2}/g);
-
-            // delete file
-            _HardDrive.fileSystem.deleteFile(programFile);
-
-            // roll out current process
-            self.rollOutProcess(currentProcess);
-
-            // load new process to opened up slot
-            _Kernel.memoryManager.memory.insert(process.base, programFromDisk);
-
-            // allocate new process we are rolling in
-            self.allocate(process);
+        // Find next available slot
+        for (var key in self.slots) {
+            if (self.slots[key].open) {
+                return key;
+                break;
+            }
         }
-
-        // TODO: read program from disk
-        // TODO: use roll out to get current process program from memory
-        // TODO: insert program in place of process we rolled out.
+        return null;
     },
+    /**
+     * Gets process to roll out of memory
+     * @public
+     * @method getProcessToRollOut
+     * @returns {jambOS.OS.ProcessControlBlock} 
+     */
+    getProcessToRollOut: function() {
+        var process = _CPU.scheduler.readyQueue.getLastProcess();
+        return process;
+    },
+    /**
+     * Rolls process into memory
+     * @public
+     * @method rollInProcess
+     * @param {jambOS.OS.ProcessControlBlock} process
+     */
+    rollInProcess: function(process) {
+
+        var self = this;
+        var slot = self.findOpenSlot();
+        process.set({
+            base: self.slots[slot].base,
+            limit: self.slots[slot].limit,
+            slot: slot,
+            state: "process loaded"
+        });
+
+        self.slots[slot].open = false;
+
+        var programFile = "process_" + process.pid;
+        
+        // get program from memory
+        var programFromDisk = _HardDrive.fileSystem.readFile(programFile, false).split(/\s/);
+
+        // load new process to opened up slot
+        _Kernel.memoryManager.memory.insert(process.base, programFromDisk);
+
+        // allocate new process we are rolling in
+        self.allocate(process);
+
+        // delete file
+        _HardDrive.fileSystem.deleteFile(programFile);
+    },
+    /**
+     * Rolls process out of memory and into hard drive
+     * @public
+     * @method rollInProcess
+     * @param {jambOS.OS.ProcessControlBlock} process
+     */
     rollOutProcess: function(process) {
 
         var self = this;
 
-        process.set("state", "in disk");
-
-        var tempList = [];
-
-        // update residentlist
-        $.each(_CPU.scheduler.residentList, function() {
-            if (this.pid === process.pid)
-                this.state = "in disk";
-
-            tempList.push(this);
-        });
-
-        _CPU.scheduler.residentList = tempList;
-
-        var tempQueue = [];
-
-        // update ready queue
-        $.each(_CPU.scheduler.readyQueue.q, function() {
-            if (this.pid === process.pid)
-                this.state = "in disk";
-
-            tempQueue.push(this);
-        });
-        _CPU.scheduler.readyQueue.q = tempQueue;
-
         // get current program
         var currentProgram = self.getProgramFromMemory(process);
-
-        console.log(currentProgram);
 
         // process to disk
         _HardDrive.fileSystem.createFile("process_" + process.pid);
         _HardDrive.fileSystem.writeFile("process_" + process.pid, currentProgram);
 
+        self.slots[process.slot].open = true;
+
         // deallocate current process
         self.deallocate(process);
+
+        process.set({state: "in disk", slot: -1});
     },
     /**
      * Gets program from memory
@@ -1792,7 +1835,7 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
         for (var i = start; i < end; i++)
             program += self.memory.read(i);
 
-        return program;
+        return program.match(/.{1,2}/g).join(" ");
     },
     /**
      * Validates if memory address is within available allocated slot
@@ -1804,6 +1847,9 @@ jambOS.OS.MemoryManager = jambOS.util.createClass({
     validateAddress: function(address) {
         var self = this;
         var activeSlot = _CPU.scheduler.get("currentProcess").slot;
+        
+        console.log(activeSlot + " <------ activeSlot");
+        
         var isValid = (address <= self.slots[activeSlot].limit && address >= self.slots[activeSlot].base);
         return isValid;
     },
@@ -1929,13 +1975,13 @@ jambOS.OS.ProcessManager = jambOS.util.createClass({
             var pc = base;
             pcb = new jambOS.OS.ProcessControlBlock({
                 pid: pid,
-                pc: 0,
-                base: 0,
-                limit: 0,
+//                pc: _Kernel.memoryManager.slots[2].base,
+//                base: _Kernel.memoryManager.slots[2].base,
+//                limit: _Kernel.memoryManager.slots[2].limit,
                 xReg: 0,
                 yReg: 0,
                 zFlag: 0,
-                slot: null,
+                slot: -1,
                 state: "in disk",
                 programSize: program.length
             });
@@ -3010,7 +3056,7 @@ jambOS.OS.FileSystemDriver = new jambOS.util.createClass(jambOS.OS.DeviceDriver,
                 break;
             case FSDD_DELETE:
                 if (this.deleteFile(filename))
-                    _StdIn.putText("Deleted: \"" + file.filename + "\"");
+                    _StdIn.putText("Deleted: \"" + filename + "\"");
                 else
                     _StdIn.putText("Sorry: File \"" + filename + "\" not found!");
                 break;
@@ -3050,6 +3096,7 @@ jambOS.OS.FileSystemDriver = new jambOS.util.createClass(jambOS.OS.DeviceDriver,
      * @param {strign} filename 
      */
     createFile: function(filename) {
+        var self = this;
         var availableTSB = _HardDrive.findNextAvailableTSB();
         var isDuplicate = this._isDuplicate(filename);
 
@@ -3057,6 +3104,7 @@ jambOS.OS.FileSystemDriver = new jambOS.util.createClass(jambOS.OS.DeviceDriver,
 
         if (availableTSB && !isDuplicate) {
             _HardDrive.initializeTSB(availableTSB, filename);
+            self.updateHardDriveDisplay();
             return true;
         }
 
@@ -3190,6 +3238,8 @@ jambOS.OS.FileSystemDriver = new jambOS.util.createClass(jambOS.OS.DeviceDriver,
 
             });
 
+            self.updateHardDriveDisplay();
+
             return true;
 
         }
@@ -3204,6 +3254,7 @@ jambOS.OS.FileSystemDriver = new jambOS.util.createClass(jambOS.OS.DeviceDriver,
      * @returns {boolean}
      */
     deleteFile: function(filename) {
+        var self = this;
 
         // get filename and its address from our array list of used filenames
         var file = $.grep(this.usedFilenames, function(el) {
@@ -3223,19 +3274,19 @@ jambOS.OS.FileSystemDriver = new jambOS.util.createClass(jambOS.OS.DeviceDriver,
             var value = "[" + occupiedBit + ",-1,-1,-1,\"" + this.sanitizeFileSystemValue("") + "\"]";
             this.write(fileAddress, value);
 
-            // reset tsb
-            _HardDrive.resetTSB(track, sector, block);
-
             // use previous info to get content from where its stored in storage
             var dataAddress = this._getAddress({track: track, sector: sector, block: block});
             var data = JSON.parse(this.read(dataAddress));
             track = parseInt(data[TRACK_BIT]);
             sector = parseInt(data[SECTOR_BIT]);
             block = parseInt(data[BLOCK_BIT]);
+            occupiedBit = parseInt(data[OCCUPIED_BIT]);
+            var linkedFiles = this.getLinkedFileBlocks(dataAddress);
 
-            // file data
-            var value = "[" + occupiedBit + "," + track + "," + sector + "," + block + ",\"" + this.sanitizeFileSystemValue("") + "\"]";
-            this.write(dataAddress, value);
+            $.each(linkedFiles, function() {
+                var value = "[0,-1,-1,-1,\"" + self.sanitizeFileSystemValue("") + "\"]";
+                self.write(this, value);
+            });
 
             // make sure we remove our file from our used files array
             var tempList = [];
@@ -3245,23 +3296,29 @@ jambOS.OS.FileSystemDriver = new jambOS.util.createClass(jambOS.OS.DeviceDriver,
             });
             this.usedFilenames = tempList;
 
-            // handle text that wrapped around
-            while (track !== -1) {
-                dataAddress = this._getAddress({track: track, sector: sector, block: block});
-                data = JSON.parse(this.read(dataAddress));
-                track = parseInt(data[TRACK_BIT]);
-                sector = parseInt(data[SECTOR_BIT]);
-                block = parseInt(data[BLOCK_BIT]);
-
-                // file data
-                var value = "[" + occupiedBit + "," + track + "," + sector + "," + block + ",\"" + this.sanitizeFileSystemValue("") + "\"]";
-                this.write(dataAddress, value);
-            }
+            self.updateHardDriveDisplay();
 
             return true;
         }
 
         return false;
+    },
+    getLinkedFileBlocks: function(parent) {
+        var files = [parent];
+        var currentKey = parent;
+        while (currentKey !== "[-1,-1,-1]") {
+            var parentVals = JSON.parse(this.read(currentKey));
+            var track = parseInt(parentVals[TRACK_BIT]);
+            var sector = parseInt(parentVals[SECTOR_BIT]);
+            var block = parseInt(parentVals[BLOCK_BIT]);
+            var child = this._getAddress({track: track, sector: sector, block: block});
+
+            if (child !== "[-1,-1,-1]")
+                files.push(child);
+            currentKey = child;
+        }
+
+        return files;
     },
     /**
      * Lists out all the files in the file system
@@ -3297,6 +3354,12 @@ jambOS.OS.FileSystemDriver = new jambOS.util.createClass(jambOS.OS.DeviceDriver,
             value += "-";
 
         return value;
+    },
+    updateHardDriveDisplay: function() {
+        $("#harddrive .content").empty();
+        for (var address in this.storage) {
+            $("#harddrive .content").append(this.read(address) + "<br/>");
+        }
     },
     /**
      * Checks if filename is a duplicate
@@ -3447,6 +3510,9 @@ jambOS.OS.ProcessQueue = jambOS.util.createClass(jambOS.OS.Queue, /** @scope jam
     initialize: function(options) {
         options || (options = {});
         this.setOptions(options);
+    },
+    getLastProcess: function() {
+        return this.q[this.q.length - 1];
     },
     /**
      * Will have to work on this in the future but in the meantime we'll just return

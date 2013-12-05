@@ -54,7 +54,7 @@ jambOS.OS.FileSystemDriver = new jambOS.util.createClass(jambOS.OS.DeviceDriver,
                 break;
             case FSDD_DELETE:
                 if (this.deleteFile(filename))
-                    _StdIn.putText("Deleted: \"" + file.filename + "\"");
+                    _StdIn.putText("Deleted: \"" + filename + "\"");
                 else
                     _StdIn.putText("Sorry: File \"" + filename + "\" not found!");
                 break;
@@ -94,6 +94,7 @@ jambOS.OS.FileSystemDriver = new jambOS.util.createClass(jambOS.OS.DeviceDriver,
      * @param {strign} filename 
      */
     createFile: function(filename) {
+        var self = this;
         var availableTSB = _HardDrive.findNextAvailableTSB();
         var isDuplicate = this._isDuplicate(filename);
 
@@ -101,6 +102,7 @@ jambOS.OS.FileSystemDriver = new jambOS.util.createClass(jambOS.OS.DeviceDriver,
 
         if (availableTSB && !isDuplicate) {
             _HardDrive.initializeTSB(availableTSB, filename);
+            self.updateHardDriveDisplay();
             return true;
         }
 
@@ -234,6 +236,8 @@ jambOS.OS.FileSystemDriver = new jambOS.util.createClass(jambOS.OS.DeviceDriver,
 
             });
 
+            self.updateHardDriveDisplay();
+
             return true;
 
         }
@@ -248,6 +252,7 @@ jambOS.OS.FileSystemDriver = new jambOS.util.createClass(jambOS.OS.DeviceDriver,
      * @returns {boolean}
      */
     deleteFile: function(filename) {
+        var self = this;
 
         // get filename and its address from our array list of used filenames
         var file = $.grep(this.usedFilenames, function(el) {
@@ -267,19 +272,19 @@ jambOS.OS.FileSystemDriver = new jambOS.util.createClass(jambOS.OS.DeviceDriver,
             var value = "[" + occupiedBit + ",-1,-1,-1,\"" + this.sanitizeFileSystemValue("") + "\"]";
             this.write(fileAddress, value);
 
-            // reset tsb
-            _HardDrive.resetTSB(track, sector, block);
-
             // use previous info to get content from where its stored in storage
             var dataAddress = this._getAddress({track: track, sector: sector, block: block});
             var data = JSON.parse(this.read(dataAddress));
             track = parseInt(data[TRACK_BIT]);
             sector = parseInt(data[SECTOR_BIT]);
             block = parseInt(data[BLOCK_BIT]);
+            occupiedBit = parseInt(data[OCCUPIED_BIT]);
+            var linkedFiles = this.getLinkedFileBlocks(dataAddress);
 
-            // file data
-            var value = "[" + occupiedBit + "," + track + "," + sector + "," + block + ",\"" + this.sanitizeFileSystemValue("") + "\"]";
-            this.write(dataAddress, value);
+            $.each(linkedFiles, function() {
+                var value = "[0,-1,-1,-1,\"" + self.sanitizeFileSystemValue("") + "\"]";
+                self.write(this, value);
+            });
 
             // make sure we remove our file from our used files array
             var tempList = [];
@@ -289,23 +294,29 @@ jambOS.OS.FileSystemDriver = new jambOS.util.createClass(jambOS.OS.DeviceDriver,
             });
             this.usedFilenames = tempList;
 
-            // handle text that wrapped around
-            while (track !== -1) {
-                dataAddress = this._getAddress({track: track, sector: sector, block: block});
-                data = JSON.parse(this.read(dataAddress));
-                track = parseInt(data[TRACK_BIT]);
-                sector = parseInt(data[SECTOR_BIT]);
-                block = parseInt(data[BLOCK_BIT]);
-
-                // file data
-                var value = "[" + occupiedBit + "," + track + "," + sector + "," + block + ",\"" + this.sanitizeFileSystemValue("") + "\"]";
-                this.write(dataAddress, value);
-            }
+            self.updateHardDriveDisplay();
 
             return true;
         }
 
         return false;
+    },
+    getLinkedFileBlocks: function(parent) {
+        var files = [parent];
+        var currentKey = parent;
+        while (currentKey !== "[-1,-1,-1]") {
+            var parentVals = JSON.parse(this.read(currentKey));
+            var track = parseInt(parentVals[TRACK_BIT]);
+            var sector = parseInt(parentVals[SECTOR_BIT]);
+            var block = parseInt(parentVals[BLOCK_BIT]);
+            var child = this._getAddress({track: track, sector: sector, block: block});
+
+            if (child !== "[-1,-1,-1]")
+                files.push(child);
+            currentKey = child;
+        }
+
+        return files;
     },
     /**
      * Lists out all the files in the file system
@@ -341,6 +352,12 @@ jambOS.OS.FileSystemDriver = new jambOS.util.createClass(jambOS.OS.DeviceDriver,
             value += "-";
 
         return value;
+    },
+    updateHardDriveDisplay: function() {
+        $("#harddrive .content").empty();
+        for (var address in this.storage) {
+            $("#harddrive .content").append(this.read(address) + "<br/>");
+        }
     },
     /**
      * Checks if filename is a duplicate

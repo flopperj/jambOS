@@ -45,6 +45,9 @@ jambOS.host.HardDrive = jambOS.util.createClass({
                     this.resetTSB(track, sector, block);
             }
         }
+
+        // update display
+        this.fileSystem.updateHardDriveDisplay();
     },
     /**
      * Resets TSB

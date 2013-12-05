@@ -21,6 +21,7 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
      * @property {jambOS.OS.ProcessQueue} readyQueue
      */
     readyQueue: null,
+    jobQueue: null,
     /**
      * @property {[jambOS.OS.ProcessControlBlock]} residentList
      */
@@ -47,6 +48,7 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
     initialize: function() {
         // initalize our ready queue
         this.readyQueue = new jambOS.OS.ProcessQueue();
+        this.jobQueue = new jambOS.OS.ProcessQueue();
     },
     /**
      * Shechules a process
@@ -109,19 +111,27 @@ jambOS.OS.CPUScheduler = jambOS.util.createClass(/** @scope jambOS.OS.CPUSchedul
 
         // get the next process to execute from ready queue
         var nextProcess = self.readyQueue.dequeue();
-        
+
         console.log(nextProcess.pid + " => " + nextProcess.state);
 
         // if there is a process available then we'll set it to run
         if (nextProcess) {
 
+
             // Add the current process being passed to the ready queue
             if (process !== null && process.state !== "terminated")
                 _CPU.scheduler.readyQueue.enqueue(process);
 
-            // handle process from disk
-            if (nextProcess.state === "in disk")
+            // handle next process if from disk
+            if (nextProcess.state === "in disk") {
+                if (!_Kernel.memoryManager.findOpenSlot()) {
+                    var processToRollOut = _Kernel.memoryManager.getProcessToRollOut();
+                    _Kernel.memoryManager.rollOutProcess(processToRollOut);
+                }
                 _Kernel.memoryManager.rollInProcess(nextProcess);
+            }
+
+
 
             // change our next process state to running
             nextProcess.set("state", "running");
